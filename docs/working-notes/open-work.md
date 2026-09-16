@@ -6,9 +6,13 @@
 
 **Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow
 already running in `vyoh.gg` rather than inventing a second one. Settled
-2026-09-17; design in [authentication.md](authentication.md). It comes before
-the write routes because those write the record this project exists to keep,
-and nothing authenticates a request today.
+2026-09-17; the design, the build order and what it is waiting on are in
+[authentication.md](authentication.md). Start there rather than here.
+
+It comes before the write routes because those write the record this project
+exists to keep, and nothing authenticates a request today. Three of its five
+steps need no GitHub credentials, so the arc can begin before the OAuth App
+exists.
 
 ## Next
 

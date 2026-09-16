@@ -93,3 +93,39 @@ startup failure rather than a 500 on the first login.
 `SESSION_SECRET` in `vyoh.gg`, where it signs the OAuth state and nothing else —
 the session token is not signed at all — and the name has to be disbelieved
 every time it is read.
+
+## Waiting on the owner
+
+None of this can be built until three things exist. They are owner actions, not
+code:
+
+1. **A GitHub OAuth App**, its client id and secret in `.env` as
+   `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`.
+2. **The owner's numeric GitHub user id** for `OWNER_GITHUB_USER_ID`. It comes
+   from `https://api.github.com/users/{login}`, unauthenticated.
+3. **`WEB_ORIGIN`** — the Vite dev server's origin. `apps/web` does not exist
+   yet, so this is a choice rather than a lookup.
+
+Open, and worth settling before registering anything: an OAuth App accepts
+**exactly one** callback URL, so development and the netcup deploy need either
+two apps or one app that only ever serves production. `vyoh.gg` has already
+faced this; whatever it does is the answer here.
+
+## Build order
+
+Each step lands on its own.
+
+1. `session` table and its migration, plus the new configuration, so a missing
+   variable fails at boot.
+2. State signing and cookie helpers. Pure functions over `crypto` — nonce
+   minting, HMAC sign and timing-safe verify, expiry, `next` validation — and
+   the only part of this arc that is fully testable without GitHub.
+3. `GET /auth/github/login` and `GET /auth/github/callback`: the redirect, the
+   state check, the code exchange, the owner check, the session.
+4. The guard, applied globally with `/health`, `/ready` and the auth routes
+   exempted, plus CORS with an origin allowlist and credentials.
+5. `GET /auth/me` so the SPA can tell whether it is signed in, and
+   `POST /auth/logout`.
+
+Steps 1, 2 and 4 need no GitHub credentials, so they are not blocked by the
+list above. Step 3 is.

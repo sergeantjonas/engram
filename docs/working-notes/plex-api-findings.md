@@ -80,6 +80,24 @@ because that 100% becomes unrecoverable the first time a series is removed.
 History depth is shallower than the library suggests: either the server was built
 in Oct 2025 or Plex has already pruned older rows. Anything before that is gone.
 
+## History is scoped to the token's own account (2026-09-17)
+
+The server is shared, so "single account" above needed checking rather than
+assuming. `/accounts` lists 13 entries on it — the owner, two named shares, and
+Plex Home placeholders. History does not follow that:
+
+- `/status/sessions/history/all` with the owner's admin token returns 86 rows,
+  every one of them `accountID: 1`.
+- The `accountID=` parameter is honoured rather than ignored, which is what
+  makes that meaningful: `accountID=2` returns `totalSize: 0` rather than the
+  unfiltered 86. Every other account id on the server returns 0 as well.
+
+So the backfill cannot pick up a housemate's viewing, and the 86 rows already
+imported are the owner's. This is a property of the endpoint, not of Engram, and
+it covers only this one path — see "Whose history this is" in
+[ingest-architecture.md](ingest-architecture.md) for the paths where it does not
+hold.
+
 ## Write-back
 
 ```

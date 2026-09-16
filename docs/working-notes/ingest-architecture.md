@@ -48,6 +48,26 @@ So: the webhook gives freshness, the nightly `get_history` pull gives
 correctness. Idempotency on `(source, source_event_id)` makes re-running the
 reconcile free, so there is no reason not to.
 
+## Whose history this is
+
+The Plex server is shared with other people. Engram is a record of one person's
+viewing, and a housemate's plays landing in it would be wrong twice over: the
+statistics stop describing anyone, and the app starts keeping a log of what
+somebody else watched without being asked.
+
+The backfill is safe by accident of the endpoint — Plex's history is scoped to
+the calling token's account, verified 2026-09-17 in
+[plex-api-findings.md](plex-api-findings.md). Nothing else is. Tautulli fires a
+webhook for every play on the server and identifies the viewer with `{user_id}`;
+Sonarr and Radarr are not per-user at all, though they only ever write
+`library_presence`.
+
+So the ingest boundary filters on an allowlist of account ids from config,
+defaulting to the owner's, and a play by anyone else is **dropped rather than
+stored**. Storing it and filtering on read would leave the record on disk, which
+is the part that needed consent. `watch_event.account_id` already exists to keep
+the owner's own Plex Home profiles separable later.
+
 ## Tautulli specifics
 
 The webhook body is authored by hand in the notification agent, using Tautulli's

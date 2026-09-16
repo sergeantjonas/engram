@@ -75,6 +75,20 @@ touch `library_presence`.
 `intent` is also what gives Engram the two things Plex genuinely cannot express:
 "want to watch" and "dropped after S2".
 
+## Titles that are not yours (proposed, not implemented)
+
+A shared Sonarr and Radarr put things on disk that the owner will never watch,
+and a library view that cannot be told so is a library view that degrades as the
+disk fills. That is an intent statement, so it belongs here rather than as a
+flag on `title`: presence says what is on disk, intent says who cares.
+
+`want = false` cannot carry it, because it already means "no opinion recorded".
+The proposal is one nullable `excluded_at timestamptz` beside the `started_at`
+and `dropped_at` already on the table, with the existing `note` saying why. A
+non-null value hides the title from the default view. It stays additive, admits
+no invalid state, and keeps "dropped after S2" — started, abandoned — distinct
+from "never mine", which was never started at all.
+
 ## Dates you do not have
 
 The record is the point; when something happened is metadata about the record.

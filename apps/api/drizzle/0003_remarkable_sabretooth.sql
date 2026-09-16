@@ -1,0 +1,1 @@
+ALTER TABLE "intent" ADD COLUMN "excluded_at" timestamp with time zone;

@@ -122,6 +122,18 @@ export const intent = pgTable('intent', {
   want: boolean('want').notNull().default(false),
   startedAt: timestamp('started_at', { withTimezone: true }),
   droppedAt: timestamp('dropped_at', { withTimezone: true }),
+
+  /**
+   * Set when the viewer says a title is not theirs and never was.
+   *
+   * A shared Sonarr and Radarr put things on disk nobody here will watch, and
+   * the default view hides whatever this names. `want` cannot carry it: false
+   * is every row's starting value and already means "no opinion", so
+   * overloading it would make an undecided title and a rejected one the same
+   * thing. Distinct from `droppedAt`, which is a title that was started.
+   */
+  excludedAt: timestamp('excluded_at', { withTimezone: true }),
+
   note: text('note'),
 });
 

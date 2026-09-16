@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -39,7 +39,9 @@ library_presence  is it on disk right now?
                   (title_id, present, first_seen_at, removed_at, source)
 
 intent            do I want to watch it?
-                  (title_id, want, started_at, dropped_at, note)
+                  (title_id, want, started_at, dropped_at, excluded_at, note)
+                  excluded_at non-null means "not mine, never was", which
+                  want = false cannot say: false is every row's default
 
 watch_event       append-only facts
                   (id, source, source_event_id, title_id, episode_id,
@@ -75,19 +77,25 @@ touch `library_presence`.
 `intent` is also what gives Engram the two things Plex genuinely cannot express:
 "want to watch" and "dropped after S2".
 
-## Titles that are not yours (proposed, not implemented)
+## Titles that are not yours
 
 A shared Sonarr and Radarr put things on disk that the owner will never watch,
 and a library view that cannot be told so is a library view that degrades as the
 disk fills. That is an intent statement, so it belongs here rather than as a
 flag on `title`: presence says what is on disk, intent says who cares.
 
-`want = false` cannot carry it, because it already means "no opinion recorded".
-The proposal is one nullable `excluded_at timestamptz` beside the `started_at`
-and `dropped_at` already on the table, with the existing `note` saying why. A
-non-null value hides the title from the default view. It stays additive, admits
-no invalid state, and keeps "dropped after S2" — started, abandoned — distinct
-from "never mine", which was never started at all.
+`want = false` cannot carry it, because it is every row's starting value and
+already means "no opinion recorded". So `excluded_at` is a nullable timestamp
+beside the `started_at` and `dropped_at` already on the table, with the existing
+`note` saying why; a non-null value hides the title from the default view. A
+timestamp rather than a flag because when the decision was made is worth as much
+here as it is for the other two, and because it keeps "dropped after S2" —
+started, then abandoned — distinct from "never mine", which was never started.
+
+Excluding something needs a `title` row to exist, since `intent` is keyed on it.
+A series sitting in Sonarr that was never watched has none yet, so exclusion is
+something done to a title Engram already knows about rather than a filter over
+Sonarr's catalogue.
 
 ## Dates you do not have
 
@@ -133,6 +141,8 @@ one "seen" fact per episode; a dated manual rewatch appends its date to the id.
 - Multi-user: the owner's history is single-account today (`accountID: 1`).
   `account_id` is carried on `watch_event` so Plex Home users can be split
   later without a migration, but no UI accounts for it yet.
-- Whether `episode` rows are created eagerly for a whole season on first sight,
-  or lazily per watched episode. Eager makes gap detection trivial and costs a
-  TMDB call per season.
+- ~~Eager vs lazy `episode` rows~~ — settled 2026-09-17: eager, a whole season
+  at a time. Marking a season watched has to write one event per episode, so the
+  rows have to exist anyway, and a season present in full is what makes a gap
+  like ONE PIECE S2E5 a fact rather than an inference. The cost is one TMDB call
+  per season.

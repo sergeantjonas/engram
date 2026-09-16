@@ -4,26 +4,31 @@
 
 ## Now
 
-**Manual write path.** A core write path rather than a convenience: the record
-is what the project keeps, and Plex reaches back only to 2025-10-24. Finding a
-title is done; what remains is
-
-1. `POST /titles` — create a title from a chosen candidate, resolving its tvdb
-   id and its episode rows from TMDB in the same call.
-2. `POST /watch-events` — bulk season marking over the derived
-   `manual:{titleKey}:S2E5` id in [data-model.md](data-model.md).
+**Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow
+already running in `vyoh.gg` rather than inventing a second one. Settled
+2026-09-17; design in [authentication.md](authentication.md). It comes before
+the write routes because those write the record this project exists to keep,
+and nothing authenticates a request today.
 
 ## Next
 
-1. **`apps/web`** — Vite + React SPA, shaped by the settled design: a poster
+1. **Manual write path** — a core write path rather than a convenience: the
+   record is what the project keeps, and Plex reaches back only to 2025-10-24.
+   Finding a title is done; what remains is
+   1. `POST /titles` — create a title from a chosen candidate, resolving its
+      tvdb id and eagerly creating a season's episode rows from TMDB in the
+      same call.
+   2. `POST /watch-events` — bulk season marking over the derived
+      `manual:{titleKey}:S2E5` id in [data-model.md](data-model.md).
+2. **`apps/web`** — Vite + React SPA, shaped by the settled design: a poster
    wall filtered by state, a title page built around the episode grid, and
    adding a title by hand as a screen of its own.
-2. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
+3. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing
    it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land
    before webhooks do: the backfill is owner-only by property of the Plex
    endpoint, and Tautulli fires for every user on the server.
-3. **Webhook receivers** — Tautulli and Sonarr, per
+4. **Webhook receivers** — Tautulli and Sonarr, per
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs
    either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`.
@@ -42,25 +47,20 @@ title is done; what remains is
 
 ## Decisions still open
 
-- **Who may write.** Nothing authenticates a request today. `WEBHOOK_SECRET`
-  covers webhook routes only, and the API binds loopback behind a TLS proxy,
-  which is a deployment assumption rather than an answer. `GET /search` is a
-  read-only proxy and can wait; `POST /titles` and `POST /watch-events` write
-  the record this project exists to keep, so this needs settling before they
-  land.
-- **Whether excluded titles are a feature.** A shared Sonarr and Radarr put
-  things on disk the owner will never watch. The proposal — one nullable
-  `excluded_at` on `intent` — is written up in
-  [data-model.md](data-model.md); it needs a yes before it is built.
-- **Eager vs lazy `episode` row creation.** Eager makes gap detection trivial
-  at the cost of a TMDB call per season. Bulk season marking needs the episode
-  rows to exist, so `POST /titles` is where this gets decided.
 - **Whether legacy-agent libraries exist here.** If they do, the season and
   episode in a legacy GUID are the only carrier of that information and
   `parseGuid` currently discards it. See
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-17** — Titles can be marked as not the owner's: `intent.excluded_at`
+  is a nullable timestamp, and a non-null value hides the title from the default
+  view. A shared Sonarr and Radarr put things on disk nobody here will watch,
+  and `want = false` could not say so — it is every row's default and already
+  means "no opinion". Verified against the live database: column present and
+  nullable, a round trip carrying a reason in `note`, and `excluded_at is null`
+  partitioning cleanly. Reasoning in [data-model.md](data-model.md).
 
 - **2026-09-17** — Title search landed: `GET /search?q=` over TMDB's
   `/search/multi`, returning kind, tmdb id, name, year, poster path and

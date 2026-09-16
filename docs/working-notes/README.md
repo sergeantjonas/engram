@@ -23,4 +23,7 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
 - `ingest-architecture.md` — design. Which source feeds which fact, and why
   webhooks are an optimization rather than the source of truth. Read before
   chunk 4.
+- `authentication.md` — design. GitHub OAuth for an app with exactly one user,
+  and why a browser and a webhook are authenticated differently. Read before
+  any route that writes.
 - `integration-ideas.md` — idea pool. Nothing here is committed to.

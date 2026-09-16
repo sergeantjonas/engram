@@ -4,17 +4,15 @@
 
 ## Now
 
-**Chunk 4 — ingest.** Plex dump importer first, since that data is already on
-disk, then the Tautulli and Sonarr webhook receivers per
-[ingest-architecture.md](ingest-architecture.md). Webhook routes must check
-`WEBHOOK_SECRET`; the endpoint is publicly reachable by design.
+**UI design brainstorm.** Owner asked for this before any frontend work, and
+the database now holds real history to design against rather than hypotheticals.
 
 ## Next
 
-1. **UI design brainstorm** — interactive, with mockups and previews. Owner
-   asked for this before any frontend work starts, so the SPA is deliberately
-   deferred until it happens. Read model and screen inventory are open
-   questions until then.
+1. **Webhook receivers** — Tautulli and Sonarr, per
+   [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
+   Tautulli is not installed, and receiving live webhooks in development needs
+   either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`.
 2. **`apps/web`** — Vite + React SPA, shaped by whatever the brainstorm
    settles on.
 
@@ -37,6 +35,15 @@ disk, then the Tautulli and Sonarr webhook receivers per
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-16** — Plex dump importer landed. All 86 plays imported from the
+  archive with nothing dropped or degraded: 11 titles, 79 episodes, 6 rewatches
+  detected. Re-running inserts 0 new events, so the idempotency the reconcile
+  design depends on is proven rather than assumed. Plex history carries no
+  progress fields at all — a row exists only because Plex already decided the
+  item was watched — so these events are stored `completed` with a null
+  percentage, and `completed` stays computed at ingest so Tautulli's real
+  percentages can use the same threshold later.
 
 - **2026-09-16** — `apps/api` landed: Drizzle schema for the five tables,
   Postgres 18 in Compose, migrations, config validation, health and readiness

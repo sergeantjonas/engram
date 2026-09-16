@@ -20,7 +20,8 @@
     "test:cc": "vitest run --reporter=dot",
     "test:tools": "pnpm run build && node --test 'tools/*.test.mjs'",
     "check:cc": "pnpm run typecheck:cc && pnpm run lint:cc",
-    "verify:cc": "pnpm run check:cc && pnpm run test:cc && pnpm run test:tools"
+    "verify:cc": "pnpm run check:cc && pnpm run test:cc && pnpm run test:tools",
+    "import:plex": "pnpm run build && pnpm --filter @engram/api run import:plex"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.13",

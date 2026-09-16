@@ -8,7 +8,8 @@
     "dev": "node --env-file-if-exists=../../.env --watch src/server.ts",
     "start": "node --env-file-if-exists=../../.env dist/server.js",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file-if-exists=../../.env dist/db/migrate.js"
+    "db:migrate": "node --env-file-if-exists=../../.env dist/db/migrate.js",
+    "import:plex": "node --env-file-if-exists=../../.env dist/ingest/import-plex-dump.js"
   },
   "dependencies": {
     "@engram/shared": "workspace:*",

@@ -135,8 +135,12 @@ export const watchEvents = pgTable(
     viewOffsetSec: integer('view_offset_sec'),
     percentComplete: real('percent_complete'),
 
-    /** Derived at ingest from percentComplete, so the threshold stays consistent
-     *  across sources rather than trusting each source's own watched flag. */
+    /**
+     * Decided at ingest rather than taken from the source's own watched flag,
+     * so one threshold applies across sources. Where a source reports progress
+     * it comes from percentComplete; Plex history reports none at all, and a
+     * row existing there already means Plex judged it watched.
+     */
     completed: boolean('completed').notNull(),
 
     accountId: text('account_id'),

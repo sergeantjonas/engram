@@ -4,19 +4,18 @@
 
 ## Now
 
-**Chunk 3 — `apps/api`.** Fastify skeleton, Drizzle schema per
-[data-model.md](data-model.md), Postgres via compose, migrations, health check.
-The Postgres-vs-SQLite decision below has to be settled first.
+**Chunk 4 — ingest.** Plex dump importer first, since that data is already on
+disk, then the Tautulli and Sonarr webhook receivers per
+[ingest-architecture.md](ingest-architecture.md). Webhook routes must check
+`WEBHOOK_SECRET`; the endpoint is publicly reachable by design.
 
 ## Next
 
-4. **Ingest** — Plex dump importer first (data is already on disk), then the
-   Tautulli and Sonarr webhook receivers per [ingest-architecture.md](ingest-architecture.md).
-5. **UI design brainstorm** — interactive, with mockups and previews. Owner
-   asked for this before any frontend work starts, so chunk 5 is deliberately
+1. **UI design brainstorm** — interactive, with mockups and previews. Owner
+   asked for this before any frontend work starts, so the SPA is deliberately
    deferred until it happens. Read model and screen inventory are open
    questions until then.
-6. **`apps/web`** — Vite + React SPA shell, shaped by whatever the brainstorm
+2. **`apps/web`** — Vite + React SPA, shaped by whatever the brainstorm
    settles on.
 
 ## Blocked
@@ -30,16 +29,22 @@ The Postgres-vs-SQLite decision below has to be settled first.
 
 ## Decisions still open
 
-- **Postgres vs SQLite.** Postgres assumed for jsonb and concurrency; SQLite
-  would make the whole app one process plus a file. Turns on the deployment
-  target.
-- **Deployment target.** Whether Bytesized allows Docker or arbitrary
-  long-running processes is unknown. If not, the app runs elsewhere and pulls
-  Tautulli over HTTPS — it only needs read access, so co-location is optional.
-- **Eager vs lazy `episode` row creation.** Eager makes gap detection trivial at
-  the cost of a TMDB call per season.
+- **Eager vs lazy `episode` row creation.** Eager makes gap detection trivial
+  at the cost of a TMDB call per season.
+- **Whether legacy-agent libraries exist here.** If they do, the season and
+  episode in a legacy GUID are the only carrier of that information and
+  `parseGuid` currently discards it. See
+  [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-16** — `apps/api` landed: Drizzle schema for the five tables,
+  Postgres 18 in Compose, migrations, config validation, health and readiness
+  endpoints, and `ops/backup.sh`. Verified against a live database: the
+  migration applies, `watch_state` derives correctly, re-ingesting the same
+  source event is a no-op, and a duplicate canonical key is rejected.
+  `watch_state` is a view rather than a table, so it cannot drift from the
+  events it summarises and there is no rebuild step to forget.
 
 - **2026-09-16** — `packages/shared` landed: canonical identity model
   (`titleKey`, `episodeKey`, `sameTitle`, `mergeIds`) and the Plex GUID

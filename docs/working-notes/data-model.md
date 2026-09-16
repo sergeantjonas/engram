@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Design — agreed in principle 2026-09-16, no tables written yet. Read before chunk 3.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -18,13 +18,19 @@ months, the fix is a re-derivation rather than a data loss.
 
 **`title` rows are permanent.** Media comes and goes underneath them. A title is
 never deleted, because outliving the media is the entire point of the project.
+The delete rules encode that: `watch_event` restricts, so a title with history
+cannot be removed at all, while `episode`, `library_presence` and `intent`
+cascade — and the episode cascade is itself blocked by the event restrict.
 
 ## Tables
 
 ```
 title             identity + cached TMDB metadata. Permanent.
-                  (id, kind, tmdb_id, tvdb_id, imdb_id, name, year,
-                   poster_path, overview, metadata_fetched_at)
+                  (id, key, kind, tmdb_id, tvdb_id, imdb_id, name, year,
+                   poster_path, overview, metadata_fetched_at, created_at)
+                  key is the canonical string from titleKey(), unique, so
+                  identity is enforced by the database rather than by
+                  whichever ingest path happens to run first
 
 episode           (id, title_id, season, number, name, air_date, runtime,
                    tmdb_episode_id)
@@ -37,11 +43,15 @@ intent            do I want to watch it?
 
 watch_event       append-only facts
                   (id, source, source_event_id, title_id, episode_id,
-                   started_at, stopped_at, duration_sec, view_offset_sec,
-                   percent_complete, completed, user_id, player, platform, raw)
+                   started_at, watched_at, duration_sec, view_offset_sec,
+                   percent_complete, completed, account_id, player, platform,
+                   raw, ingested_at)
                   UNIQUE (source, source_event_id)
+                  (title_id, episode_id) is a composite foreign key, so an
+                  event cannot name one title and an episode of another
 
-watch_state       derived projection, rebuildable
+watch_state       SQL view over watch_event, not a table: it cannot drift
+                  from its source and needs no rebuild step
                   (title_id, episode_id, first_watched_at, last_watched_at,
                    play_count, seen)
 ```
@@ -70,13 +80,12 @@ than a source of truth.
 
 ## Open questions
 
-- Postgres vs SQLite. Postgres chosen for jsonb on `raw` and for concurrent
-  access from the API and the worker, but deployment target is still unsettled
-  and SQLite would make the whole app a single process plus a file. Drizzle
-  keeps the query layer portable either way.
+- ~~Postgres vs SQLite~~ — settled 2026-09-16: Postgres, hosted on a netcup
+  VPS rather than on Bytesized. Full root means Docker, real timers, and a
+  lifecycle independent of the media stack.
 - Multi-user: the owner's history is single-account today (`accountID: 1`).
-  `user_id` is carried on `watch_event` so Plex Home users can be split later
-  without a migration, but no UI accounts for it yet.
+  `account_id` is carried on `watch_event` so Plex Home users can be split
+  later without a migration, but no UI accounts for it yet.
 - Whether `episode` rows are created eagerly for a whole season on first sight,
   or lazily per watched episode. Eager makes gap detection trivial and costs a
   TMDB call per season.

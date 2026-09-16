@@ -7,8 +7,9 @@ build/
 .env.*
 !.env.example
 
-# Plex history dumps carry account ids and viewing data
+# Plex history dumps and database backups carry account ids and viewing data
 tools/out/
+backups/
 
 .DS_Store
 *.log

@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-engram}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-engram}
+      POSTGRES_DB: ${POSTGRES_DB:-engram}
+    ports:
+      # Loopback only: the API reaches Postgres over the compose network, and
+      # this box is on the public internet. Non-default host port so a dev
+      # machine running several projects cannot collide on 5432.
+      - '127.0.0.1:${POSTGRES_PORT:-55432}:5432'
+    volumes:
+      # 18+ images store data in major-version subdirectories, so the volume
+      # mounts one level above what older images used.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-engram} -d ${POSTGRES_DB:-engram}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

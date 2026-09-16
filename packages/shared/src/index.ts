@@ -9,3 +9,5 @@ export {
   sameTitle,
   titleKey,
 } from './ids.js';
+export type { WatchPrecision } from './watch.js';
+export { WATCH_PRECISIONS } from './watch.js';

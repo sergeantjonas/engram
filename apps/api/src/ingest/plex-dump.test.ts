@@ -46,6 +46,7 @@ describe('planImport', () => {
     ]);
     expect(plan.events[0]?.sourceEventId).toBe('/status/sessions/history/1');
     expect(plan.events[0]?.watchedAt.toISOString()).toBe('2025-10-24T23:38:08.000Z');
+    expect(plan.events[0]?.watchedPrecision).toBe('exact');
   });
 
   it('routes movies through the movie namespace with no episode', () => {

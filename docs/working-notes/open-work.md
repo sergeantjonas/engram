@@ -24,6 +24,9 @@ the database now holds real history to design against rather than hypotheticals.
 - **Tautulli webhook payload shape is unverified.** Which external-id parameters
   actually populate per media type needs one empirical check against a throwaway
   endpoint before any parsing code is trusted.
+- **`DATABASE_URL` in `.env` names port 5432, but Compose publishes 55432.**
+  Migrations only run with the port overridden. Exactly the mismatch
+  `.env.example` warns about.
 
 ## Decisions still open
 
@@ -35,6 +38,18 @@ the database now holds real history to design against rather than hypotheticals.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-17** — Date precision landed, so the record can hold something
+  watched years ago. `watched_at` is nullable and `watched_precision` carries
+  `exact | day | month | year | unknown`, tied together by a check constraint in
+  both directions; `watch_state` reports a precision per boundary rather than
+  one for the row, since a group can hold a remembered year and an exact play at
+  once. Verified against the live database: all 86 existing plays backfilled to
+  `exact` with timestamps intact, the column default dropped so a later insert
+  must state its own precision, a dateless row accepted and surfacing with null
+  boundaries and a real `play_count`, both invalid combinations rejected, and a
+  2019 entry beside an exact play reporting `year` on first and `exact` on last.
+  Reasoning in [data-model.md](data-model.md).
 
 - **2026-09-16** — Plex dump importer landed. All 86 plays imported from the
   archive with nothing dropped or degraded: 11 titles, 79 episodes, 6 rewatches

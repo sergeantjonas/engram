@@ -131,6 +131,7 @@ const inserted = await db.transaction(async (tx) => {
         titleId,
         episodeId,
         watchedAt: event.watchedAt,
+        watchedPrecision: event.watchedPrecision,
         // Plex history rows carry no progress fields at all: a row exists only
         // because Plex already decided the item was watched.
         completed: true,

@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   date,
   foreignKey,
   index,
@@ -17,6 +18,30 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const titleKind = pgEnum('title_kind', ['show', 'movie']);
+
+/**
+ * How much of a `watch_event.watched_at` to believe.
+ *
+ * Something watched years ago and entered by hand carries a date the viewer
+ * half-remembers, or none at all. Storing that alongside the timestamp keeps
+ * the record honest: the UI can say "2019" rather than inventing 1 January, and
+ * a query can still order every event on one column.
+ *
+ * Mirrors `WatchPrecision` in `@engram/shared`, the way `titleKind` mirrors
+ * `TitleKind`: `apps/web` cannot import this package, so the union lives there
+ * and the database shape agrees with it here.
+ *
+ * Declared most precise first, and `watch_state` orders on that. A value added
+ * later lands at the end unless `ALTER TYPE ... ADD VALUE ... BEFORE` says
+ * otherwise, which would silently make it the coarsest thing in the enum.
+ */
+export const watchPrecision = pgEnum('watch_precision', [
+  'exact',
+  'day',
+  'month',
+  'year',
+  'unknown',
+]);
 
 /**
  * A work, identified by external ids rather than anything Plex-internal.
@@ -129,7 +154,19 @@ export const watchEvents = pgTable(
     episodeId: uuid('episode_id'),
 
     startedAt: timestamp('started_at', { withTimezone: true }),
-    watchedAt: timestamp('watched_at', { withTimezone: true }).notNull(),
+
+    /**
+     * Null only when the viewer genuinely does not know, which backfilling years
+     * of television by hand makes the ordinary case rather than an edge one.
+     * `seen` is the fact this project keeps; when it happened is metadata about
+     * that fact, and demanding it would mean either refusing the row or
+     * fabricating a date.
+     *
+     * Read it with `watchedPrecision`: a coarse entry stores the first instant
+     * of the period it names, so 2019 is 2019-01-01.
+     */
+    watchedAt: timestamp('watched_at', { withTimezone: true }),
+    watchedPrecision: watchPrecision('watched_precision').notNull(),
 
     durationSec: integer('duration_sec'),
     viewOffsetSec: integer('view_offset_sec'),
@@ -166,6 +203,15 @@ export const watchEvents = pgTable(
     }).onDelete('restrict'),
     index('watch_event_title_idx').on(t.titleId),
     index('watch_event_watched_at_idx').on(t.watchedAt),
+    /**
+     * The two columns describe one thing, so the database holds them to it: a
+     * missing date must say so, and an event claiming any precision must carry
+     * the date that precision describes.
+     */
+    check(
+      'watch_event_precision_date',
+      sql`(${t.watchedPrecision} = 'unknown') = (${t.watchedAt} is null)`,
+    ),
   ],
 );
 
@@ -180,8 +226,22 @@ export const watchEvents = pgTable(
 export const watchState = pgView('watch_state', {
   titleId: uuid('title_id').notNull(),
   episodeId: uuid('episode_id'),
-  firstWatchedAt: timestamp('first_watched_at', { withTimezone: true }).notNull(),
-  lastWatchedAt: timestamp('last_watched_at', { withTimezone: true }).notNull(),
+  /**
+   * Null when every event behind this row is undated. Aggregates skip nulls, so
+   * one dated event among several still yields a real first and last — but any
+   * ordering on these columns has to say `nulls last` or Postgres sorts the
+   * things you cannot date to the top.
+   */
+  firstWatchedAt: timestamp('first_watched_at', { withTimezone: true }),
+  lastWatchedAt: timestamp('last_watched_at', { withTimezone: true }),
+  /**
+   * The precision of the event each boundary came from, not the best precision
+   * in the group. A group holding a remembered 2019 and an exact play last week
+   * would otherwise describe its own `first_watched_at` as exact, and the UI
+   * would render the January that the precision column exists to prevent.
+   */
+  firstWatchedPrecision: watchPrecision('first_watched_precision').notNull(),
+  lastWatchedPrecision: watchPrecision('last_watched_precision').notNull(),
   playCount: integer('play_count').notNull(),
   seen: boolean('seen').notNull(),
 }).as(sql`
@@ -190,6 +250,10 @@ export const watchState = pgView('watch_state', {
     episode_id,
     min(watched_at) as first_watched_at,
     max(watched_at) as last_watched_at,
+    (array_agg(watched_precision order by watched_at asc nulls last))[1]
+      as first_watched_precision,
+    (array_agg(watched_precision order by watched_at desc nulls last))[1]
+      as last_watched_precision,
     count(*)::int as play_count,
     bool_or(completed) as seen
   from watch_event

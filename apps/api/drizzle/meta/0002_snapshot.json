@@ -1,0 +1,553 @@
+{
+  "id": "26397c2a-c984-43bf-b9e1-4564f587741f",
+  "prevId": "b8e25859-cd58-4b4f-ba26-19a0b8ade595",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.episode": {
+      "name": "episode",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "title_id": {
+          "name": "title_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season": {
+          "name": "season",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "air_date": {
+          "name": "air_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "runtime_min": {
+          "name": "runtime_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tmdb_episode_id": {
+          "name": "tmdb_episode_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "episode_title_id_title_id_fk": {
+          "name": "episode_title_id_title_id_fk",
+          "tableFrom": "episode",
+          "tableTo": "title",
+          "columnsFrom": ["title_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "episode_title_season_number": {
+          "name": "episode_title_season_number",
+          "nullsNotDistinct": false,
+          "columns": ["title_id", "season", "number"]
+        },
+        "episode_id_title": {
+          "name": "episode_id_title",
+          "nullsNotDistinct": false,
+          "columns": ["id", "title_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.intent": {
+      "name": "intent",
+      "schema": "",
+      "columns": {
+        "title_id": {
+          "name": "title_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "want": {
+          "name": "want",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dropped_at": {
+          "name": "dropped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "intent_title_id_title_id_fk": {
+          "name": "intent_title_id_title_id_fk",
+          "tableFrom": "intent",
+          "tableTo": "title",
+          "columnsFrom": ["title_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.library_presence": {
+      "name": "library_presence",
+      "schema": "",
+      "columns": {
+        "title_id": {
+          "name": "title_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "present": {
+          "name": "present",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "library_presence_title_id_title_id_fk": {
+          "name": "library_presence_title_id_title_id_fk",
+          "tableFrom": "library_presence",
+          "tableTo": "title",
+          "columnsFrom": ["title_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.title": {
+      "name": "title",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "title_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tmdb_id": {
+          "name": "tmdb_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tvdb_id": {
+          "name": "tvdb_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imdb_id": {
+          "name": "imdb_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "poster_path": {
+          "name": "poster_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "overview": {
+          "name": "overview",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata_fetched_at": {
+          "name": "metadata_fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "title_key_unique": {
+          "name": "title_key_unique",
+          "nullsNotDistinct": false,
+          "columns": ["key"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.watch_event": {
+      "name": "watch_event",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_event_id": {
+          "name": "source_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title_id": {
+          "name": "title_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "episode_id": {
+          "name": "episode_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "watched_at": {
+          "name": "watched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "watched_precision": {
+          "name": "watched_precision",
+          "type": "watch_precision",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duration_sec": {
+          "name": "duration_sec",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "view_offset_sec": {
+          "name": "view_offset_sec",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percent_complete": {
+          "name": "percent_complete",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed": {
+          "name": "completed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "player": {
+          "name": "player",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ingested_at": {
+          "name": "ingested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "watch_event_title_idx": {
+          "name": "watch_event_title_idx",
+          "columns": [
+            {
+              "expression": "title_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "watch_event_watched_at_idx": {
+          "name": "watch_event_watched_at_idx",
+          "columns": [
+            {
+              "expression": "watched_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "watch_event_title_id_title_id_fk": {
+          "name": "watch_event_title_id_title_id_fk",
+          "tableFrom": "watch_event",
+          "tableTo": "title",
+          "columnsFrom": ["title_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "watch_event_episode_fk": {
+          "name": "watch_event_episode_fk",
+          "tableFrom": "watch_event",
+          "tableTo": "episode",
+          "columnsFrom": ["title_id", "episode_id"],
+          "columnsTo": ["title_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "watch_event_source_id": {
+          "name": "watch_event_source_id",
+          "nullsNotDistinct": false,
+          "columns": ["source", "source_event_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "watch_event_precision_date": {
+          "name": "watch_event_precision_date",
+          "value": "(\"watch_event\".\"watched_precision\" = 'unknown') = (\"watch_event\".\"watched_at\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.title_kind": {
+      "name": "title_kind",
+      "schema": "public",
+      "values": ["show", "movie"]
+    },
+    "public.watch_precision": {
+      "name": "watch_precision",
+      "schema": "public",
+      "values": ["exact", "day", "month", "year", "unknown"]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {
+    "public.watch_state": {
+      "columns": {
+        "title_id": {
+          "name": "title_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "episode_id": {
+          "name": "episode_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_watched_at": {
+          "name": "first_watched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_watched_at": {
+          "name": "last_watched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_watched_precision": {
+          "name": "first_watched_precision",
+          "type": "watch_precision",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_watched_precision": {
+          "name": "last_watched_precision",
+          "type": "watch_precision",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "play_count": {
+          "name": "play_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seen": {
+          "name": "seen",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "definition": "\n  select\n    title_id,\n    episode_id,\n    min(watched_at) as first_watched_at,\n    max(watched_at) as last_watched_at,\n    (array_agg(watched_precision order by watched_at asc nulls last))[1]\n      as first_watched_precision,\n    (array_agg(watched_precision order by watched_at desc nulls last))[1]\n      as last_watched_precision,\n    count(*)::int as play_count,\n    bool_or(completed) as seen\n  from watch_event\n  group by title_id, episode_id\n",
+      "name": "watch_state",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    }
+  },
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

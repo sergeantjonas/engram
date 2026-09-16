@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -43,17 +43,21 @@ intent            do I want to watch it?
 
 watch_event       append-only facts
                   (id, source, source_event_id, title_id, episode_id,
-                   started_at, watched_at, duration_sec, view_offset_sec,
-                   percent_complete, completed, account_id, player, platform,
-                   raw, ingested_at)
+                   started_at, watched_at, watched_precision, duration_sec,
+                   view_offset_sec, percent_complete, completed, account_id,
+                   player, platform, raw, ingested_at)
                   UNIQUE (source, source_event_id)
                   (title_id, episode_id) is a composite foreign key, so an
                   event cannot name one title and an episode of another
+                  CHECK ((watched_precision = 'unknown') = (watched_at IS NULL))
 
 watch_state       SQL view over watch_event, not a table: it cannot drift
                   from its source and needs no rebuild step
                   (title_id, episode_id, first_watched_at, last_watched_at,
+                   first_watched_precision, last_watched_precision,
                    play_count, seen)
+                  first/last are null when every event behind the row is
+                  undated, so ordering on them needs NULLS LAST
 ```
 
 ## Why presence and intent are separate tables
@@ -71,12 +75,41 @@ touch `library_presence`.
 `intent` is also what gives Engram the two things Plex genuinely cannot express:
 "want to watch" and "dropped after S2".
 
+## Dates you do not have
+
+The record is the point; when something happened is metadata about the record.
+A series watched years before Plex existed here has no timestamp to offer, and
+demanding one would mean either refusing the row or inventing a date — so
+`watched_at` is nullable and `watched_precision` says how much of it to believe:
+`exact | day | month | year | unknown`. A coarse entry stores the first instant
+of the period it names, so 2019 is 2019-01-01 at precision `year`, and the UI
+renders "2019" rather than a January that never happened.
+
+A check constraint ties the two together in both directions: `unknown` if and
+only if the date is null. That is the whole of what the database enforces — it
+cannot also check that a `year` event sits on the first of January, because the
+expression would not be immutable. Storing the first instant of the period is
+the writer's job.
+
+`watch_state` carries a precision per boundary, `first_watched_precision` and
+`last_watched_precision`, rather than one for the row. A group holding a
+remembered 2019 and an exact play from last week has a `first_watched_at` that
+is only good to the year and a `last_watched_at` that is good to the second;
+collapsing those into one column would describe the 2019 date as exact and
+produce precisely the invented January this design exists to avoid. Aggregates
+skip nulls, so one dated event among several still yields a real first and last.
+
 ## Idempotency
 
 `UNIQUE (source, source_event_id)` is what makes re-ingest safe. Backfill and
 nightly reconcile can run as often as they like and converge rather than
 duplicate. This is what allows webhooks to be treated as an optimization rather
 than a source of truth.
+
+It also covers entry by hand, which is why the id for a manual row is derived
+rather than random: `manual:{titleKey}:S2E5` means marking a season watched
+twice is a no-op instead of a duplicate. A dateless manual entry is therefore
+one "seen" fact per episode; a dated manual rewatch appends its date to the id.
 
 ## Open questions
 

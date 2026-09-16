@@ -1,4 +1,4 @@
-import { type ExternalIds, type TitleKind, titleKey } from '@engram/shared';
+import { type ExternalIds, type TitleKind, titleKey, type WatchPrecision } from '@engram/shared';
 
 /** A row as it appears in a dump written by `tools/dump-plex-history.mjs`. */
 export interface PlexHistoryRow {
@@ -43,6 +43,7 @@ export interface PlannedEvent {
   season: number | null;
   number: number | null;
   watchedAt: Date;
+  watchedPrecision: WatchPrecision;
   accountId: string | null;
   raw: PlexHistoryRow;
 }
@@ -155,6 +156,9 @@ export function planImport(rows: PlexHistoryRow[], resolved: ResolvedTitle[]): I
       season: hasEpisode ? season : null,
       number: hasEpisode ? number : null,
       watchedAt: new Date(row.viewedAt * 1000),
+      // A dump row is dropped above unless it carries viewedAt, so anything
+      // reaching here has a real instant behind it rather than a remembered one.
+      watchedPrecision: 'exact',
       accountId: row.accountID === undefined ? null : String(row.accountID),
       raw: row,
     });

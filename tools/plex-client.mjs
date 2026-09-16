@@ -1,10 +1,12 @@
+export { parseGuid, parseGuids } from '@engram/shared';
+
 // Shared Plex access for the one-shot tools. plex.tv knows how to reach the
 // server from anywhere, so none of this needs LAN access or port forwarding.
 
 const CLIENT_ID = 'engram-tools';
 
 export const plexHeaders = (token) => ({
-  'Accept': 'application/json',
+  Accept: 'application/json',
   'X-Plex-Token': token,
   'X-Plex-Client-Identifier': CLIENT_ID,
   'X-Plex-Product': 'engram',
@@ -56,32 +58,6 @@ export async function pickConnection(server, accountToken) {
   return null;
 }
 
-// Plex exposes external ids as Guid children, in modern (tmdb://1396) and
-// legacy agent (com.plexapp.agents.thetvdb://81189/1/1?lang=en) shapes. The
-// Guid[] entries are read first and win, because a legacy top-level guid on the
-// same item can name an older id for the same title.
-export function parseGuids(metadata) {
-  const out = {};
-  const record = (raw) => {
-    if (typeof raw !== 'string') return;
-    const modern = raw.match(/^(imdb|tmdb|tvdb):\/\/([^/?]+)/);
-    if (modern) {
-      out[modern[1]] ??= modern[2];
-      return;
-    }
-    const legacy = raw.match(/^com\.plexapp\.agents\.(themoviedb|thetvdb|imdb):\/\/([^/?]+)/);
-    if (legacy) {
-      const key = { themoviedb: 'tmdb', thetvdb: 'tvdb', imdb: 'imdb' }[legacy[1]];
-      out[key] ??= legacy[2];
-    }
-  };
-
-  const guids = Array.isArray(metadata?.Guid) ? metadata.Guid : [];
-  for (const g of guids) record(g?.id);
-  record(metadata?.guid);
-  return out;
-}
-
 const rowId = (r) => r.historyKey ?? `${r.ratingKey}:${r.viewedAt}`;
 
 // An incomplete archive that reports success is the worst outcome this tool can
@@ -98,7 +74,9 @@ export async function fetchAllHistory(uri, token, options = {}) {
 
   for (let pages = 0; ; pages++) {
     if (pages >= maxPages) {
-      throw new Error(`pagination exceeded ${maxPages} pages — aborting rather than writing a partial archive`);
+      throw new Error(
+        `pagination exceeded ${maxPages} pages — aborting rather than writing a partial archive`,
+      );
     }
 
     const url =

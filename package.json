@@ -11,14 +11,30 @@
     "node": "24.15.0"
   },
   "scripts": {
-    "dump:history": "node --env-file-if-exists=.env tools/dump-plex-history.mjs",
-    "resolve:ids": "node --env-file-if-exists=.env tools/resolve-ids.mjs",
-    "test": "node --test 'tools/*.test.mjs'"
+    "dump:history": "pnpm run build && node --env-file-if-exists=.env tools/dump-plex-history.mjs",
+    "resolve:ids": "pnpm run build && node --env-file-if-exists=.env tools/resolve-ids.mjs",
+    "build": "tsc -b",
+    "typecheck:cc": "tsc -b --pretty false && tsc -p tsconfig.test.json --pretty false",
+    "lint:cc": "biome check --reporter=summary",
+    "format": "biome check --write",
+    "test:cc": "vitest run --reporter=dot",
+    "test:tools": "pnpm run build && node --test 'tools/*.test.mjs'",
+    "check:cc": "pnpm run typecheck:cc && pnpm run lint:cc",
+    "verify:cc": "pnpm run check:cc && pnpm run test:cc && pnpm run test:tools"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@biomejs/biome",
       "esbuild"
     ]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.13",
+    "@types/node": "^22.20.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@engram/shared": "workspace:*"
   }
 }

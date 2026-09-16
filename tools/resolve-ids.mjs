@@ -9,9 +9,9 @@
 //
 //   PLEX_TOKEN=xxxxx node tools/resolve-ids.mjs [path-to-dump.json]
 
-import { readFile, writeFile, readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { discoverServers, pickConnection, getJson, parseGuids } from './plex-client.mjs';
+import { discoverServers, getJson, parseGuids, pickConnection } from './plex-client.mjs';
 
 const TOKEN = process.env.PLEX_TOKEN;
 if (!TOKEN) {
@@ -108,8 +108,18 @@ const playsIn = (list) => list.reduce((n, t) => n + t.plays, 0);
 const report = {
   dump: dumpPath,
   resolvedAt: new Date().toISOString(),
-  titles: { total: targets.size, resolved: resolved.length, gone: gone.length, errored: errored.length },
-  plays: { total: dump.rows.length, resolved: playsIn(resolved), gone: playsIn(gone), errored: playsIn(errored) },
+  titles: {
+    total: targets.size,
+    resolved: resolved.length,
+    gone: gone.length,
+    errored: errored.length,
+  },
+  plays: {
+    total: dump.rows.length,
+    resolved: playsIn(resolved),
+    gone: playsIn(gone),
+    errored: playsIn(errored),
+  },
   resolved,
   gone,
   errored,
@@ -124,7 +134,8 @@ await writeFile(outFile, JSON.stringify(report, null, 2));
 console.log(`\ntitles:  ${report.titles.resolved}/${report.titles.total} resolved`);
 console.log(`plays:   ${report.plays.resolved}/${report.plays.total} covered`);
 if (gone.length > 0) console.log(`gone:    ${gone.length} title(s) no longer resolvable`);
-if (errored.length > 0) console.log(`errors:  ${errored.length} title(s) failed transiently — re-run`);
+if (errored.length > 0)
+  console.log(`errors:  ${errored.length} title(s) failed transiently — re-run`);
 console.log(`wrote ${outFile}`);
 
 process.exit(errored.length > 0 ? 1 : 0);

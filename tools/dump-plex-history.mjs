@@ -5,9 +5,9 @@
 //
 //   PLEX_TOKEN=xxxxx node tools/dump-plex-history.mjs [--server "Name"]
 
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { discoverServers, pickConnection, fetchAllHistory } from './plex-client.mjs';
+import { discoverServers, fetchAllHistory, pickConnection } from './plex-client.mjs';
 
 const TOKEN = process.env.PLEX_TOKEN;
 if (!TOKEN) {
@@ -82,7 +82,9 @@ for (const server of targets) {
   console.log(`${server.name}:`);
   const conn = await pickConnection(server, TOKEN);
   if (!conn) {
-    console.error(`  unreachable on all ${server.connections?.length ?? 0} connection(s) — server may be down\n`);
+    console.error(
+      `  unreachable on all ${server.connections?.length ?? 0} connection(s) — server may be down\n`,
+    );
     failures++;
     continue;
   }
@@ -93,7 +95,9 @@ for (const server of targets) {
       onProgress: (p) =>
         p.phase === 'total'
           ? console.log(`  server reports ${p.total ?? 'an unknown number of'} history entries`)
-          : process.stdout.write(`\r  fetched ${p.fetched}${p.total === null ? '' : `/${p.total}`}`),
+          : process.stdout.write(
+              `\r  fetched ${p.fetched}${p.total === null ? '' : `/${p.total}`}`,
+            ),
     });
     process.stdout.write('\n');
     const summary = summarise(rows);
@@ -103,7 +107,13 @@ for (const server of targets) {
     await writeFile(
       file,
       JSON.stringify(
-        { server: server.name, machineIdentifier: server.clientIdentifier, dumpedAt: new Date().toISOString(), summary, rows },
+        {
+          server: server.name,
+          machineIdentifier: server.clientIdentifier,
+          dumpedAt: new Date().toISOString(),
+          summary,
+          rows,
+        },
         null,
         2,
       ),

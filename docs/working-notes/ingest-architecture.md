@@ -44,6 +44,16 @@ groups rows belonging to one continuous watch (paused Tuesday, finished
 Thursday) and is the natural dedupe key rather than `id`. `grouping=1` makes
 Tautulli collapse them server-side.
 
+## Legacy GUIDs carry the episode number
+
+A legacy agent guid is `com.plexapp.agents.thetvdb://81189/1/1?lang=en`, where
+the trailing `/1/1` is season and episode. `parseGuid` deliberately drops it,
+because for modern libraries the episode number arrives as a separate field.
+
+For a library scanned by an old agent, that suffix may be the only carrier of
+season and episode. Decide before ingest whether such libraries exist here; if
+they do, the parser needs an accessor for it rather than discarding it.
+
 ## Completion
 
 Compute it from `percent_complete` rather than trusting any source's

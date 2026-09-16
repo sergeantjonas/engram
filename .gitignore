@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+# Plex history dumps carry account ids and viewing data
+tools/out/
+
+.DS_Store
+*.log
+
+.claude/
+CLAUDE.md
+
+# Force-tracked so a malicious postinstall writing one of these shows up in
+# git status instead of hiding under an ignore rule.
+!.cursorrules
+!.cursor/
+!.windsurfrules
+!.aider.conf.yml
+!.github/copilot-instructions.md
+!.vscode/setup.mjs

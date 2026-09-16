@@ -1,0 +1,24 @@
+{
+  "name": "engram",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.1.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "volta": {
+    "node": "24.15.0"
+  },
+  "scripts": {
+    "dump:history": "node --env-file-if-exists=.env tools/dump-plex-history.mjs",
+    "resolve:ids": "node --env-file-if-exists=.env tools/resolve-ids.mjs",
+    "test": "node --test 'tools/*.test.mjs'"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "esbuild"
+    ]
+  }
+}

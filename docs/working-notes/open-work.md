@@ -4,17 +4,21 @@
 
 ## Now
 
-**UI design brainstorm.** Owner asked for this before any frontend work, and
-the database now holds real history to design against rather than hypotheticals.
+**Manual write path.** `POST /titles` and bulk season marking, over the derived
+`manual:{titleKey}:S2E5` id in [data-model.md](data-model.md). This is a core
+write path rather than a convenience: the record is what the project keeps, and
+Plex reaches back only to 2025-10-24. `TMDB_API_KEY` is set as of 2026-09-17, so
+the search that finds a title not on disk is available.
 
 ## Next
 
-1. **Webhook receivers** — Tautulli and Sonarr, per
+1. **`apps/web`** — Vite + React SPA, shaped by the settled design: a poster
+   wall filtered by state, a title page built around the episode grid, and
+   adding a title by hand as a screen of its own.
+2. **Webhook receivers** — Tautulli and Sonarr, per
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs
    either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`.
-2. **`apps/web`** — Vite + React SPA, shaped by whatever the brainstorm
-   settles on.
 
 ## Blocked
 
@@ -38,6 +42,23 @@ the database now holds real history to design against rather than hypotheticals.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-17** — UI direction settled. A poster wall filtered by state is the
+  home, a title page built around an episode grid is where the work happens, and
+  adding a title by hand is a screen of its own rather than a setting. Espresso
+  ground so artwork is the only saturated thing on screen; jade for the
+  affirmative, kept clear of the gold that means "in progress"; Archivo names
+  things and Martian Mono sets every figure. Long names wrap to two lines and
+  drop a subtitle past a colon, which is a layout answer to truncation rather
+  than a typographic one.
+
+  Two findings drove it. The owner's own record contains the argument: ONE PIECE
+  S2E5 sits between a rewatch of E4 and a play of E6, so the UI has to let you
+  say whether a hole was skipped or never downloaded. And TMDB returns
+  `poster_path` inline with a search result while its image CDN needs no key
+  — verified 2026-09-17, an unauthenticated poster returns 200 and a bad path
+  returns 404 rather than 403 — so added titles carry artwork immediately and a
+  generated cover is only the fallback.
 
 - **2026-09-17** — Date precision landed, so the record can hold something
   watched years ago. `watched_at` is nullable and `watched_precision` carries

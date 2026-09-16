@@ -1,4 +1,4 @@
-import type { TitleKind } from '@engram/shared';
+import type { ExternalIds, TitleKind } from '@engram/shared';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
@@ -46,8 +46,38 @@ export interface TmdbClientOptions {
   timeoutMs?: number;
 }
 
+/** A season as the details call summarises it, before its episodes are fetched. */
+export interface TmdbSeason {
+  season: number;
+  episodeCount: number;
+}
+
+/** Everything storing a title needs, from one call. */
+export interface TmdbTitleDetails {
+  kind: TitleKind;
+  ids: ExternalIds;
+  name: string;
+  year: number | null;
+  posterPath: string | null;
+  overview: string | null;
+  /** Empty for a movie. Includes season 0, which is where specials live. */
+  seasons: TmdbSeason[];
+}
+
+export interface TmdbEpisode {
+  season: number;
+  number: number;
+  name: string | null;
+  /** `YYYY-MM-DD`, matching the `date` column it is stored in. */
+  airDate: string | null;
+  runtimeMin: number | null;
+  tmdbEpisodeId: string | null;
+}
+
 export interface TmdbClient {
   search(query: string): Promise<TmdbCandidate[]>;
+  details(kind: TitleKind, tmdbId: string): Promise<TmdbTitleDetails>;
+  seasonEpisodes(tmdbId: string, season: number): Promise<TmdbEpisode[]>;
 }
 
 /** A row of `/search/multi`, typed as loosely as the endpoint actually behaves. */
@@ -60,6 +90,30 @@ interface MultiSearchRow {
   release_date?: string;
   poster_path?: string | null;
   overview?: string;
+}
+
+/** A details response, typed as loosely as the endpoint actually behaves. */
+interface DetailsBody {
+  name?: string;
+  title?: string;
+  first_air_date?: string;
+  release_date?: string;
+  poster_path?: string | null;
+  overview?: string;
+  imdb_id?: string | null;
+  external_ids?: { tvdb_id?: number | null; imdb_id?: string | null };
+  seasons?: { season_number?: number; episode_count?: number }[];
+}
+
+interface SeasonBody {
+  episodes?: {
+    season_number?: number;
+    episode_number?: number;
+    name?: string;
+    air_date?: string;
+    runtime?: number | null;
+    id?: number;
+  }[];
 }
 
 const yearOf = (date: string | undefined): number | null => {
@@ -119,6 +173,55 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
       const rows = body?.results ?? [];
       // Upstream order is popularity, which is the ranking the add screen wants.
       return rows.map(candidateOf).filter((c): c is TmdbCandidate => c !== null);
+    },
+
+    async details(kind, tmdbId) {
+      const path = kind === 'show' ? `/tv/${tmdbId}` : `/movie/${tmdbId}`;
+      // One call rather than two: the tvdb id a show is keyed on lives behind
+      // /external_ids, and appending it costs nothing extra.
+      const body = (await get(path, { append_to_response: 'external_ids' })) as DetailsBody | null;
+      const name = body?.name ?? body?.title;
+      if (!body || !name) throw new TmdbError('TMDB returned a title with no name');
+
+      const ids: ExternalIds = { tmdb: tmdbId };
+      // A show with no tvdb id reports it as 0 or null rather than omitting it,
+      // and either way it cannot be the canonical id.
+      if (body.external_ids?.tvdb_id) ids.tvdb = String(body.external_ids.tvdb_id);
+      const imdb = body.external_ids?.imdb_id ?? body.imdb_id;
+      if (imdb) ids.imdb = imdb;
+
+      return {
+        kind,
+        ids,
+        name,
+        year: yearOf(kind === 'show' ? body.first_air_date : body.release_date),
+        posterPath: body.poster_path ?? null,
+        overview: body.overview || null,
+        seasons: (body.seasons ?? [])
+          .filter((s) => typeof s.season_number === 'number' && (s.episode_count ?? 0) > 0)
+          .map((s) => ({ season: s.season_number as number, episodeCount: s.episode_count ?? 0 })),
+      };
+    },
+
+    async seasonEpisodes(tmdbId, season) {
+      const body = (await get(`/tv/${tmdbId}/season/${season}`, {})) as SeasonBody | null;
+      const episodes: TmdbEpisode[] = [];
+
+      for (const row of body?.episodes ?? []) {
+        if (typeof row.episode_number !== 'number') continue;
+        episodes.push({
+          // The response repeats the season on every episode; trusting it over
+          // the argument keeps a redirected or merged season honest.
+          season: typeof row.season_number === 'number' ? row.season_number : season,
+          number: row.episode_number,
+          name: row.name || null,
+          airDate: row.air_date || null,
+          runtimeMin: typeof row.runtime === 'number' ? row.runtime : null,
+          tmdbEpisodeId: typeof row.id === 'number' ? String(row.id) : null,
+        });
+      }
+
+      return episodes;
     },
   };
 }

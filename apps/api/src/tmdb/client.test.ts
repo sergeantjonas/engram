@@ -37,7 +37,7 @@ const client = (body: unknown, status?: number) => {
   return { tmdb: createTmdbClient({ apiKey: 'test-key', fetch }), calls };
 };
 
-describe('createTmdbClient.search', () => {
+describe('createTmdbClient', () => {
   it('maps tv to show and movie to movie, taking each kind its own date field', async () => {
     const { tmdb } = client({ results: [witcher, matrix] });
 
@@ -98,6 +98,95 @@ describe('createTmdbClient.search', () => {
       name: 'TmdbError',
       upstreamStatus: 401,
     });
+  });
+
+  it('asks for external ids in the same call, since a show is keyed on tvdb', async () => {
+    const { tmdb, calls } = client({ name: 'The Witcher', external_ids: { tvdb_id: 362696 } });
+
+    const details = await tmdb.details('show', '71912');
+
+    const url = new URL(calls[0]);
+    expect(url.pathname).toBe('/3/tv/71912');
+    expect(url.searchParams.get('append_to_response')).toBe('external_ids');
+    expect(details.ids).toEqual({ tmdb: '71912', tvdb: '362696' });
+  });
+
+  it('reads a movie from its own fields and leaves it without a tvdb id', async () => {
+    const { tmdb, calls } = client({
+      title: 'The Matrix',
+      release_date: '1999-03-30',
+      imdb_id: 'tt0133093',
+    });
+
+    const details = await tmdb.details('movie', '603');
+
+    expect(new URL(calls[0]).pathname).toBe('/3/movie/603');
+    expect(details).toMatchObject({
+      kind: 'movie',
+      name: 'The Matrix',
+      year: 1999,
+      ids: { tmdb: '603', imdb: 'tt0133093' },
+      seasons: [],
+    });
+  });
+
+  it('does not carry a tvdb id the show does not have', async () => {
+    const { tmdb } = client({ name: 'Unlisted', external_ids: { tvdb_id: 0 } });
+
+    expect((await tmdb.details('show', '1')).ids).toEqual({ tmdb: '1' });
+  });
+
+  it('drops a season with nothing in it, and keeps season 0', async () => {
+    const { tmdb } = client({
+      name: 'The Witcher',
+      seasons: [
+        { season_number: 0, episode_count: 3 },
+        { season_number: 1, episode_count: 8 },
+        { season_number: 5, episode_count: 0 },
+      ],
+    });
+
+    expect((await tmdb.details('show', '71912')).seasons).toEqual([
+      { season: 0, episodeCount: 3 },
+      { season: 1, episodeCount: 8 },
+    ]);
+  });
+
+  it('refuses a title with no name, which cannot be stored', async () => {
+    const { tmdb } = client({ external_ids: { tvdb_id: 1 } });
+
+    await expect(tmdb.details('show', '1')).rejects.toBeInstanceOf(TmdbError);
+  });
+
+  it('maps a season, trusting the season each episode reports', async () => {
+    const { tmdb, calls } = client({
+      episodes: [
+        {
+          season_number: 2,
+          episode_number: 1,
+          name: 'A Grain of Truth',
+          air_date: '2021-12-17',
+          runtime: 60,
+          id: 2661333,
+        },
+        { episode_number: 2, name: null, air_date: '', runtime: null, id: null },
+      ],
+    });
+
+    const episodes = await tmdb.seasonEpisodes('71912', 2);
+
+    expect(new URL(calls[0]).pathname).toBe('/3/tv/71912/season/2');
+    expect(episodes).toEqual([
+      {
+        season: 2,
+        number: 1,
+        name: 'A Grain of Truth',
+        airDate: '2021-12-17',
+        runtimeMin: 60,
+        tmdbEpisodeId: '2661333',
+      },
+      { season: 2, number: 2, name: null, airDate: null, runtimeMin: null, tmdbEpisodeId: null },
+    ]);
   });
 
   it('raises a TmdbError when a 200 does not carry JSON', async () => {

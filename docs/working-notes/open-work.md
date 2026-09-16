@@ -4,26 +4,22 @@
 
 ## Now
 
-**Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow
-already running in `vyoh.gg` rather than inventing a second one. Settled
-2026-09-17; the design, the build order and what it is waiting on are in
-[authentication.md](authentication.md). Start there rather than here.
-
-It comes before the write routes because those write the record this project
-exists to keep, and nothing authenticates a request today. Three of its five
-steps need no GitHub credentials, so the arc can begin before the OAuth App
-exists.
+**Manual write path.** A core write path rather than a convenience: the record
+is what the project keeps, and Plex reaches back only to 2025-10-24. Finding a
+title and storing one are done; what remains is `POST /watch-events` — bulk
+season marking over the derived `manual:{titleKey}:S2E5` id in
+[data-model.md](data-model.md).
 
 ## Next
 
-1. **Manual write path** — a core write path rather than a convenience: the
-   record is what the project keeps, and Plex reaches back only to 2025-10-24.
-   Finding a title is done; what remains is
-   1. `POST /titles` — create a title from a chosen candidate, resolving its
-      tvdb id and eagerly creating a season's episode rows from TMDB in the
-      same call.
-   2. `POST /watch-events` — bulk season marking over the derived
-      `manual:{titleKey}:S2E5` id in [data-model.md](data-model.md).
+1. **Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow
+   already running in `vyoh.gg` rather than inventing a second one. Settled
+   2026-09-17; the design, the build order and what it is waiting on are in
+   [authentication.md](authentication.md). Start there rather than here.
+
+   Nothing authenticates a request today, so this gates the netcup deploy
+   rather than local work — the API binds loopback. Three of its five steps
+   need no GitHub credentials and are not blocked on the owner.
 2. **`apps/web`** — Vite + React SPA, shaped by the settled design: a poster
    wall filtered by state, a title page built around the episode grid, and
    adding a title by hand as a screen of its own.
@@ -45,9 +41,9 @@ exists.
 - **Tautulli webhook payload shape is unverified.** Which external-id parameters
   actually populate per media type needs one empirical check against a throwaway
   endpoint before any parsing code is trusted.
-- **`DATABASE_URL` in `.env` names port 5432, but Compose publishes 55432.**
-  Migrations only run with the port overridden. Exactly the mismatch
-  `.env.example` warns about.
+- **Nothing authenticates a write.** `POST /titles` is reachable by anyone who
+  can reach the port. The API binds loopback, so this blocks the netcup deploy
+  rather than local work. See [authentication.md](authentication.md).
 
 ## Decisions still open
 
@@ -57,6 +53,34 @@ exists.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-17** — `POST /titles` landed: a title the disk has never held can be
+  stored, with its whole episode grid. One TMDB call carries the details and,
+  via `append_to_response`, the tvdb id a show is keyed on; a show TMDB cannot
+  give one for is refused with 422 rather than keyed on something else, since a
+  second identity for one title is worse than no row. Episodes are created
+  eagerly, one call per season, so a gap is a fact rather than an inference.
+
+  Re-posting a title refreshes what TMDB says about it and answers 200 instead
+  of 201, which makes the add screen safe to retry. Metadata is refreshed but
+  identity is not: an id already on the row survives a TMDB response that omits
+  it, because the Plex resolution pass found ids TMDB alone does not always
+  return. Whether the row is new comes from `xmax` in the same statement rather
+  than a prior select, so two concurrent posts cannot both claim to have created
+  it, and the title and its episodes are written in one transaction.
+
+  `tmdbId` is validated as digits before it reaches a URL: `..` in that position
+  resolves against the base and would aim the owner's API key at an endpoint of
+  the caller's choosing. Uncaught errors no longer answer with their own text
+  either, which was echoing constraint names to the client.
+
+  Verified end to end against the live database: search, create, re-create, five
+  episode rows with names, air dates and runtimes, an upsert with every incoming
+  id null leaving all three intact, the traversal refused, then the rows removed
+  and the database back to 11 titles and 79 episodes.
+
+- **2026-09-17** — `DATABASE_URL` and Compose agree again; the port mismatch
+  that made every migration need an override is gone.
 
 - **2026-09-17** — Titles can be marked as not the owner's: `intent.excluded_at`
   is a nullable timestamp, and a non-null value hides the title from the default

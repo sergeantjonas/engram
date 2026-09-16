@@ -4,11 +4,14 @@
 
 ## Now
 
-**Manual write path.** `POST /titles` and bulk season marking, over the derived
-`manual:{titleKey}:S2E5` id in [data-model.md](data-model.md). This is a core
-write path rather than a convenience: the record is what the project keeps, and
-Plex reaches back only to 2025-10-24. `TMDB_API_KEY` is set as of 2026-09-17, so
-the search that finds a title not on disk is available.
+**Manual write path.** A core write path rather than a convenience: the record
+is what the project keeps, and Plex reaches back only to 2025-10-24. Finding a
+title is done; what remains is
+
+1. `POST /titles` — create a title from a chosen candidate, resolving its tvdb
+   id and its episode rows from TMDB in the same call.
+2. `POST /watch-events` — bulk season marking over the derived
+   `manual:{titleKey}:S2E5` id in [data-model.md](data-model.md).
 
 ## Next
 
@@ -42,6 +45,21 @@ the search that finds a title not on disk is available.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-17** — Title search landed: `GET /search?q=` over TMDB's
+  `/search/multi`, returning kind, tmdb id, name, year, poster path and
+  overview. Verified against live TMDB — 20 results for "the witcher", both
+  kinds, posters and years intact. The key is a v3 one and authenticates by
+  query parameter; the same key as a bearer token returns 401, so nothing about
+  a request may reach a log line, and the client's error type carries the
+  upstream status and nothing else. `/search/multi` also returns people, which
+  are dropped. The route answers 503 rather than going unregistered when no key
+  is configured, so a missing capability does not look like a wrong path.
+
+  Routes now assemble through `buildApp()` in `apps/api/src/app.ts` and
+  `server.ts` is the entry that owns the process. That is what makes a route
+  testable: the first HTTP tests in the repo drive `app.inject()` against a
+  stub, with no port, network or database.
 
 - **2026-09-17** — UI direction settled. A poster wall filtered by state is the
   home, a title page built around an episode grid is where the work happens, and

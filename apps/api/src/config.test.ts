@@ -10,7 +10,7 @@ describe('loadConfig', () => {
   it('accepts a complete environment', () => {
     const config = loadConfig({ ...base });
     expect(config.DATABASE_URL).toBe(base.DATABASE_URL);
-    expect(config.PORT).toBe(3000);
+    expect(config.PORT).toBe(2012);
   });
 
   // This API is publicly reachable so the media stack can post webhooks to it;

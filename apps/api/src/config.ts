@@ -9,7 +9,10 @@ import { z } from 'zod';
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
   WEBHOOK_SECRET: z.string().min(16, 'WEBHOOK_SECRET must be at least 16 characters'),
-  PORT: z.coerce.number().int().positive().default(3000),
+  // Away from 3000, which every other Node project on a box also wants, and
+  // next to the ports `vyoh.gg` already claims so the two read as a group. It
+  // is baked into the OAuth app's callback URL, so moving it is not free.
+  PORT: z.coerce.number().int().positive().default(2012),
   // Loopback by default: this runs on a public VPS behind a TLS proxy, and
   // binding every interface would expose unauthenticated routes directly.
   HOST: z.string().default('127.0.0.1'),

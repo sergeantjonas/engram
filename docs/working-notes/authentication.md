@@ -96,20 +96,38 @@ every time it is read.
 
 ## Waiting on the owner
 
-None of this can be built until three things exist. They are owner actions, not
+None of this can be built until two things exist. They are owner actions, not
 code:
 
-1. **A GitHub OAuth App**, its client id and secret in `.env` as
+1. **A GitHub OAuth App** for development, its client id and secret in `.env` as
    `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`.
 2. **The owner's numeric GitHub user id** for `OWNER_GITHUB_USER_ID`. It comes
    from `https://api.github.com/users/{login}`, unauthenticated.
-3. **`WEB_ORIGIN`** — the Vite dev server's origin. `apps/web` does not exist
-   yet, so this is a choice rather than a lookup.
 
-Open, and worth settling before registering anything: an OAuth App accepts
-**exactly one** callback URL, so development and the netcup deploy need either
-two apps or one app that only ever serves production. `vyoh.gg` has already
-faced this; whatever it does is the answer here.
+## Ports and the callback URL
+
+Settled 2026-09-17. The API is on **2012** and the SPA will be on **2011**, next
+to the 2009 and 2010 `vyoh.gg` already claims so the four read as a group, and
+clear of 3000, which every other Node project on a box also wants.
+
+The callback URL is the API's, not the SPA's — `/auth/github/callback` is an API
+route, and the authorize request deliberately sends no `redirect_uri` so where
+the browser lands cannot be steered from a crafted link. That makes the
+registered URL the only one that works, and the port part of a registration
+rather than a flag:
+
+```
+http://localhost:2012/auth/github/callback
+```
+
+`WEB_ORIGIN` is `http://localhost:2011` in development. It is the post-login
+redirect target and the CORS allowlist, and has nothing to do with the callback.
+
+An OAuth App accepts exactly one callback URL, so development and the netcup
+deploy get **separate apps**, which is what `vyoh.gg` does. Not for convenience:
+one app's client secret is shared across every redirect URI on it, so reusing
+the development registration in production would make a leak from a laptop a
+production credential.
 
 ## Build order
 

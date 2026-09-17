@@ -94,3 +94,15 @@ export async function resolveOwner(
 
   return true;
 }
+
+/**
+ * Ends a session, if the cookie names one.
+ *
+ * Idempotent: logging out twice, or with a cookie whose row was already reaped,
+ * is a success. There is nothing for the caller to do differently, and saying
+ * "no such session" would only tell a stranger that their guess was wrong.
+ */
+export async function revokeSession(db: Database, token: string | undefined): Promise<void> {
+  if (!token) return;
+  await db.delete(sessionTable).where(eq(sessionTable.tokenHash, hashSessionToken(token)));
+}

@@ -4,49 +4,24 @@
 
 ## Now
 
-**Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow
-already running in `vyoh.gg` rather than inventing a second one. Settled
-2026-09-17; the design, the build order and what it is waiting on are in
-[authentication.md](authentication.md). Start there rather than here.
-
-It moved ahead of `apps/web` because the API had two write routes and no door on
-either of them. It now has one.
-
-Steps 1 and 2 landed 2026-09-17: the `session` table and its migration, the
-configuration the flow needs validated at boot, and the pure half of the flow —
-state signing with a timing-safe verify, session token minting and hashing, the
-sliding expiry rules, `next` clamped against an open redirect, and cookie
-serialisation. Nothing is waiting on the owner any more.
-
-Step 3 landed the same day: both routes, the two calls to GitHub behind a
-client shaped like the TMDB one, and the session write. The login redirect was
-driven against the live authorize endpoint, which answered rather than erroring,
-so the registration and the configured client id agree.
-
-Step 4 landed the same day and closes the blocker this arc existed for: every
-route now needs an owner session except `/health`, `/ready` and the two login
-routes, and CORS names one origin with credentials. Verified against the live
-database — a request with no cookie is refused, one with the owner's cookie
-reaches the route, the sliding window moves once and not twice, and an expired
-row is reaped on the read that found it.
-
-Step 5 is what remains: `GET /auth/me` so the SPA can tell whether it is signed
-in, and `POST /auth/logout`.
+**`apps/web`** — Vite + React SPA on port 2011, shaped by the settled design: a
+poster wall filtered by state, a title page built around the episode grid, and
+adding a title by hand as a screen of its own. Every API it needs now exists,
+including `GET /auth/me` to decide what to render before anything else.
 
 ## Next
 
-1. **`apps/web`** — Vite + React SPA, shaped by the settled design: a poster
-   wall filtered by state, a title page built around the episode grid, and
-   adding a title by hand as a screen of its own. Every API it needs now exists.
-2. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
+1. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing
    it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land
    before webhooks do: the backfill is owner-only by property of the Plex
    endpoint, and Tautulli fires for every user on the server.
-3. **Webhook receivers** — Tautulli and Sonarr, per
+2. **Webhook receivers** — Tautulli and Sonarr, per
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs
-   either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`.
+   either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`, and
+   must be added to the guard's open-path list when they land — they have no
+   cookie jar, so the secret is their authentication rather than a session.
 
 ## Blocked
 
@@ -65,6 +40,28 @@ in, and `POST /auth/logout`.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-18** — Owner-only authentication shipped, all five steps. GitHub
+  OAuth ported from `vyoh.gg` rather than reinvented: signed state with a
+  timing-safe verify and a nonce cookie pinning the callback to the browser that
+  started it, an owner check on the numeric id, and an opaque session token
+  whose SHA-256 is all the database holds. The guard is global with an opt-out
+  list, which is the opposite of how `vyoh.gg` applies the same guard and
+  deliberately so — this API is private by design, so a forgotten entry locks a
+  route rather than opening one.
+
+  Three bugs the port carried or the shape invited, each caught before it
+  shipped: `verifyState` compared UTF-16 string length against a `timingSafeEqual`
+  that measures bytes, so one multibyte character in a crafted `state` threw
+  instead of returning null; `next` was clamped when the state was minted but
+  used raw when the redirect was built; and the nonce cookie was collected into
+  an array rather than set on the reply, so a failed session write answered 500
+  carrying no `Set-Cookie` and left the nonce live. The first two exist in
+  `vyoh.gg` too and were reported there.
+
+  Verified against the live database end to end: signed out, signed in, a
+  guarded route reached, logout clearing the cookie and the row, the same cookie
+  then shut out, and logging out again still answering 204.
 
 - **2026-09-17** — `POST /watch-events` landed, which closes the manual write
   path: history older than this Plex server can now be entered at all. One

@@ -1,7 +1,7 @@
 # Authentication
 
-**Status:** In progress — steps 1 to 4 of the build order landed 2026-09-17.
-Read before writing any auth code.
+**Status:** Shipped — the whole build order landed 2026-09-17/18. Read before
+changing any auth code; the reasoning here is why it is shaped the way it is.
 
 Engram has exactly one human user. The question is not which of several people
 is calling, it is whether the caller is the owner at all, and every answer other
@@ -153,7 +153,7 @@ forgetting an annotation leaks one page.
 
 Here it is inverted. This API is private by design and has no public
 projection, so the list is of exceptions to being closed — `/health`, `/ready`
-and the two login routes. Forgetting an entry locks a route rather than opening
+and the four auth routes. Forgetting an entry locks a route rather than opening
 it, which is the failure mode worth having. An unmatched path answers 401 rather
 than 404 for the same reason: a stranger learns nothing about what exists.
 
@@ -214,7 +214,19 @@ Each step lands on its own.
 4. ~~The guard, applied globally with `/health`, `/ready` and the auth routes
    exempted, plus CORS with an origin allowlist and credentials.~~ Landed
    2026-09-17 as `auth/guard.ts`, with `resolveOwner` in `auth/store.ts`.
-5. `GET /auth/me` so the SPA can tell whether it is signed in, and
-   `POST /auth/logout`.
+5. ~~`GET /auth/me` so the SPA can tell whether it is signed in, and
+   `POST /auth/logout`.~~ Landed 2026-09-18. Both sit outside the gate and
+   resolve the session themselves: `/auth/me` because answering "not signed in"
+   is its ordinary case rather than an error, and `/auth/logout` because a
+   cookie whose row has already been reaped must still log out cleanly instead
+   of meeting a locked door.
 
-Step 5 is next, and is the last of it.
+The arc is done. What is left is `apps/web`, which is what all of it was for.
+
+## What the unit tests do not cover
+
+The session stub answers every lookup with one row and deletes unconditionally,
+so no test here can tell a `where` clause from a missing one. That half is
+checked against the live database instead: hash matching, the sliding window
+moving once and not twice, reaping on read, and a logout that ends the session
+it was handed and leaves a second one open.

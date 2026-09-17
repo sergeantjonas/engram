@@ -18,7 +18,7 @@ import {
   signState,
   verifyState,
 } from '../auth/state.js';
-import { createSession } from '../auth/store.js';
+import { createSession, resolveOwner, revokeSession } from '../auth/store.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
 import { GITHUB_ISSUER, type GithubClient, type GithubIdentity } from '../github/client.js';
@@ -79,6 +79,40 @@ export function registerAuthRoutes(
     return reply
       .header('set-cookie', serializeCookie(STATE_COOKIE, nonce, cookie(STATE_TTL_MS)))
       .redirect(github.authorizeUrl(state), 302);
+  });
+
+  /**
+   * Who is asking. Answers 200 for everyone: being signed out is this route's
+   * ordinary case, not an error, and a 401 would make the SPA treat its own
+   * first question as a failed request.
+   *
+   * `no-store` because the answer differs per viewer. Nothing shared should
+   * ever hold a copy of it, however unlikely a cache is in front of a loopback
+   * API today.
+   */
+  app.get('/auth/me', async (request, reply) => {
+    const token = parseCookieHeader(request.headers.cookie)[SESSION_COOKIE];
+    const owner = await resolveOwner(db, token, config.OWNER_GITHUB_USER_ID, new Date());
+
+    return reply.header('cache-control', 'no-store').send({ isOwner: owner });
+  });
+
+  /**
+   * Ends the session and clears the cookie, whether or not either existed.
+   *
+   * The cookie is cleared even when no row was deleted: a cookie naming a
+   * session that has already been reaped is exactly what the browser should be
+   * told to forget.
+   */
+  app.post('/auth/logout', async (request, reply) => {
+    const token = parseCookieHeader(request.headers.cookie)[SESSION_COOKIE];
+    await revokeSession(db, token);
+
+    return reply
+      .header('set-cookie', expireCookie(SESSION_COOKIE, cookie(0)))
+      .header('cache-control', 'no-store')
+      .code(204)
+      .send();
   });
 
   app.get('/auth/github/callback', async (request, reply) => {

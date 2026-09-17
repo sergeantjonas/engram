@@ -8,14 +8,24 @@ import { resolveOwner } from './store.js';
  * The only paths reachable without a session.
  *
  * `/health` and `/ready` because a reverse proxy has to reach them to decide
- * whether to route here at all, and the login pair because they are how a
- * session comes to exist.
+ * whether to route here at all, and the auth routes because they are how a
+ * session comes to exist, is asked about, and ends. Each of those resolves the
+ * session itself; being outside the gate is not the same as being unchecked.
  *
  * The webhook receivers will join this list when they land, and are not an
  * exception to being authenticated: Tautulli and Sonarr have no browser and no
  * cookie jar, so they present `WEBHOOK_SECRET` instead of a session.
  */
-const OPEN_PATHS = new Set(['/health', '/ready', '/auth/github/login', '/auth/github/callback']);
+const OPEN_PATHS = new Set([
+  '/health',
+  '/ready',
+  '/auth/github/login',
+  '/auth/github/callback',
+  // Both answer for a caller who has no session, which is why they are here
+  // rather than behind the gate. Their handlers say why.
+  '/auth/me',
+  '/auth/logout',
+]);
 
 /** What the SPA sends; the API has no other kind of caller with a browser. */
 const ALLOWED_METHODS = 'GET, POST, OPTIONS';

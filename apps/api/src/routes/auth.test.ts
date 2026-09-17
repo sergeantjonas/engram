@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import { SESSION_COOKIE, STATE_COOKIE } from '../auth/cookies.js';
+import { type StubbedSession, sessionDb, signedIn } from '../auth/session.fixture.js';
 import { STATE_TTL_MS, signState } from '../auth/state.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
@@ -91,6 +92,12 @@ const handshake = async (
     { code: 'a-code', state: stateOf(login), ...query },
     nonceOf(login),
   );
+};
+
+const signedInAs = (session: StubbedSession | null) => {
+  const stub = sessionDb(session);
+  app = buildApp({ config, db: stub.db, tmdb: null, github: github() });
+  return { app, stub };
 };
 
 afterEach(async () => {
@@ -285,5 +292,82 @@ describe('GET /auth/github/callback', () => {
     expect(response.statusCode).toBe(500);
     expect(cookieNamed(response, STATE_COOKIE)).toContain('Max-Age=0');
     expect(cookieNamed(response, SESSION_COOKIE)).toBeUndefined();
+  });
+});
+
+describe('GET /auth/me', () => {
+  it('answers 200 to a caller with no session', async () => {
+    const response = await signedInAs(null).app.inject({ method: 'GET', url: '/auth/me' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ isOwner: false });
+  });
+
+  it('says so when the owner is signed in', async () => {
+    const response = await signedInAs({}).app.inject({
+      method: 'GET',
+      url: '/auth/me',
+      headers: signedIn,
+    });
+
+    expect(response.json()).toEqual({ isOwner: true });
+  });
+
+  it('is not the owner on a session issued to somebody else', async () => {
+    const response = await signedInAs({ githubUserId: '999' }).app.inject({
+      method: 'GET',
+      url: '/auth/me',
+      headers: signedIn,
+    });
+
+    expect(response.json()).toEqual({ isOwner: false });
+  });
+
+  // The answer differs per viewer, so nothing shared may hold a copy.
+  it('forbids anything caching the answer', async () => {
+    const response = await signedInAs(null).app.inject({ method: 'GET', url: '/auth/me' });
+
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+});
+
+describe('POST /auth/logout', () => {
+  it('ends the session and tells the browser to forget the cookie', async () => {
+    const { app: server, stub } = signedInAs({});
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/auth/logout',
+      headers: signedIn,
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(stub.deleted).toBe(1);
+    expect(cookieNamed(response, SESSION_COOKIE)).toContain('Max-Age=0');
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+
+  // Logging out twice, or with a cookie whose row was already reaped, is a
+  // success: there is nothing the caller would do differently.
+  it('succeeds with a cookie that names nothing', async () => {
+    const { app: server } = signedInAs(null);
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/auth/logout',
+      headers: signedIn,
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(cookieNamed(response, SESSION_COOKIE)).toContain('Max-Age=0');
+  });
+
+  it('succeeds with no cookie at all, and deletes nothing', async () => {
+    const { app: server, stub } = signedInAs(null);
+
+    const response = await server.inject({ method: 'POST', url: '/auth/logout' });
+
+    expect(response.statusCode).toBe(204);
+    expect(stub.deleted).toBe(0);
   });
 });

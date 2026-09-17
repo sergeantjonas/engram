@@ -27,8 +27,11 @@ export interface SessionDb {
  * A database that knows one session and nothing else.
  *
  * It answers every lookup with the same row rather than matching on the hash,
- * which is drizzle's job and is covered against the real table instead. Pass
- * null for a request whose cookie names nothing.
+ * and deletes unconditionally. Both predicates are drizzle's job and are
+ * covered against the real table instead — a `resolveOwner` that selected on
+ * the wrong column, or a `revokeSession` that dropped its `where` and ended
+ * every session at once, would leave every test here green. Pass null for a
+ * request whose cookie names nothing.
  */
 export function sessionDb(session: StubbedSession | null = {}, now = new Date()): SessionDb {
   const row =

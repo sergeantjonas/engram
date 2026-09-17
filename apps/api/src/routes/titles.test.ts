@@ -11,6 +11,11 @@ const config: Config = {
   PORT: 0,
   HOST: '127.0.0.1',
   LOG_LEVEL: 'fatal',
+  GITHUB_OAUTH_CLIENT_ID: 'Ov23liexample',
+  GITHUB_OAUTH_CLIENT_SECRET: 'a-client-secret',
+  OWNER_GITHUB_USER_ID: '10808486',
+  OAUTH_STATE_SECRET: 'b'.repeat(32),
+  WEB_ORIGIN: 'http://localhost:2011',
 };
 
 const witcher: TmdbTitleDetails = {

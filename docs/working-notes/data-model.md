@@ -53,6 +53,13 @@ watch_event       append-only facts
                   event cannot name one title and an episode of another
                   CHECK ((watched_precision = 'unknown') = (watched_at IS NULL))
 
+session           a signed-in browser, which is only ever the owner's
+                  (id, token_hash, github_user_id, created_at, expires_at,
+                   absolute_expires_at)
+                  only the SHA-256 of the cookie's token is stored, so a leaked
+                  backup yields nothing a caller can present
+                  see authentication.md for the flow that writes these
+
 watch_state       SQL view over watch_event, not a table: it cannot drift
                   from its source and needs no rebuild step
                   (title_id, episode_id, first_watched_at, last_watched_at,

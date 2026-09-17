@@ -1,6 +1,7 @@
 # Authentication
 
-**Status:** Design — agreed 2026-09-17. Read before writing any auth code.
+**Status:** In progress — step 1 of the build order landed 2026-09-17. Read
+before writing any auth code.
 
 Engram has exactly one human user. The question is not which of several people
 is calling, it is whether the caller is the owner at all, and every answer other
@@ -96,13 +97,12 @@ every time it is read.
 
 ## Waiting on the owner
 
-None of this can be built until two things exist. They are owner actions, not
-code:
+Nothing, as of 2026-09-17. The development OAuth App is registered with the
+callback below, and `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET` and
+`OWNER_GITHUB_USER_ID` are in `.env`. The whole arc is buildable.
 
-1. **A GitHub OAuth App** for development, its client id and secret in `.env` as
-   `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`.
-2. **The owner's numeric GitHub user id** for `OWNER_GITHUB_USER_ID`. It comes
-   from `https://api.github.com/users/{login}`, unauthenticated.
+A second OAuth App is still owed for the netcup deploy, but nothing here is
+blocked on it.
 
 ## Ports and the callback URL
 
@@ -133,8 +133,11 @@ production credential.
 
 Each step lands on its own.
 
-1. `session` table and its migration, plus the new configuration, so a missing
-   variable fails at boot.
+1. ~~`session` table and its migration, plus the new configuration, so a missing
+   variable fails at boot.~~ Landed 2026-09-17. The token itself is never
+   stored — only its SHA-256 — and `WEB_ORIGIN` is validated as a bare http or
+   https origin, since a URL parser will hand `ftp://x` a real origin and an
+   allowlist holding one is an entry no browser can ever match.
 2. State signing and cookie helpers. Pure functions over `crypto` — nonce
    minting, HMAC sign and timing-safe verify, expiry, `next` validation — and
    the only part of this arc that is fully testable without GitHub.
@@ -145,5 +148,4 @@ Each step lands on its own.
 5. `GET /auth/me` so the SPA can tell whether it is signed in, and
    `POST /auth/logout`.
 
-Steps 1, 2 and 4 need no GitHub credentials, so they are not blocked by the
-list above. Step 3 is.
+Step 2 is next.

@@ -10,11 +10,13 @@ already running in `vyoh.gg` rather than inventing a second one. Settled
 [authentication.md](authentication.md). Start there rather than here.
 
 Nothing authenticates a request today, so this gates the netcup deploy rather
-than local work — the API binds loopback. Three of its five steps need no GitHub
-credentials and are not blocked on the owner.
+than local work — the API binds loopback. It moves ahead of `apps/web` because
+the API has two write routes and no door on either of them.
 
-It moves ahead of `apps/web` because the API now has two write routes and no
-door on either of them.
+Step 1 landed 2026-09-17: the `session` table, its migration, and the
+configuration the flow needs, all validated at boot. Nothing is waiting on the
+owner any more — the OAuth App is registered and its credentials are in `.env`.
+Step 2, the state signing and cookie helpers, is next.
 
 ## Next
 

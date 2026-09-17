@@ -10,7 +10,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { and, eq, sql } from 'drizzle-orm';
-import { loadConfig } from '../config.js';
+import { loadDatabaseUrl } from '../config.js';
 import { createDatabase } from '../db/client.js';
 import { episodes, titles, watchEvents } from '../db/schema.js';
 import { type PlexHistoryRow, planImport, type ResolvedTitle } from './plex-dump.js';
@@ -52,8 +52,7 @@ console.log(`report: ${reportPath} (${report.resolved.length} titles)\n`);
 
 const plan = planImport(dump.rows, report.resolved);
 
-const config = loadConfig();
-const { db, sql: connection } = createDatabase(config.DATABASE_URL);
+const { db, sql: connection } = createDatabase(loadDatabaseUrl());
 
 const inserted = await db.transaction(async (tx) => {
   const titleIds = new Map<string, string>();

@@ -18,17 +18,73 @@ const schema = z.object({
   HOST: z.string().default('127.0.0.1'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   TMDB_API_KEY: z.string().optional(),
+
+  GITHUB_OAUTH_CLIENT_ID: z.string().min(1),
+  GITHUB_OAUTH_CLIENT_SECRET: z.string().min(1),
+
+  /**
+   * The owner's numeric GitHub id, never the login. A login can be renamed and
+   * the freed name claimed by someone else, who would then inherit the watch
+   * history; the id is permanent.
+   */
+  OWNER_GITHUB_USER_ID: z
+    .string()
+    .regex(/^[1-9]\d*$/, 'OWNER_GITHUB_USER_ID must be the numeric id, not the login'),
+
+  /**
+   * Signs the OAuth `state` and nothing else. The floor is what
+   * `openssl rand -hex 32` produces, so a passphrase short enough to guess
+   * cannot be substituted for it.
+   */
+  OAUTH_STATE_SECRET: z.string().min(64, 'OAUTH_STATE_SECRET must be at least 64 characters'),
+
+  /**
+   * The SPA's origin: the CORS allowlist and the absolute target of the
+   * post-login redirect. A bare origin because `next` is appended to it, and a
+   * trailing slash would build `//path`, which a browser reads as a host.
+   */
+  WEB_ORIGIN: z.url('WEB_ORIGIN must be an absolute URL').refine(
+    (value) => {
+      const url = URL.parse(value);
+      // The scheme is checked too: `ftp://x` has a real origin as far as the
+      // URL parser is concerned, and would sit in the CORS allowlist as a
+      // value no browser can ever send.
+      if (!url || (url.protocol !== 'http:' && url.protocol !== 'https:')) return false;
+      return url.origin === value;
+    },
+    {
+      message:
+        'WEB_ORIGIN must be exactly the origin a browser sends: http or https, ' +
+        'lowercase, no default port, credentials, path, query or fragment',
+    },
+  ),
+
+  /** Unset in development, where the API and the SPA are both on localhost. */
+  SESSION_COOKIE_DOMAIN: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof schema>;
 
+function orThrow<T>(result: z.ZodSafeParseResult<T>): T {
+  if (result.success) return result.data;
+  // The issues only, never the values: half of these variables are secrets.
+  const issues = result.error.issues
+    .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
+    .join('\n');
+  throw new Error(`Invalid configuration:\n${issues}`);
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const parsed = schema.safeParse(env);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
-      .join('\n');
-    throw new Error(`Invalid configuration:\n${issues}`);
-  }
-  return parsed.data;
+  return orThrow(schema.safeParse(env));
+}
+
+/**
+ * Just the database, for the entry points that run once and exit.
+ *
+ * `db:migrate` and `import:plex` read nothing else, and making them parse the
+ * whole environment would mean a fresh deploy had to register an OAuth app
+ * before it could create its tables.
+ */
+export function loadDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  return orThrow(schema.pick({ DATABASE_URL: true }).safeParse(env)).DATABASE_URL;
 }

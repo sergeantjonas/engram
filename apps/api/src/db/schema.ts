@@ -228,6 +228,43 @@ export const watchEvents = pgTable(
 );
 
 /**
+ * A signed-in browser, which for this project is the owner's and nobody else's.
+ *
+ * Only the SHA-256 of the cookie's token is stored. A leaked backup then yields
+ * nothing a caller can present, which is not true of a JWT signed with a key
+ * that sits in the same environment as the dump.
+ */
+export const sessions = pgTable('session', {
+  id: uuid('id').primaryKey().defaultRandom(),
+
+  /** SHA-256 of the opaque token in the cookie, hex. The token itself is never stored. */
+  tokenHash: text('token_hash').notNull().unique(),
+
+  /**
+   * Who the session was issued to, re-checked against `OWNER_GITHUB_USER_ID`
+   * every time it is read rather than only when it was issued. Changing that
+   * variable then ends every session at once instead of leaving cookies valid
+   * until they expire.
+   */
+  githubUserId: text('github_user_id').notNull(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+  /**
+   * Moved forward as the session is used, but only once the drift passes a
+   * threshold: extending it on every request would make reading a session a
+   * write, and this table is read on all of them.
+   */
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+
+  /**
+   * The cap the sliding window cannot push past, so a session in continuous use
+   * still ends rather than living forever.
+   */
+  absoluteExpiresAt: timestamp('absolute_expires_at', { withTimezone: true }).notNull(),
+});
+
+/**
  * Derived view of what has been seen.
  *
  * A view rather than a table: it cannot drift from the events it summarises,

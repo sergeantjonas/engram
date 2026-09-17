@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
+import type { GithubClient } from '../github/client.js';
 import { type TmdbClient, TmdbError, type TmdbTitleDetails } from '../tmdb/client.js';
 
 const config: Config = {
@@ -28,6 +29,12 @@ const witcher: TmdbTitleDetails = {
   seasons: [],
 };
 
+/** Never exercised here; the app requires one to build. */
+const github: GithubClient = {
+  authorizeUrl: () => 'https://github.test/authorize',
+  exchangeCode: async () => ({ ok: false, reason: 'unused' }),
+};
+
 const stub = (over: Partial<TmdbClient> = {}): TmdbClient => ({
   search: async () => [],
   details: async () => witcher,
@@ -43,7 +50,7 @@ let app: FastifyInstance | undefined;
  * covered by `planTitle`/`planEpisodes` and verified against a live database.
  */
 const start = (tmdb: TmdbClient | null): FastifyInstance => {
-  app = buildApp({ config, db: {} as Database, tmdb });
+  app = buildApp({ config, db: {} as Database, tmdb, github });
   return app;
 };
 

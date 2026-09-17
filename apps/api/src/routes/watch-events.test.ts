@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
+import type { GithubClient } from '../github/client.js';
 import { toScope } from './watch-events.js';
 
 const config: Config = {
@@ -20,6 +21,12 @@ const config: Config = {
 
 const titleId = '5e2f6f0c-6a5e-4f3b-9a4f-2b1d1c0e9a77';
 
+/** Never exercised here; the app requires one to build. */
+const github: GithubClient = {
+  authorizeUrl: () => 'https://github.test/authorize',
+  exchangeCode: async () => ({ ok: false, reason: 'unused' }),
+};
+
 let app: FastifyInstance | undefined;
 
 /**
@@ -29,7 +36,7 @@ let app: FastifyInstance | undefined;
  * the event id carries only shows up against a live database.
  */
 const start = (): FastifyInstance => {
-  app = buildApp({ config, db: {} as Database, tmdb: null });
+  app = buildApp({ config, db: {} as Database, tmdb: null, github });
   return app;
 };
 

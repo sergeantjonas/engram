@@ -1,6 +1,6 @@
 # Authentication
 
-**Status:** In progress — steps 1 and 2 of the build order landed 2026-09-17.
+**Status:** In progress — steps 1 to 3 of the build order landed 2026-09-17.
 Read before writing any auth code.
 
 Engram has exactly one human user. The question is not which of several people
@@ -129,6 +129,22 @@ one app's client secret is shared across every redirect URI on it, so reusing
 the development registration in production would make a leak from a laptop a
 production credential.
 
+## `next` is clamped at both ends
+
+`safeNextPath` runs when the state is minted and again when the redirect is
+built. The signature in between proves the value arrived unmodified, which is
+not the same as proving it was ever safe.
+
+The case the second call catches is `@evil.example`: appended to an origin it
+makes that origin the userinfo of a URL whose host is somewhere else entirely.
+`//evil.example` is the one that looks dangerous and is not — appended to an
+absolute origin the host stays put and the path merely starts with two slashes.
+A test asserting `location.startsWith(WEB_ORIGIN)` passes for both and is worth
+nothing; the assertion has to be on the whole value.
+
+Belt and braces on purpose: the mint-side call is the real defence, and the
+use-side call is what survives someone later adding a second way to mint one.
+
 ## Cookies are hand-rolled
 
 Fastify has neither half of cookie handling natively, so the choice was a plugin
@@ -158,11 +174,15 @@ Each step lands on its own.
    rather than rewritten. Session lifetimes came with it: 30 days sliding, a 90
    day ceiling, and no write until the window has drifted a day, so reading a
    session is not a write on every request.
-3. `GET /auth/github/login` and `GET /auth/github/callback`: the redirect, the
-   state check, the code exchange, the owner check, the session.
+3. ~~`GET /auth/github/login` and `GET /auth/github/callback`: the redirect, the
+   state check, the code exchange, the owner check, the session.~~ Landed
+   2026-09-17, with `github/client.ts` holding the two calls to GitHub and
+   `auth/store.ts` the one write. Verified against the live authorize endpoint:
+   GitHub answers the minted URL rather than an error, so the registration and
+   the client id agree.
 4. The guard, applied globally with `/health`, `/ready` and the auth routes
    exempted, plus CORS with an origin allowlist and credentials.
 5. `GET /auth/me` so the SPA can tell whether it is signed in, and
    `POST /auth/logout`.
 
-Step 3 is next, and is the one part of the arc that needs GitHub.
+Step 4 is next: the guard, which is what makes any of this bite.

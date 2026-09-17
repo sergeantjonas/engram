@@ -19,8 +19,15 @@ state signing with a timing-safe verify, session token minting and hashing, the
 sliding expiry rules, `next` clamped against an open redirect, and cookie
 serialisation. Nothing is waiting on the owner any more.
 
-Step 3 is next: `GET /auth/github/login` and `GET /auth/github/callback`. It is
-the one part of the arc that needs GitHub, and the first to touch the network.
+Step 3 landed the same day: both routes, the two calls to GitHub behind a
+client shaped like the TMDB one, and the session write. The login redirect was
+driven against the live authorize endpoint, which answered rather than erroring,
+so the registration and the configured client id agree.
+
+Step 4 is next — the guard, applied globally with `/health`, `/ready` and the
+auth routes exempted, plus CORS with an origin allowlist and credentials. It is
+the step that makes the other three bite: until it lands, a session is issued
+and then read by nothing.
 
 ## Next
 

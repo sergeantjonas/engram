@@ -2,6 +2,8 @@ import { sql } from 'drizzle-orm';
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import type { Config } from './config.js';
 import type { Database } from './db/client.js';
+import type { GithubClient } from './github/client.js';
+import { registerAuthRoutes } from './routes/auth.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerTitleRoutes } from './routes/titles.js';
 import { registerWatchEventRoutes } from './routes/watch-events.js';
@@ -15,6 +17,8 @@ export interface AppDeps {
    * everything that does not need TMDB, and the routes that do say so.
    */
   tmdb: TmdbClient | null;
+  /** Never null: its credentials are required configuration, checked at boot. */
+  github: GithubClient;
 }
 
 /**
@@ -22,8 +26,26 @@ export interface AppDeps {
  * singletons, so a test can hand it a stub and drive routes through
  * `app.inject()` without a database, a network or an open port.
  */
-export function buildApp({ config, db, tmdb }: AppDeps): FastifyInstance {
-  const app = Fastify({ logger: { level: config.LOG_LEVEL } });
+export function buildApp({ config, db, tmdb, github }: AppDeps): FastifyInstance {
+  const app = Fastify({
+    logger: {
+      level: config.LOG_LEVEL,
+      serializers: {
+        /**
+         * The default serializer logs the whole URL at `info`, and the OAuth
+         * callback's query string carries a live authorisation code and the
+         * signed state. Neither is worth keeping, and a log is the one place a
+         * short-lived secret outlives its exchange.
+         */
+        req: (request) => ({
+          method: request.method,
+          url: request.url.startsWith('/auth/') ? (request.url.split('?')[0] ?? '') : request.url,
+          host: request.host,
+          remoteAddress: request.ip,
+        }),
+      },
+    },
+  });
 
   /**
    * Fastify's default handler puts the thrown error's message in the response,
@@ -57,6 +79,7 @@ export function buildApp({ config, db, tmdb }: AppDeps): FastifyInstance {
     }
   });
 
+  registerAuthRoutes(app, db, config, github);
   registerSearchRoutes(app, tmdb);
   registerTitleRoutes(app, db, tmdb);
   registerWatchEventRoutes(app, db);

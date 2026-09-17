@@ -9,9 +9,8 @@ already running in `vyoh.gg` rather than inventing a second one. Settled
 2026-09-17; the design, the build order and what it is waiting on are in
 [authentication.md](authentication.md). Start there rather than here.
 
-Nothing authenticates a request today, so this gates the netcup deploy rather
-than local work — the API binds loopback. It moves ahead of `apps/web` because
-the API has two write routes and no door on either of them.
+It moved ahead of `apps/web` because the API had two write routes and no door on
+either of them. It now has one.
 
 Steps 1 and 2 landed 2026-09-17: the `session` table and its migration, the
 configuration the flow needs validated at boot, and the pure half of the flow —
@@ -24,10 +23,15 @@ client shaped like the TMDB one, and the session write. The login redirect was
 driven against the live authorize endpoint, which answered rather than erroring,
 so the registration and the configured client id agree.
 
-Step 4 is next — the guard, applied globally with `/health`, `/ready` and the
-auth routes exempted, plus CORS with an origin allowlist and credentials. It is
-the step that makes the other three bite: until it lands, a session is issued
-and then read by nothing.
+Step 4 landed the same day and closes the blocker this arc existed for: every
+route now needs an owner session except `/health`, `/ready` and the two login
+routes, and CORS names one origin with credentials. Verified against the live
+database — a request with no cookie is refused, one with the owner's cookie
+reaches the route, the sliding window moves once and not twice, and an expired
+row is reaped on the read that found it.
+
+Step 5 is what remains: `GET /auth/me` so the SPA can tell whether it is signed
+in, and `POST /auth/logout`.
 
 ## Next
 
@@ -52,10 +56,6 @@ and then read by nothing.
 - **Tautulli webhook payload shape is unverified.** Which external-id parameters
   actually populate per media type needs one empirical check against a throwaway
   endpoint before any parsing code is trusted.
-- **Nothing authenticates a write.** `POST /titles` and `POST /watch-events` are
-  reachable by anyone who can reach the port. The API binds loopback, so this
-  blocks the netcup deploy rather than local work. See
-  [authentication.md](authentication.md).
 
 ## Decisions still open
 

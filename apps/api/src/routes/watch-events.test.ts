@@ -1,47 +1,32 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
+import { githubStub, testConfig } from '../app.fixture.js';
 import { buildApp } from '../app.js';
-import type { Config } from '../config.js';
-import type { Database } from '../db/client.js';
-import type { GithubClient } from '../github/client.js';
+import { sessionDb, signedIn } from '../auth/session.fixture.js';
 import { toScope } from './watch-events.js';
 
-const config: Config = {
-  DATABASE_URL: 'postgres://unused',
-  WEBHOOK_SECRET: 'x'.repeat(16),
-  PORT: 0,
-  HOST: '127.0.0.1',
-  LOG_LEVEL: 'fatal',
-  GITHUB_OAUTH_CLIENT_ID: 'Ov23liexample',
-  GITHUB_OAUTH_CLIENT_SECRET: 'a-client-secret',
-  OWNER_GITHUB_USER_ID: '10808486',
-  OAUTH_STATE_SECRET: 'b'.repeat(32),
-  WEB_ORIGIN: 'http://localhost:2011',
-};
-
 const titleId = '5e2f6f0c-6a5e-4f3b-9a4f-2b1d1c0e9a77';
-
-/** Never exercised here; the app requires one to build. */
-const github: GithubClient = {
-  authorizeUrl: () => 'https://github.test/authorize',
-  exchangeCode: async () => ({ ok: false, reason: 'unused' }),
-};
 
 let app: FastifyInstance | undefined;
 
 /**
- * Every case here is rejected before a query is issued, so the app gets a
- * database that would throw if it were reached. What the plan then becomes is
- * covered by `planWatchEvents`; the pairing of the stored date with the date
- * the event id carries only shows up against a live database.
+ * Every case here is rejected before a query is issued. The stubbed database
+ * answers the guard's session lookup and would throw on a write. What the plan
+ * then becomes is covered by `planWatchEvents`; the pairing of the stored date
+ * with the date the event id carries only shows up against a live database.
  */
 const start = (): FastifyInstance => {
-  app = buildApp({ config, db: {} as Database, tmdb: null, github });
+  app = buildApp({ config: testConfig, db: sessionDb().db, tmdb: null, github: githubStub });
   return app;
 };
 
 const post = (payload: unknown) =>
-  start().inject({ method: 'POST', url: '/watch-events', payload: payload as object });
+  start().inject({
+    method: 'POST',
+    url: '/watch-events',
+    payload: payload as object,
+    headers: signedIn,
+  });
 
 afterEach(async () => {
   await app?.close();

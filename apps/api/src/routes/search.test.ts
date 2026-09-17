@@ -1,17 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
+import { githubStub, testConfig } from '../app.fixture.js';
 import { buildApp } from '../app.js';
-import type { Config } from '../config.js';
-import type { Database } from '../db/client.js';
+import { sessionDb, signedIn } from '../auth/session.fixture.js';
 import { type TmdbCandidate, type TmdbClient, TmdbError } from '../tmdb/client.js';
-
-const config: Config = {
-  DATABASE_URL: 'postgres://unused',
-  WEBHOOK_SECRET: 'x'.repeat(16),
-  PORT: 0,
-  HOST: '127.0.0.1',
-  LOG_LEVEL: 'fatal',
-};
 
 const witcher: TmdbCandidate = {
   kind: 'show',
@@ -24,10 +16,11 @@ const witcher: TmdbCandidate = {
 
 let app: FastifyInstance | undefined;
 
-// `/search` never reaches Postgres, so the app gets a database it cannot use:
-// a stub that is touched would fail loudly rather than quietly querying.
+// `/search` never reaches Postgres itself. The stub answers the guard's
+// session lookup and nothing else, so a route that started querying would get
+// a session row rather than data.
 const start = (tmdb: TmdbClient | null): FastifyInstance => {
-  app = buildApp({ config, db: {} as Database, tmdb });
+  app = buildApp({ config: testConfig, db: sessionDb().db, tmdb, github: githubStub });
   return app;
 };
 
@@ -40,7 +33,11 @@ describe('GET /search', () => {
   it('returns the candidates TMDB found', async () => {
     const server = start({ search: async () => [witcher] });
 
-    const response = await server.inject({ method: 'GET', url: '/search?q=witcher' });
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=witcher',
+      headers: signedIn,
+    });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ results: [witcher] });
@@ -50,7 +47,11 @@ describe('GET /search', () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ ...witcher, tmdbId: String(i) }));
     const server = start({ search: async () => many });
 
-    const response = await server.inject({ method: 'GET', url: '/search?q=a&limit=3' });
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=a&limit=3',
+      headers: signedIn,
+    });
 
     expect(response.json().results).toHaveLength(3);
   });
@@ -58,7 +59,11 @@ describe('GET /search', () => {
   it('refuses a limit larger than the one page it fetches', async () => {
     const server = start({ search: async () => [witcher] });
 
-    const response = await server.inject({ method: 'GET', url: '/search?q=a&limit=50' });
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=a&limit=50',
+      headers: signedIn,
+    });
 
     expect(response.statusCode).toBe(400);
   });
@@ -66,7 +71,11 @@ describe('GET /search', () => {
   it('rejects a query that asks for nothing', async () => {
     const server = start({ search: async () => [witcher] });
 
-    const response = await server.inject({ method: 'GET', url: '/search?q=%20%20' });
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=%20%20',
+      headers: signedIn,
+    });
 
     expect(response.statusCode).toBe(400);
     expect(response.json().error).toBe('bad_request');
@@ -75,7 +84,11 @@ describe('GET /search', () => {
   it('says the capability is missing rather than 404 when no key is configured', async () => {
     const server = start(null);
 
-    const response = await server.inject({ method: 'GET', url: '/search?q=witcher' });
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=witcher',
+      headers: signedIn,
+    });
 
     expect(response.statusCode).toBe(503);
     expect(response.json().error).toBe('search_unavailable');
@@ -88,7 +101,11 @@ describe('GET /search', () => {
       },
     });
 
-    const response = await server.inject({ method: 'GET', url: '/search?q=witcher' });
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=witcher',
+      headers: signedIn,
+    });
 
     expect(response.statusCode).toBe(502);
     expect(response.json()).toEqual({ error: 'upstream_failed', message: 'TMDB did not answer' });

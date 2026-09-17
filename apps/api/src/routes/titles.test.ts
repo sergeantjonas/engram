@@ -1,23 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
+import { githubStub, testConfig } from '../app.fixture.js';
 import { buildApp } from '../app.js';
-import type { Config } from '../config.js';
-import type { Database } from '../db/client.js';
-import type { GithubClient } from '../github/client.js';
+import { sessionDb, signedIn } from '../auth/session.fixture.js';
 import { type TmdbClient, TmdbError, type TmdbTitleDetails } from '../tmdb/client.js';
-
-const config: Config = {
-  DATABASE_URL: 'postgres://unused',
-  WEBHOOK_SECRET: 'x'.repeat(16),
-  PORT: 0,
-  HOST: '127.0.0.1',
-  LOG_LEVEL: 'fatal',
-  GITHUB_OAUTH_CLIENT_ID: 'Ov23liexample',
-  GITHUB_OAUTH_CLIENT_SECRET: 'a-client-secret',
-  OWNER_GITHUB_USER_ID: '10808486',
-  OAUTH_STATE_SECRET: 'b'.repeat(32),
-  WEB_ORIGIN: 'http://localhost:2011',
-};
 
 const witcher: TmdbTitleDetails = {
   kind: 'show',
@@ -27,12 +13,6 @@ const witcher: TmdbTitleDetails = {
   posterPath: null,
   overview: null,
   seasons: [],
-};
-
-/** Never exercised here; the app requires one to build. */
-const github: GithubClient = {
-  authorizeUrl: () => 'https://github.test/authorize',
-  exchangeCode: async () => ({ ok: false, reason: 'unused' }),
 };
 
 const stub = (over: Partial<TmdbClient> = {}): TmdbClient => ({
@@ -45,17 +25,23 @@ const stub = (over: Partial<TmdbClient> = {}): TmdbClient => ({
 let app: FastifyInstance | undefined;
 
 /**
- * Every case here is rejected before a query is issued, so the app gets a
- * database that would throw if it were reached. The paths that do write are
- * covered by `planTitle`/`planEpisodes` and verified against a live database.
+ * Every case here is rejected before a query is issued. The stubbed database
+ * answers the guard's session lookup and would throw on a write, so a case that
+ * reached one would fail loudly. The paths that do write are covered by
+ * `planTitle`/`planEpisodes` and verified against a live database.
  */
 const start = (tmdb: TmdbClient | null): FastifyInstance => {
-  app = buildApp({ config, db: {} as Database, tmdb, github });
+  app = buildApp({ config: testConfig, db: sessionDb().db, tmdb, github: githubStub });
   return app;
 };
 
 const post = (server: FastifyInstance, payload: unknown) =>
-  server.inject({ method: 'POST', url: '/titles', payload: payload as object });
+  server.inject({
+    method: 'POST',
+    url: '/titles',
+    payload: payload as object,
+    headers: signedIn,
+  });
 
 afterEach(async () => {
   await app?.close();

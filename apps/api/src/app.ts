@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import { registerOwnerGuard } from './auth/guard.js';
 import type { Config } from './config.js';
 import type { Database } from './db/client.js';
 import type { GithubClient } from './github/client.js';
@@ -63,6 +64,9 @@ export function buildApp({ config, db, tmdb, github }: AppDeps): FastifyInstance
       .code(500)
       .send({ error: 'internal', message: 'the request could not be completed' });
   });
+
+  // Before every route, so nothing can be registered outside it by accident.
+  registerOwnerGuard(app, db, config);
 
   /** Liveness only — answers whether the process is up, nothing about Postgres. */
   app.get('/health', async () => ({ status: 'ok' }));

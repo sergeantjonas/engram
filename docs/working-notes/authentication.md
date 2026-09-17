@@ -1,6 +1,6 @@
 # Authentication
 
-**Status:** In progress — steps 1 to 3 of the build order landed 2026-09-17.
+**Status:** In progress — steps 1 to 4 of the build order landed 2026-09-17.
 Read before writing any auth code.
 
 Engram has exactly one human user. The question is not which of several people
@@ -145,6 +145,37 @@ nothing; the assertion has to be on the whole value.
 Belt and braces on purpose: the mint-side call is the real defence, and the
 use-side call is what survives someone later adding a second way to mint one.
 
+## The guard is global, which `vyoh.gg`'s is not
+
+`vyoh.gg` applies the same guard per route and says why at its definition: that
+site is public by design, so every gated endpoint is a deliberate exception and
+forgetting an annotation leaks one page.
+
+Here it is inverted. This API is private by design and has no public
+projection, so the list is of exceptions to being closed — `/health`, `/ready`
+and the two login routes. Forgetting an entry locks a route rather than opening
+it, which is the failure mode worth having. An unmatched path answers 401 rather
+than 404 for the same reason: a stranger learns nothing about what exists.
+
+The guard throws rather than answering "not the owner" when the session cannot
+be read. `vyoh.gg` swallows that failure because it can serve the visitor's
+version of a page; there is no such version here, and a database outage quietly
+becoming a permissions error is the kind of thing that costs an afternoon.
+
+## CORS is hand-rolled too
+
+One fixed origin, compared exactly, with `Vary: Origin` set whether or not it
+matched — a cache keyed on the path alone would otherwise hand one origin's
+allow header to another. A wildcard is incompatible with credentials, so the
+allowlist is not a convenience.
+
+The preflight is answered inside the hook because nothing registers an `OPTIONS`
+route and Fastify would 404 it, which fails every credentialed request before
+the real one is sent. It is answered *before* the gate, since a preflight
+carries no cookies by design. The 401 carries the CORS headers too, or the
+browser reports an opaque CORS failure and the real reason never reaches the
+SPA.
+
 ## Cookies are hand-rolled
 
 Fastify has neither half of cookie handling natively, so the choice was a plugin
@@ -180,9 +211,10 @@ Each step lands on its own.
    `auth/store.ts` the one write. Verified against the live authorize endpoint:
    GitHub answers the minted URL rather than an error, so the registration and
    the client id agree.
-4. The guard, applied globally with `/health`, `/ready` and the auth routes
-   exempted, plus CORS with an origin allowlist and credentials.
+4. ~~The guard, applied globally with `/health`, `/ready` and the auth routes
+   exempted, plus CORS with an origin allowlist and credentials.~~ Landed
+   2026-09-17 as `auth/guard.ts`, with `resolveOwner` in `auth/store.ts`.
 5. `GET /auth/me` so the SPA can tell whether it is signed in, and
    `POST /auth/logout`.
 
-Step 4 is next: the guard, which is what makes any of this bite.
+Step 5 is next, and is the last of it.

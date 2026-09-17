@@ -1,7 +1,7 @@
 # Authentication
 
-**Status:** In progress — step 1 of the build order landed 2026-09-17. Read
-before writing any auth code.
+**Status:** In progress — steps 1 and 2 of the build order landed 2026-09-17.
+Read before writing any auth code.
 
 Engram has exactly one human user. The question is not which of several people
 is calling, it is whether the caller is the owner at all, and every answer other
@@ -129,6 +129,18 @@ one app's client secret is shared across every redirect URI on it, so reusing
 the development registration in production would make a leak from a laptop a
 production credential.
 
+## Cookies are hand-rolled
+
+Fastify has neither half of cookie handling natively, so the choice was a plugin
+or sixty lines. `vyoh.gg` hand-rolled the half Express lacked for the same
+reason, and the values here are base64url and hex, which need no escaping to
+begin with. Two cookies do not justify a dependency in the request path of every
+authenticated route.
+
+The one place this bites is `Max-Age`, which the header takes in seconds while
+every cookie library takes milliseconds. Getting it backwards would make a
+30-day session last 43 minutes, so it has a test of its own.
+
 ## Build order
 
 Each step lands on its own.
@@ -138,9 +150,14 @@ Each step lands on its own.
    stored — only its SHA-256 — and `WEB_ORIGIN` is validated as a bare http or
    https origin, since a URL parser will hand `ftp://x` a real origin and an
    allowlist holding one is an entry no browser can ever match.
-2. State signing and cookie helpers. Pure functions over `crypto` — nonce
+2. ~~State signing and cookie helpers. Pure functions over `crypto` — nonce
    minting, HMAC sign and timing-safe verify, expiry, `next` validation — and
-   the only part of this arc that is fully testable without GitHub.
+   the only part of this arc that is fully testable without GitHub.~~ Landed
+   2026-09-17 as `auth/state.ts`, `auth/session.ts` and `auth/cookies.ts`,
+   ported from `vyoh.gg`'s `oauth-state.ts`, `auth.service.ts` and `cookies.ts`
+   rather than rewritten. Session lifetimes came with it: 30 days sliding, a 90
+   day ceiling, and no write until the window has drifted a day, so reading a
+   session is not a write on every request.
 3. `GET /auth/github/login` and `GET /auth/github/callback`: the redirect, the
    state check, the code exchange, the owner check, the session.
 4. The guard, applied globally with `/health`, `/ready` and the auth routes
@@ -148,4 +165,4 @@ Each step lands on its own.
 5. `GET /auth/me` so the SPA can tell whether it is signed in, and
    `POST /auth/logout`.
 
-Step 2 is next.
+Step 3 is next, and is the one part of the arc that needs GitHub.

@@ -13,10 +13,14 @@ Nothing authenticates a request today, so this gates the netcup deploy rather
 than local work — the API binds loopback. It moves ahead of `apps/web` because
 the API has two write routes and no door on either of them.
 
-Step 1 landed 2026-09-17: the `session` table, its migration, and the
-configuration the flow needs, all validated at boot. Nothing is waiting on the
-owner any more — the OAuth App is registered and its credentials are in `.env`.
-Step 2, the state signing and cookie helpers, is next.
+Steps 1 and 2 landed 2026-09-17: the `session` table and its migration, the
+configuration the flow needs validated at boot, and the pure half of the flow —
+state signing with a timing-safe verify, session token minting and hashing, the
+sliding expiry rules, `next` clamped against an open redirect, and cookie
+serialisation. Nothing is waiting on the owner any more.
+
+Step 3 is next: `GET /auth/github/login` and `GET /auth/github/callback`. It is
+the one part of the arc that needs GitHub, and the first to touch the network.
 
 ## Next
 

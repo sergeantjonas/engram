@@ -4,37 +4,29 @@
 
 ## Now
 
-**Manual write path.** A core write path rather than a convenience: the record
-is what the project keeps, and Plex reaches back only to 2025-10-24. Finding a
-title and storing one are done; what remains is `POST /watch-events` — bulk
-season marking over the derived `manual:{titleKey}:S2E5` id in
-[data-model.md](data-model.md).
+**Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow
+already running in `vyoh.gg` rather than inventing a second one. Settled
+2026-09-17; the design, the build order and what it is waiting on are in
+[authentication.md](authentication.md). Start there rather than here.
 
-Its pure half has landed: `parseWatchedAt` and `manualEventId` in
-`@engram/shared`, and `planWatchEvents` in `apps/api/src/watch/plan.ts`, which
-expands a scope (whole title, one season, one episode) into the per-episode
-events `watch_state` needs. What remains is the route that reads the title and
-its grid and writes them.
+Nothing authenticates a request today, so this gates the netcup deploy rather
+than local work — the API binds loopback. Three of its five steps need no GitHub
+credentials and are not blocked on the owner.
+
+It moves ahead of `apps/web` because the API now has two write routes and no
+door on either of them.
 
 ## Next
 
-1. **Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow
-   already running in `vyoh.gg` rather than inventing a second one. Settled
-   2026-09-17; the design, the build order and what it is waiting on are in
-   [authentication.md](authentication.md). Start there rather than here.
-
-   Nothing authenticates a request today, so this gates the netcup deploy
-   rather than local work — the API binds loopback. Three of its five steps
-   need no GitHub credentials and are not blocked on the owner.
-2. **`apps/web`** — Vite + React SPA, shaped by the settled design: a poster
+1. **`apps/web`** — Vite + React SPA, shaped by the settled design: a poster
    wall filtered by state, a title page built around the episode grid, and
-   adding a title by hand as a screen of its own.
-3. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
+   adding a title by hand as a screen of its own. Every API it needs now exists.
+2. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing
    it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land
    before webhooks do: the backfill is owner-only by property of the Plex
    endpoint, and Tautulli fires for every user on the server.
-4. **Webhook receivers** — Tautulli and Sonarr, per
+3. **Webhook receivers** — Tautulli and Sonarr, per
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs
    either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`.
@@ -47,9 +39,10 @@ its grid and writes them.
 - **Tautulli webhook payload shape is unverified.** Which external-id parameters
   actually populate per media type needs one empirical check against a throwaway
   endpoint before any parsing code is trusted.
-- **Nothing authenticates a write.** `POST /titles` is reachable by anyone who
-  can reach the port. The API binds loopback, so this blocks the netcup deploy
-  rather than local work. See [authentication.md](authentication.md).
+- **Nothing authenticates a write.** `POST /titles` and `POST /watch-events` are
+  reachable by anyone who can reach the port. The API binds loopback, so this
+  blocks the netcup deploy rather than local work. See
+  [authentication.md](authentication.md).
 
 ## Decisions still open
 
@@ -59,6 +52,39 @@ its grid and writes them.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-17** — `POST /watch-events` landed, which closes the manual write
+  path: history older than this Plex server can now be entered at all. One
+  request marks one scope — a whole title, one season, or one episode — and the
+  route expands it into the per-episode events `watch_state` groups on, because
+  a season-level row would be invisible to every query the UI makes.
+
+  Idempotent by construction rather than by a check before writing: the event id
+  is derived as `manual:{titleKey}:S2E5`, so pressing "mark season watched"
+  twice writes nothing the second time and the response says how much was
+  already on record. A date appended to that id is what makes a rewatch a second
+  event instead of a no-op, and it is the date as written rather than as stored,
+  so a remembered 2019 stays distinct from a known 1 January.
+
+  Precision is read off the shape of the date rather than sent beside it —
+  `2019` is a year, `2019-06-14` a day, an ISO instant is exact. Two fields
+  could contradict each other and the check constraint only catches half of
+  that. An instant must name its offset, or the same string would mean two
+  different moments on a laptop and on the server, and a day that does not exist
+  is refused in both forms: `new Date` rolls `2019-02-30T12:00:00Z` forward to 2
+  March rather than failing.
+
+  Specials sit outside a whole-title mark and are reachable by naming season 0,
+  since marking a show watched is not a claim about its OVAs.
+
+  Verified end to end against the live database: a season marked, re-marked as a
+  no-op, dated as a rewatch, that date re-submitted as a no-op, a single episode
+  already covered, a season that does not exist refused with 422, an unknown
+  title with 404, a movie marked with no episode row and refused a season. The
+  resulting `watch_state` reported one episode as `plays=3 first=2019 (year)
+  last=(exact)` — the remembered year and the real Plex play each keeping their
+  own precision, which is what the two boundary columns exist for. The five rows
+  were then removed and the table was back to its 86.
 
 - **2026-09-17** — `POST /titles` landed: a title the disk has never held can be
   stored, with its whole episode grid. One TMDB call carries the details and,

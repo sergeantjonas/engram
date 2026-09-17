@@ -4,6 +4,7 @@ import type { Config } from './config.js';
 import type { Database } from './db/client.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerTitleRoutes } from './routes/titles.js';
+import { registerWatchEventRoutes } from './routes/watch-events.js';
 import type { TmdbClient } from './tmdb/client.js';
 
 export interface AppDeps {
@@ -58,6 +59,7 @@ export function buildApp({ config, db, tmdb }: AppDeps): FastifyInstance {
 
   registerSearchRoutes(app, tmdb);
   registerTitleRoutes(app, db, tmdb);
+  registerWatchEventRoutes(app, db);
 
   return app;
 }

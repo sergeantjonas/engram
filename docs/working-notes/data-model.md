@@ -107,6 +107,12 @@ demanding one would mean either refusing the row or inventing a date — so
 of the period it names, so 2019 is 2019-01-01 at precision `year`, and the UI
 renders "2019" rather than a January that never happened.
 
+Precision is read off the shape of what the viewer wrote — `2019` is a year,
+`2019-06-14` a day, a full ISO instant is exact — rather than being a field of
+its own. Two fields can disagree, and a request claiming `exact` for `2019`
+would describe the first of January as a moment someone lived through; the
+check constraint cannot see that.
+
 A check constraint ties the two together in both directions: `unknown` if and
 only if the date is null. That is the whole of what the database enforces — it
 cannot also check that a `year` event sits on the first of January, because the

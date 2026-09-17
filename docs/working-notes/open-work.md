@@ -10,6 +10,12 @@ title and storing one are done; what remains is `POST /watch-events` — bulk
 season marking over the derived `manual:{titleKey}:S2E5` id in
 [data-model.md](data-model.md).
 
+Its pure half has landed: `parseWatchedAt` and `manualEventId` in
+`@engram/shared`, and `planWatchEvents` in `apps/api/src/watch/plan.ts`, which
+expands a scope (whole title, one season, one episode) into the per-episode
+events `watch_state` needs. What remains is the route that reads the title and
+its grid and writes them.
+
 ## Next
 
 1. **Owner-only authentication.** GitHub OAuth, porting the hand-rolled flow

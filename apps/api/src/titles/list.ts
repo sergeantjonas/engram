@@ -28,6 +28,8 @@ export interface TitleSummary {
 }
 
 export interface TitleListFilter {
+  /** One title by id, for the detail route. Everything else is ignored. */
+  titleId?: string | undefined;
   state?: TitleState | undefined;
   /** Excluded titles are hidden unless asked for: the point of the flag is to stop seeing them. */
   includeExcluded?: boolean | undefined;
@@ -69,6 +71,10 @@ interface Row extends Record<string, unknown> {
  * Every join is a LEFT: a title with no `intent`, no `library_presence` and no
  * history is the ordinary case for something just added, and an inner join
  * would quietly drop exactly the titles the add screen just created.
+ *
+ * The detail route narrows this to one id rather than defining its own query.
+ * Two statements deriving the same summary is how the wall and the title page
+ * start disagreeing about a title they are both looking at.
  */
 export async function listTitles(db: Database, filter: TitleListFilter = {}) {
   const rows = await db.execute<Row>(sql`
@@ -113,6 +119,7 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
                  as last_watched_precision
         from watch_state group by title_id
       ) w on w.title_id = t.id
+    ${filter.titleId !== undefined ? sql`where t.id = ${filter.titleId}` : sql``}
     -- Most recently watched first. NULLS LAST or everything undated sorts to
     -- the top of the wall, which is the opposite of what recency means.
     order by w.sort_watched_at desc nulls last, t.name asc

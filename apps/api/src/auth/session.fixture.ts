@@ -20,6 +20,13 @@ export interface SessionDb {
   db: Database;
   /** Rows the next raw `db.execute` answers with. Assign before the request. */
   rows: unknown[];
+  /**
+   * Result sets for consecutive `db.execute` calls, consumed in order.
+   *
+   * A route that reads twice — the title, then its grid — needs two different
+   * answers, and one shared `rows` would hand the grid query a list of titles.
+   */
+  executions: unknown[][];
   /** Set when a row was reaped, and when the sliding window was rewritten. */
   deleted: number;
   extended: Date[];
@@ -50,10 +57,11 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
     deleted: 0,
     extended: [],
     rows: [],
+    executions: [],
     db: {
       // `db.execute` is the raw-SQL path; the queries that use it are verified
       // against the real table, so here it only replays what a test sets up.
-      execute: async () => state.rows,
+      execute: async () => state.executions.shift() ?? state.rows,
       select: () => ({
         from: () => ({
           where: () => ({ limit: async () => (row === null ? [] : [row]) }),

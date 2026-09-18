@@ -13,7 +13,7 @@ Two things have to land on the API side first, and the second was a surprise:
 
 1. `GET /titles` for the wall and `GET /titles/:id` for the grid. Neither
    existed — `GET /search` asks TMDB, not the database — so the SPA had nothing
-   to render. `GET /titles` landed 2026-09-18.
+   to render. Both landed 2026-09-18.
 2. ~~Backfilling the imported episode grids.~~ Done 2026-09-18 via
    `pnpm backfill:episodes`: 79 episode rows became 829, Bleach went from an
    apparently-complete 8 of 8 to 8 of 424, and ONE PIECE S2E5 exists as a row,
@@ -21,8 +21,29 @@ Two things have to land on the API side first, and the second was a surprise:
    episodes carrying watch history that TMDB has never heard of — see
    [data-model.md](data-model.md) for both.
 
-What remains before the SPA: `GET /titles/:id`, the title page's data — one
-title, its episode grid, per-episode watch state, and what is on disk.
+3. ~~`GET /titles/:id`, the title page's data.~~ Done 2026-09-18: the title's
+   summary narrowed out of the same query the wall uses, plus its grid grouped
+   by season with each episode's watch state and both precisions. ONE PIECE
+   S2E5 now comes back as `WAX ON, WAX OFF`, aired 2026-03-10, `seen: false` —
+   a labelled hole rather than a missing row.
+
+**Open decision, and it blocks part of the title page.** The settled design says
+the UI has to let the viewer *say* whether a hole was skipped or never
+downloaded. Nothing can record that answer today: `library_presence` is keyed on
+`title_id` as its primary key, so it is per title rather than per episode, and
+it holds zero rows because only Sonarr and Radarr webhooks would write it and
+those are deferred.
+
+Two readings, and they are different work:
+
+- **The viewer declares it.** "Let you say" read literally — a per-episode
+  annotation next to `intent`, written from the grid. Needs a table, a
+  migration and a write route.
+- **The system reports it.** Per-episode presence from Sonarr, which means
+  waiting on the webhook arc and changing `library_presence`'s grain.
+
+The grid ships without it either way; the cells are already distinguishable as
+watched, unwatched, or unknown to TMDB.
 
 ## Next
 

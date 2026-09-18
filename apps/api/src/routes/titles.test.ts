@@ -207,3 +207,56 @@ describe('GET /titles', () => {
     expect((await list('?state=unwatched', rows)).json().titles).toHaveLength(0);
   });
 });
+
+describe('GET /titles/:id', () => {
+  const detail = (id: string, executions: unknown[][] = []) => {
+    const stub = sessionDb();
+    stub.executions = executions;
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    return app.inject({ method: 'GET', url: `/titles/${id}`, headers: signedIn });
+  };
+
+  it('rejects an id that is not one', async () => {
+    const response = await detail('the-witcher');
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toContain('id');
+  });
+
+  it('answers 404 for an id nothing is stored under', async () => {
+    // Only one result set: the episode query is never reached.
+    const response = await detail('0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701', [[]]);
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toBe('not_found');
+  });
+
+  it('answers with the title and its grid', async () => {
+    const response = await detail('0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701', [
+      [listRow()],
+      [
+        {
+          id: 'e1',
+          season: 1,
+          number: 1,
+          name: 'A Grain of Truth',
+          air_date: '2019-12-20',
+          runtime_min: 60,
+          tmdb_episode_id: '1859369',
+          seen: true,
+          play_count: 1,
+          first_watched_at: null,
+          first_watched_precision: 'unknown',
+          last_watched_at: null,
+          last_watched_precision: 'unknown',
+        },
+      ],
+    ]);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().title.name).toBe('The Witcher');
+    expect(response.json().seasons).toEqual([
+      { season: 1, episodes: [expect.objectContaining({ number: 1, seen: true })] },
+    ]);
+  });
+});

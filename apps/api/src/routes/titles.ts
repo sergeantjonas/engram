@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
 import { episodes as episodeTable, titles as titleTable } from '../db/schema.js';
+import { titleDetail } from '../titles/detail.js';
 import { listTitles } from '../titles/list.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
 import {
@@ -24,6 +25,8 @@ const listQuery = z.object({
     .transform((value) => value === 'true')
     .optional(),
 });
+
+const detailParams = z.object({ id: z.uuid('id must be the id of a stored title') });
 
 const bodySchema = z.object({
   kind: z.enum(['show', 'movie']),
@@ -80,6 +83,30 @@ export function registerTitleRoutes(
     });
 
     return { titles };
+  });
+
+  /**
+   * One title and its grid, which is where the work happens.
+   *
+   * Excluded titles are served here even though the wall hides them: arriving
+   * by link or by back button should not 404 because of a flag that exists to
+   * tidy a listing.
+   */
+  app.get('/titles/:id', async (request, reply) => {
+    const parsed = detailParams.safeParse(request.params);
+    if (!parsed.success) {
+      const message = parsed.error.issues.map((issue) => issue.message).join('; ');
+      return reply.code(400).send({ error: 'bad_request', message });
+    }
+
+    const detail = await titleDetail(db, parsed.data.id);
+    if (!detail) {
+      return reply
+        .code(404)
+        .send({ error: 'not_found', message: 'no title is stored under that id' });
+    }
+
+    return detail;
   });
 
   app.post('/titles', async (request, reply) => {

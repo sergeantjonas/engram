@@ -18,6 +18,8 @@ export interface StubbedSession {
 
 export interface SessionDb {
   db: Database;
+  /** Rows the next raw `db.execute` answers with. Assign before the request. */
+  rows: unknown[];
   /** Set when a row was reaped, and when the sliding window was rewritten. */
   deleted: number;
   extended: Date[];
@@ -47,7 +49,11 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
   const state: SessionDb = {
     deleted: 0,
     extended: [],
+    rows: [],
     db: {
+      // `db.execute` is the raw-SQL path; the queries that use it are verified
+      // against the real table, so here it only replays what a test sets up.
+      execute: async () => state.rows,
       select: () => ({
         from: () => ({
           where: () => ({ limit: async () => (row === null ? [] : [row]) }),

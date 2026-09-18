@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. **Open defect as of 2026-09-18: the imported episode grids are partial** — see that section below. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -148,10 +148,13 @@ one "seen" fact per episode; a dated manual rewatch appends its date to the id.
 
 ## The imported grids are partial
 
-The Plex importer created an `episode` row only for an episode that was played,
-which predates the 2026-09-17 decision to create them eagerly. So every title
-that came from the dump carries a grid of exactly the episodes with history, and
-a gap is indistinguishable from a season that ends early.
+The Plex importer creates an `episode` row only for an episode that was played,
+which predates the 2026-09-17 decision to create them eagerly. It still behaves
+that way — `plex-dump.ts` writes an episode only inside its `hasEpisode` branch
+— so re-running the import reproduces the problem rather than repairing it, and
+a backfill is the only remedy. Every title that came from the dump carries a
+grid of exactly the episodes with history, and a gap is indistinguishable from a
+season that ends early.
 
 ONE PIECE is the proof and the reason it matters: its rows run
 `S2E4, S2E6` with no S2E5 between them, so the title reads 15 of 15 and

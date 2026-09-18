@@ -14,8 +14,12 @@ import {
 
 const listQuery = z.object({
   state: z.enum(['seen', 'in_progress', 'unwatched']).optional(),
-  /** Off by default: the point of marking a title not-mine is to stop seeing it. */
-  excluded: z
+  /**
+   * Adds excluded titles to the answer rather than selecting them: off is the
+   * point of marking a title not-mine, and there is no view that shows only
+   * the rejects.
+   */
+  includeExcluded: z
     .enum(['true', 'false'])
     .transform((value) => value === 'true')
     .optional(),
@@ -72,7 +76,7 @@ export function registerTitleRoutes(
 
     const titles = await listTitles(db, {
       state: parsed.data.state,
-      includeExcluded: parsed.data.excluded,
+      includeExcluded: parsed.data.includeExcluded,
     });
 
     return { titles };

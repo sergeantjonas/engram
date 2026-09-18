@@ -12,7 +12,11 @@ export interface TitleSummary {
   year: number | null;
   posterPath: string | null;
   state: TitleState;
-  /** Counts specials out of both halves, the way `deriveState` does. */
+  /**
+   * Counts specials out of both halves, the way `deriveState` does. Always
+   * `0 / 0` for a movie, which has no episodes — a card must read that as
+   * "not applicable" rather than rendering "0 of 0".
+   */
   episodes: { total: number; seen: number };
   want: boolean;
   dropped: boolean;

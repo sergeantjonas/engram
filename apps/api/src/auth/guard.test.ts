@@ -44,7 +44,9 @@ describe('the owner guard', () => {
     const server = start(null).app;
 
     expect((await get(server, '/health')).statusCode).toBe(200);
-    expect((await get(server, '/ready')).statusCode).toBe(503);
+    // 200 because the stubbed database answers its `select 1`; what matters is
+    // that neither probe is turned away by the gate.
+    expect((await get(server, '/ready')).statusCode).toBe(200);
   });
 
   // They are how a session comes to exist; gating them would be a locked door

@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
 import { episodes as episodeTable, titles as titleTable } from '../db/schema.js';
+import { listTitles } from '../titles/list.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
 import {
   type TmdbClient,
@@ -10,6 +11,15 @@ import {
   TmdbError,
   type TmdbTitleDetails,
 } from '../tmdb/client.js';
+
+const listQuery = z.object({
+  state: z.enum(['seen', 'in_progress', 'unwatched']).optional(),
+  /** Off by default: the point of marking a title not-mine is to stop seeing it. */
+  excluded: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .optional(),
+});
 
 const bodySchema = z.object({
   kind: z.enum(['show', 'movie']),
@@ -47,6 +57,27 @@ export function registerTitleRoutes(
   db: Database,
   tmdb: TmdbClient | null,
 ): void {
+  /**
+   * The wall. Everything stored, with the state each card is coloured by.
+   *
+   * Unpaginated on purpose: this is one person's library, and a few hundred
+   * rows of metadata is smaller than one of the posters the page then loads.
+   */
+  app.get('/titles', async (request, reply) => {
+    const parsed = listQuery.safeParse(request.query);
+    if (!parsed.success) {
+      const message = parsed.error.issues.map((issue) => issue.message).join('; ');
+      return reply.code(400).send({ error: 'bad_request', message });
+    }
+
+    const titles = await listTitles(db, {
+      state: parsed.data.state,
+      includeExcluded: parsed.data.excluded,
+    });
+
+    return { titles };
+  });
+
   app.post('/titles', async (request, reply) => {
     if (!tmdb) {
       return reply

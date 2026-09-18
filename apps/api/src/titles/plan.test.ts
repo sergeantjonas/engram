@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TmdbEpisode, TmdbTitleDetails } from '../tmdb/client.js';
-import { planEpisodes, planTitle } from './plan.js';
+import { deriveState, planEpisodes, planTitle } from './plan.js';
 
 const witcher: TmdbTitleDetails = {
   kind: 'show',
@@ -110,5 +110,40 @@ describe('planEpisodes', () => {
 
   it('drops a row with no usable numbering', () => {
     expect(planEpisodes([episode({ number: Number.NaN })])).toEqual([]);
+  });
+});
+
+describe('deriveState', () => {
+  const show = { kind: 'show' as const, movieSeen: false };
+
+  it('is unwatched until something has been seen', () => {
+    expect(deriveState({ ...show, episodeTotal: 12, seenCount: 0 })).toBe('unwatched');
+  });
+
+  it('is in progress part of the way through', () => {
+    expect(deriveState({ ...show, episodeTotal: 12, seenCount: 5 })).toBe('in_progress');
+  });
+
+  it('is seen once every episode on record is', () => {
+    expect(deriveState({ ...show, episodeTotal: 12, seenCount: 12 })).toBe('seen');
+  });
+
+  // An empty fraction is not completion. Reading it as one would paint a title
+  // jade the moment it was added and before anything was watched.
+  it('is unwatched, not seen, when no episodes are on record', () => {
+    expect(deriveState({ ...show, episodeTotal: 0, seenCount: 0 })).toBe('unwatched');
+  });
+
+  // A season marked watched writes an event per episode, and a re-mark is a
+  // no-op, so the count cannot exceed the total — but a stale grid could.
+  it('does not fall out of "seen" if the count runs ahead of the total', () => {
+    expect(deriveState({ ...show, episodeTotal: 12, seenCount: 13 })).toBe('seen');
+  });
+
+  it('reads a movie off its own watch state, not an episode count', () => {
+    const movie = { kind: 'movie' as const, episodeTotal: 0, seenCount: 0 };
+
+    expect(deriveState({ ...movie, movieSeen: true })).toBe('seen');
+    expect(deriveState({ ...movie, movieSeen: false })).toBe('unwatched');
   });
 });

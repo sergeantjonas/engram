@@ -87,3 +87,36 @@ export function planEpisodes(episodes: TmdbEpisode[]): PlannedEpisodeRow[] {
 
   return [...rows.values()];
 }
+
+/**
+ * Where a title sits, as one word the wall can colour.
+ *
+ * Jade for `seen`, gold for `in_progress`, and the espresso ground for the
+ * rest — so the state is legible across a wall of artwork without a legend.
+ */
+export type TitleState = 'seen' | 'in_progress' | 'unwatched';
+
+export interface TitleProgress {
+  kind: TitleKind;
+  /** Episodes on record, specials excluded. Zero for a movie. */
+  episodeTotal: number;
+  /** Of those, how many have a `watch_state` row saying seen. */
+  seenCount: number;
+  /** Whether the movie itself has been seen. Meaningless for a show. */
+  movieSeen: boolean;
+}
+
+/**
+ * Specials are left out of both halves of the fraction, matching what a
+ * whole-title mark writes: a show whose every regular episode is seen reads as
+ * seen even if an OVA never was, because that is what the viewer meant.
+ *
+ * A show with no episodes on record is `unwatched` rather than `seen`. An empty
+ * fraction is not completion, and reading it as one would paint a title jade
+ * the moment it was added.
+ */
+export function deriveState(progress: TitleProgress): TitleState {
+  if (progress.kind === 'movie') return progress.movieSeen ? 'seen' : 'unwatched';
+  if (progress.episodeTotal === 0 || progress.seenCount === 0) return 'unwatched';
+  return progress.seenCount >= progress.episodeTotal ? 'seen' : 'in_progress';
+}

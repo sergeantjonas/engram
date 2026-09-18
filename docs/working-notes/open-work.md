@@ -6,8 +6,19 @@
 
 **`apps/web`** — Vite + React SPA on port 2011, shaped by the settled design: a
 poster wall filtered by state, a title page built around the episode grid, and
-adding a title by hand as a screen of its own. Every API it needs now exists,
-including `GET /auth/me` to decide what to render before anything else.
+adding a title by hand as a screen of its own. TanStack Router and Query,
+Tailwind v4 with Radix primitives and no shadcn, settled 2026-09-18.
+
+Two things have to land on the API side first, and the second was a surprise:
+
+1. `GET /titles` for the wall and `GET /titles/:id` for the grid. Neither
+   existed — `GET /search` asks TMDB, not the database — so the SPA had nothing
+   to render. `GET /titles` landed 2026-09-18.
+2. **Backfilling the imported episode grids.** The Plex importer only wrote an
+   episode row for an episode that was played, so every imported title claims to
+   be complete: ONE PIECE runs `S2E4, S2E6` and reads 15 of 15, Bleach reads 8
+   of 8. See [data-model.md](data-model.md). The grid cannot show a gap that the
+   database does not contain, so this blocks the title page rather than the wall.
 
 ## Next
 

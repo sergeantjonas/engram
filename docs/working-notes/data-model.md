@@ -146,6 +146,24 @@ rather than random: `manual:{titleKey}:S2E5` means marking a season watched
 twice is a no-op instead of a duplicate. A dateless manual entry is therefore
 one "seen" fact per episode; a dated manual rewatch appends its date to the id.
 
+## The imported grids are partial
+
+The Plex importer created an `episode` row only for an episode that was played,
+which predates the 2026-09-17 decision to create them eagerly. So every title
+that came from the dump carries a grid of exactly the episodes with history, and
+a gap is indistinguishable from a season that ends early.
+
+ONE PIECE is the proof and the reason it matters: its rows run
+`S2E4, S2E6` with no S2E5 between them, so the title reads 15 of 15 and
+complete. Bleach reads 8 of 8. Nothing downstream can tell a skipped episode
+from one that was never on disk, which is the distinction the UI exists to
+offer.
+
+`POST /titles` already writes a full grid from TMDB, one call per season. The
+fix is to run the same path over the eleven imported titles; until that happens
+`GET /titles` reports a fraction whose denominator is "episodes we happen to
+know about" rather than "episodes there are".
+
 ## Open questions
 
 - ~~Postgres vs SQLite~~ — settled 2026-09-16: Postgres, hosted on a netcup

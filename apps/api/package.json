@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b",
-    "dev": "node --env-file-if-exists=../../.env --watch src/server.ts",
+    "dev": "pnpm run build && pnpm run \"/^dev:/\"",
+    "dev:types": "tsc -b --watch --preserveWatchOutput",
+    "dev:server": "node --env-file-if-exists=../../.env --watch dist/server.js",
     "start": "node --env-file-if-exists=../../.env dist/server.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=../../.env dist/db/migrate.js",

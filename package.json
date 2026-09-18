@@ -14,6 +14,7 @@
     "dump:history": "pnpm run build && node --env-file-if-exists=.env tools/dump-plex-history.mjs",
     "resolve:ids": "pnpm run build && node --env-file-if-exists=.env tools/resolve-ids.mjs",
     "build": "tsc -b",
+    "dev": "pnpm run build && pnpm --parallel --filter \"./apps/*\" run dev",
     "typecheck:cc": "tsc -b --pretty false && tsc -p tsconfig.test.json --pretty false",
     "lint:cc": "biome check --reporter=summary",
     "format": "biome check --write",

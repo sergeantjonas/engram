@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. **Open defect as of 2026-09-18: the imported episode grids are partial** — see that section below. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -146,7 +146,7 @@ rather than random: `manual:{titleKey}:S2E5` means marking a season watched
 twice is a no-op instead of a duplicate. A dateless manual entry is therefore
 one "seen" fact per episode; a dated manual rewatch appends its date to the id.
 
-## The imported grids are partial
+## The imported grids were partial
 
 The Plex importer creates an `episode` row only for an episode that was played,
 which predates the 2026-09-17 decision to create them eagerly. It still behaves
@@ -162,10 +162,47 @@ complete. Bleach reads 8 of 8. Nothing downstream can tell a skipped episode
 from one that was never on disk, which is the distinction the UI exists to
 offer.
 
-`POST /titles` already writes a full grid from TMDB, one call per season. The
-fix is to run the same path over the eleven imported titles; until that happens
-`GET /titles` reports a fraction whose denominator is "episodes we happen to
-know about" rather than "episodes there are".
+`POST /titles` already writes a full grid from TMDB, one call per season, and
+`backfill:episodes` runs that same path over every stored show. It ran on
+2026-09-18 and took the table from 79 rows to 829. Bleach went from 8 of 8 and
+apparently complete to 8 of 424; ONE PIECE's season 2 gained the E5 row it never
+had, so the hole between E4 and E6 is now a fact in the database rather than an
+absence nothing can describe.
+
+The script is insert-only and idempotent — `episode` is unique on (title,
+season, number) — so it is safe to re-run after any future import. It has to be
+re-run after one, because the importer is unchanged and will keep writing
+partial grids.
+
+Existing rows keep their id and gain their metadata. The conflict clause
+updates name, air date, runtime and TMDB episode id but never `episode.id`, so
+`watch_event`'s composite foreign key is untouched. That is not a refinement:
+the rows the importer wrote are exactly the watched ones, and they arrived
+without air dates, so insert-only would have left the grid able to date every
+episode except the ones actually seen.
+
+Specials come with it. TMDB files promotional clips under season 0 alongside
+genuine OVAs and offers no way to tell them apart: of the 193 specials, 89
+belong to House of the Dragon, 76 to The Boys and 24 to Fallout, which are
+featurettes, while Bleach's 4 are real. They are stored because dropping season
+0 would leave a watched OVA with no row to mark, and they are excluded from the
+progress fraction, so the cost is a season the grid should collapse by default
+rather than a wrong count.
+
+## Eight episodes TMDB has never heard of
+
+`Bleach S17E41` through `S17E48` carry ten watch events between them and match
+nothing TMDB returns for tmdb id 30984, which has no season 17 at all. They are
+the only rows left with no name, no air date and no TMDB episode id, and no
+amount of re-running the backfill will fix them: there is nothing upstream to
+fetch.
+
+The likely cause is that Plex numbered *Thousand-Year Blood War* as a
+continuation of the original series while TMDB files it as its own title. If
+that is right the repair is not metadata but identity — those events belong to a
+different `title` — and it is a decision about what the record should say, not a
+lookup. `backfill:episodes` reports the count on every run so they stay visible
+rather than becoming eight quietly unlabelled cells in the grid.
 
 ## Open questions
 

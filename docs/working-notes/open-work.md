@@ -14,11 +14,15 @@ Two things have to land on the API side first, and the second was a surprise:
 1. `GET /titles` for the wall and `GET /titles/:id` for the grid. Neither
    existed — `GET /search` asks TMDB, not the database — so the SPA had nothing
    to render. `GET /titles` landed 2026-09-18.
-2. **Backfilling the imported episode grids.** The Plex importer only wrote an
-   episode row for an episode that was played, so every imported title claims to
-   be complete: ONE PIECE runs `S2E4, S2E6` and reads 15 of 15, Bleach reads 8
-   of 8. See [data-model.md](data-model.md). The grid cannot show a gap that the
-   database does not contain, so this blocks the title page rather than the wall.
+2. ~~Backfilling the imported episode grids.~~ Done 2026-09-18 via
+   `pnpm backfill:episodes`: 79 episode rows became 829, Bleach went from an
+   apparently-complete 8 of 8 to 8 of 424, and ONE PIECE S2E5 exists as a row,
+   so the hole is now something the grid can draw. It also surfaced eight Bleach
+   episodes carrying watch history that TMDB has never heard of — see
+   [data-model.md](data-model.md) for both.
+
+What remains before the SPA: `GET /titles/:id`, the title page's data — one
+title, its episode grid, per-episode watch state, and what is on disk.
 
 ## Next
 

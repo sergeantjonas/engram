@@ -39,9 +39,27 @@ Plex history dump ─┘        ↑                                      ↓
 
 - `apps/api` — Fastify. Webhook receiver, reconcile job, TMDB enrichment,
   Plex write-back.
-- `apps/web` — React SPA.
+- `apps/web` — Vite + React SPA. TanStack Router and Query, Tailwind with Radix
+  primitives.
 - `packages/shared` — types and the GUID normalizer, shared by both.
 - `tools/` — one-shot scripts. Currently the Plex history archiver.
+
+### Why Fastify and not NestJS
+
+The author's other project, `vyoh.gg`, is NestJS + Prisma, and this one
+deliberately is not. Engram has one user and a surface measured in single-digit
+routes; `buildApp({ config, db, tmdb, github })` is the entire dependency graph,
+which is a thing to read rather than a container to configure. The API's whole
+runtime dependency list is `fastify`, `drizzle-orm`, `postgres`, `zod` and the
+shared package — no decorators, no `reflect-metadata`, nothing between the
+request and the function that answers it.
+
+The divergence is not free, and the cost is worth stating: porting `vyoh.gg`'s
+GitHub OAuth flow meant translating controllers into route functions, guards
+into `onRequest` hooks, DTOs into zod schemas, and hand-writing the
+`Set-Cookie` serialisation Express gives NestJS for nothing. Roughly sixty lines
+exist here that would not exist on the other stack. Consistency between the two
+projects would have avoided that; the smaller surface was judged worth it.
 
 ## Status
 

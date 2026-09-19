@@ -85,13 +85,18 @@ pnpm dev                                      # every app in apps/, watched
 ```
 
 `pnpm dev` builds once, then runs each app's own `dev` script in parallel. The
-API lands on `http://127.0.0.1:2012` and rebuilds on save. It is deliberately
+API lands on `http://localhost:2012` and rebuilds on save. It is deliberately
 not on 3000: the port is registered as the GitHub OAuth app's callback host, so
-a collision would mean editing that registration rather than a flag.
+a collision would mean editing that registration rather than a flag. The SPA
+lands on `http://localhost:2011`, which is the API's `WEB_ORIGIN`; both ports
+are strict, so a collision fails loudly instead of quietly breaking CORS.
+
+Use `localhost` for both, not `127.0.0.1`: the session cookie is host-only in
+development, and the registered callback URL names `localhost`.
 
 Every route except `/health`, `/ready` and the four `/auth/*` routes needs an
-owner session, so a bare `curl` answers 401 by design. Sign in by opening
-`http://127.0.0.1:2012/auth/github/login` in a browser.
+owner session, so a bare `curl` answers 401 by design. Sign in from the SPA's
+header, or by opening `http://localhost:2012/auth/github/login` in a browser.
 
 ## Notes
 

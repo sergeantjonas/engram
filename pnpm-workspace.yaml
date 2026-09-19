@@ -11,3 +11,8 @@ packages:
 # postinstall only re-validates what is already installed.
 allowBuilds:
   esbuild: false
+  #
+  # @tailwindcss/oxide: denied for the same reason. The native binary is an
+  # optional platform dependency; the postinstall is a fallback download for
+  # platforms without one, which this is not.
+  '@tailwindcss/oxide': false

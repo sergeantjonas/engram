@@ -9,7 +9,19 @@ poster wall filtered by state, a title page built around the episode grid, and
 adding a title by hand as a screen of its own. TanStack Router and Query,
 Tailwind v4 with Radix primitives and no shadcn, settled 2026-09-18.
 
-Two things have to land on the API side first, and the second was a surprise:
+The scaffold landed 2026-09-19: the shell asks `/auth/me` and offers sign-in or
+sign-out, `/login` explains the reason the API's callback sent the browser back
+with, and the API client sends credentials to `VITE_API_ORIGIN`. Radix is not a
+dependency yet — nothing in the shell needs a primitive, and it joins with the
+first screen that does. The screens land in this order, one commit each:
+
+1. The wall over `GET /titles`, filtered by state.
+2. The title page: episode grid plus declaring and clearing a hole's reason.
+3. Adding a title by hand over `GET /search` and `POST /titles`.
+4. The `intent` write route on the API, and the wall's want / dropped / excluded
+   controls that need it.
+
+Two things had to land on the API side first, and the second was a surprise:
 
 1. `GET /titles` for the wall and `GET /titles/:id` for the grid. Neither
    existed — `GET /search` asks TMDB, not the database — so the SPA had nothing
@@ -72,6 +84,14 @@ screen that needs it rather than ahead of it.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-19** — `apps/web` scaffolded: Vite 8, React 19, TanStack Router with
+  file-based routes and Query, Tailwind v4, tested through a memory-history
+  router against a stubbed `fetch` under happy-dom. Wired into the root `tsc -b`
+  graph as its own solution (browser `lib`, `noEmit`) and into Vitest as a
+  second project so `test:cc` runs both. The generated `routeTree.gen.ts` is
+  committed and excluded from Biome. `@tailwindcss/oxide`'s install script is
+  denied like `esbuild`'s: the native binary arrives as an optional dependency.
 
 - **2026-09-18** — Owner-only authentication shipped, all five steps. GitHub
   OAuth ported from `vyoh.gg` rather than reinvented: signed state with a

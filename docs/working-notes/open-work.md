@@ -15,7 +15,9 @@ with, and the API client sends credentials to `VITE_API_ORIGIN`. Radix is not a
 dependency yet — nothing in the shell needs a primitive, and it joins with the
 first screen that does. The screens land in this order, one commit each:
 
-1. The wall over `GET /titles`, filtered by state.
+1. ~~The wall over `GET /titles`, filtered by state.~~ Landed 2026-09-19.
+   Cards are not links yet; they get one when the title page exists to point
+   at.
 2. The title page: episode grid plus declaring and clearing a hole's reason.
 3. Adding a title by hand over `GET /search` and `POST /titles`.
 4. The `intent` write route on the API, and the wall's want / dropped / excluded
@@ -84,6 +86,16 @@ screen that needs it rather than ahead of it.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-19** — The wall: `GET /titles` as a poster grid under `/`, with the
+  state filter and the excluded toggle as links carrying `?state=` and
+  `?excluded=true`, so a filter is a place the back button returns to. The
+  route loader reads through the query cache; a stranger's 401 lands on the
+  route's error component rather than an empty grid. The wire type is declared
+  in `apps/web/src/api/titles.ts` by hand, mirroring the API's `TitleSummary`,
+  since the web app cannot import the API package and `@engram/shared` has no
+  reason to hold a response shape. Posters come straight from TMDB's image CDN
+  at `w342`. Still no Radix: links and anchors covered every control.
 
 - **2026-09-19** — `apps/web` scaffolded: Vite 8, React 19, TanStack Router with
   file-based routes and Query, Tailwind v4, tested through a memory-history

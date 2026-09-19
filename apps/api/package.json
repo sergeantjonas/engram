@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=../../.env dist/db/migrate.js",
     "import:plex": "node --env-file-if-exists=../../.env dist/ingest/import-plex-dump.js",
-    "backfill:episodes": "node --env-file-if-exists=../../.env dist/titles/backfill-cli.js"
+    "backfill:episodes": "node --env-file-if-exists=../../.env dist/titles/backfill-cli.js",
+    "backfill:metadata": "node --env-file-if-exists=../../.env dist/titles/backfill-metadata-cli.js"
   },
   "dependencies": {
     "@engram/shared": "workspace:*",

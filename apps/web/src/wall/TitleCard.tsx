@@ -8,9 +8,9 @@ export const STATE_LABEL: Record<TitleState, string> = {
 };
 
 const STATE_BADGE: Record<TitleState, string> = {
-  unwatched: 'bg-neutral-700 text-neutral-100',
-  in_progress: 'bg-amber-400 text-amber-950',
-  seen: 'bg-emerald-500 text-emerald-950',
+  unwatched: 'border border-line bg-raise text-tx',
+  in_progress: 'bg-gold text-bg',
+  seen: 'bg-jade text-on-jade',
 };
 
 export function TitleCard({ title }: { title: TitleSummary }) {
@@ -27,14 +27,14 @@ export function TitleCard({ title }: { title: TitleSummary }) {
         to="/titles/$id"
         params={{ id: title.id }}
         aria-label={`${title.name}, ${STATE_LABEL[title.state]}`}
-        className="relative block aspect-2/3 overflow-hidden rounded bg-neutral-800 hover:ring-2 hover:ring-neutral-400"
+        className="relative block aspect-2/3 overflow-hidden rounded bg-surf hover:ring-2 hover:ring-dim"
       >
         {poster ? (
           // Decorative: the heading below carries the name for a screen reader,
           // and repeating it here would read every card twice.
           <img src={poster} alt="" loading="lazy" className="size-full object-cover" />
         ) : (
-          <span className="flex size-full items-center justify-center p-3 text-center text-sm text-neutral-500">
+          <span className="flex size-full items-center justify-center p-3 text-center text-sm text-faint">
             {title.name}
           </span>
         )}
@@ -47,13 +47,13 @@ export function TitleCard({ title }: { title: TitleSummary }) {
       <h2 className="truncate text-sm font-medium" title={title.name}>
         {title.name}
       </h2>
-      <p className="text-xs text-neutral-400">
+      <p className="font-mono text-xs text-dim">
         {title.year ?? 'Year unknown'}
         {title.kind === 'show'
           ? ` · ${title.episodes.seen} of ${title.episodes.total} episodes`
           : ''}
       </p>
-      {flags.length > 0 ? <p className="text-xs text-neutral-500">{flags.join(' · ')}</p> : null}
+      {flags.length > 0 ? <p className="text-xs text-faint">{flags.join(' · ')}</p> : null}
     </article>
   );
 }

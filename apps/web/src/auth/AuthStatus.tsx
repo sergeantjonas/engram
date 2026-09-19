@@ -17,11 +17,11 @@ export function AuthStatus() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: meQuery.queryKey }),
   });
 
-  if (me.isPending) return <span className="text-sm text-neutral-500">…</span>;
+  if (me.isPending) return <span className="text-sm text-faint">…</span>;
 
   if (me.isError) {
     return (
-      <span role="alert" className="text-sm text-red-400">
+      <span role="alert" className="text-sm text-gap-tx">
         API unreachable
       </span>
     );
@@ -29,10 +29,7 @@ export function AuthStatus() {
 
   if (!me.data.isOwner) {
     return (
-      <a
-        href={loginUrl(here)}
-        className="text-sm text-neutral-300 underline-offset-4 hover:underline"
-      >
+      <a href={loginUrl(here)} className="text-sm text-dim underline-offset-4 hover:underline">
         Sign in
       </a>
     );
@@ -43,7 +40,7 @@ export function AuthStatus() {
       type="button"
       onClick={() => signOut.mutate()}
       disabled={signOut.isPending}
-      className="text-sm text-neutral-300 underline-offset-4 hover:underline disabled:opacity-50"
+      className="text-sm text-dim underline-offset-4 hover:underline disabled:opacity-50"
     >
       Sign out
     </button>

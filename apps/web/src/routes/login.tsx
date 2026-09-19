@@ -39,13 +39,13 @@ function Login() {
     <div className="mx-auto max-w-sm space-y-6 pt-16 text-center">
       <h1 className="text-2xl font-semibold">Sign in</h1>
       {error ? (
-        <p role="alert" className="text-sm text-amber-300">
+        <p role="alert" className="text-sm text-gap-tx">
           {EXPLANATIONS[error]}
         </p>
       ) : null}
       <a
         href={loginUrl(next ?? '/')}
-        className="inline-block rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900"
+        className="inline-block rounded bg-jade px-4 py-2 font-medium text-on-jade"
       >
         Continue with GitHub
       </a>

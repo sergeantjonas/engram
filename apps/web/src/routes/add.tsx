@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { CandidateRow } from '../add/CandidateRow.tsx';
+import { meQuery } from '../api/auth.ts';
 import { ApiError } from '../api/client.ts';
 import { addTitle, candidateKey, searchQuery, type TmdbCandidate } from '../api/titles.ts';
 
@@ -12,6 +13,19 @@ interface AddSearch {
 export const Route = createFileRoute('/add')({
   validateSearch: (search: Record<string, unknown>): AddSearch =>
     typeof search.q === 'string' && search.q.trim() !== '' ? { q: search.q.trim() } : {},
+  /**
+   * The one screen with nothing on it to read. Its results come from a search
+   * the API will not run for a stranger and every row ends in a button they
+   * cannot press, so there is no narrower version of it to show — only the
+   * sign-in that would make it work, with the way back to here attached.
+   */
+  beforeLoad: async ({ context, location }) => {
+    // `fetchQuery`, not the root's `ensureQueryData`: that one is happy with
+    // whatever is cached, and a session that expired while the tab sat open
+    // would let this screen render on the strength of an old answer.
+    const me = await context.queryClient.fetchQuery(meQuery);
+    if (!me.isOwner) throw redirect({ to: '/login', search: { next: location.href } });
+  },
   component: Add,
 });
 
@@ -69,12 +83,9 @@ function Add() {
           placeholder="Search for a film or series"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2"
+          className="flex-1 rounded border border-line bg-bg px-3 py-2"
         />
-        <button
-          type="submit"
-          className="rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900"
-        >
+        <button type="submit" className="rounded bg-jade px-4 py-2 font-medium text-on-jade">
           Search
         </button>
       </form>
@@ -104,18 +115,18 @@ function Results({
   failed: { key: string; message: string } | null;
 }) {
   if (q === undefined) {
-    return <p className="text-neutral-400">Search TMDB for something to put on the record.</p>;
+    return <p className="text-dim">Search TMDB for something to put on the record.</p>;
   }
-  if (results.isPending) return <p className="text-neutral-400">Searching…</p>;
+  if (results.isPending) return <p className="text-dim">Searching…</p>;
   if (results.isError) {
     return (
-      <p role="alert" className="text-red-400">
+      <p role="alert" className="text-gap-tx">
         {describe(results.error)}
       </p>
     );
   }
   if (results.data.results.length === 0) {
-    return <p className="text-neutral-400">TMDB has nothing for “{q}”.</p>;
+    return <p className="text-dim">TMDB has nothing for “{q}”.</p>;
   }
 
   return (

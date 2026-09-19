@@ -71,7 +71,11 @@ describe('the shell', () => {
     (await screen.findByRole('button', { name: 'Sign out' })).click();
 
     await screen.findByRole('link', { name: 'Sign in' });
-    expect(calls.filter((call) => call.url.endsWith('/auth/me'))).toHaveLength(2);
+    // Three: the root primes the answer before the first paint so the header
+    // and the wall's controls do not arrive a tick late, `AuthStatus` asks
+    // again on mount because `no-store` means a cached yes is worth nothing,
+    // and the sign-out invalidates and asks a third time.
+    expect(calls.filter((call) => call.url.endsWith('/auth/me'))).toHaveLength(3);
   });
 
   it('says why the API sent the browser back to /login', async () => {
@@ -168,16 +172,31 @@ describe('the wall', () => {
     await screen.findByText('Nothing on record yet.');
   });
 
-  it('points a stranger at sign-in when the API turns the wall away', async () => {
+  // The record reads for anyone; what it does not do for them is offer a way
+  // to change it.
+  it('shows a stranger the wall without the controls that change it', async () => {
     stubApi((url) =>
       url.includes('/titles')
-        ? json({ error: 'unauthorized', message: 'an owner session is required' }, 401)
+        ? json({ titles: [title({ name: 'Bleach', state: 'in_progress' })] })
         : json({ isOwner: false }),
     );
     await renderAt('/');
 
-    await screen.findByText('Sign in to see your wall.');
-    expect(screen.queryByRole('alert')).toBeNull();
+    await screen.findByRole('heading', { name: 'Bleach' });
+    expect(screen.getByRole('link', { name: 'In progress' })).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Show excluded' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Add a title' })).toBeNull();
+  });
+
+  it('reports a wall that will not load rather than offering sign-in', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({ error: 'internal', message: 'the request could not be completed' }, 500)
+        : json({ isOwner: false }),
+    );
+    await renderAt('/');
+
+    expect((await screen.findByRole('alert')).textContent).toContain('could not be loaded');
   });
 });
 
@@ -229,7 +248,7 @@ describe('the title page', () => {
   });
 
   /** A stub API whose one title remembers the gap the viewer declares. */
-  function stubTitle() {
+  function stubTitle(isOwner = true) {
     let gap: EpisodeCell['gap'] = null;
     const calls = stubApi((url, init) => {
       if (url.endsWith('/gap') && init?.method === 'PUT') {
@@ -246,7 +265,7 @@ describe('the title page', () => {
         if (cell) cell.gap = gap;
         return json(body);
       }
-      return json({ isOwner: true });
+      return json({ isOwner });
     });
     return calls;
   }
@@ -308,6 +327,21 @@ describe('the title page', () => {
     expect(calls.filter((call) => call.init?.method === 'DELETE')).toHaveLength(1);
   });
 
+  // The grid is the record; the form under it is the only part that writes.
+  it('gives a stranger the grid and its facts but no form', async () => {
+    stubTitle(false);
+    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+
+    await screen.findByRole('heading', { name: 'ONE PIECE' });
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+
+    // The popover still opens and still says what it knows.
+    await screen.findByText('5. WAX ON, WAX OFF');
+    expect(screen.getByText('Not seen')).toBeDefined();
+    expect(screen.queryByRole('radio', { name: 'Never had it' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+  });
+
   it('says when no title is stored under the id', async () => {
     stubApi((url) =>
       url.includes('/titles/')
@@ -332,6 +366,20 @@ const candidate = (overrides: Partial<TmdbCandidate>): TmdbCandidate => ({
 });
 
 describe('adding a title', () => {
+  // Nothing on this screen reads without being able to act, so there is no
+  // narrower version of it to show a stranger.
+  it('turns a stranger away at the door, with the way back attached', async () => {
+    const calls = stubApi(() => json({ isOwner: false }));
+    await renderAt('/add');
+
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Continue with GitHub' }).getAttribute('href')).toBe(
+      'http://localhost:2012/auth/github/login?next=%2Fadd',
+    );
+    // Turned away before TMDB was asked anything on their behalf.
+    expect(calls.some((call) => call.url.includes('/search'))).toBe(false);
+  });
+
   it('searches TMDB for what the URL asks and lists what comes back', async () => {
     const calls = stubApi((url) =>
       url.includes('/search')

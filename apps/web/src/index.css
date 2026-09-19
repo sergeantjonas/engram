@@ -1,5 +1,36 @@
 @import "tailwindcss";
 
+/* The espresso palette and the two-family split, settled against the mockup in
+   docs/design/. Token names match that file so the two can be read side by
+   side. Jade is the affirmative accent and deliberately not gold: "finished"
+   must never collide with "in progress". */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --color-bg: #100e0c;
+  --color-surf: #1a1714;
+  --color-raise: #221e1a;
+  --color-line: #2c2621;
+  --color-tx: #f2ede4;
+  --color-dim: #9c9288;
+  --color-faint: #6b635a;
+  --color-jade: #4e9c86;
+  --color-on-jade: #0b1713;
+  --color-gold: #d9a441;
+  --color-drift: #c4662f;
+  --color-gap: #c0485e;
+  /* Derived, not from the mockup, which only ever fills a 3px bar or a cell
+     border with `--gap`. As body text that fill is 3.97:1 on the page, so alert
+     copy gets a lighter tone of it that clears AA at 6.92:1. */
+  --color-gap-tx: #e8798c;
+
+  /* Archivo names things, Martian Mono sets figures. Splitting by job rather
+     than by size keeps the mono out of a show name under a 118px tile. */
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-tx);
+  }
 }

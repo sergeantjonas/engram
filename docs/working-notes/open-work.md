@@ -27,9 +27,10 @@ each:
    controls that need it.
 
 The three screens above were built on Tailwind's defaults — slate greys and
-system-ui — because the design had never been written down. Applying the
-palette and the type split is the next thing to land. What the screens owe the
-design beyond that, all checked against the running app rather than guessed:
+system-ui — because the design had never been written down. The palette and the
+type split landed 2026-09-19, so the shell, the wall, the grid and the add
+screen are on espresso and Archivo / Martian Mono now. What the screens still
+owe the design, all checked against the running app rather than guessed:
 
 - The tile's figure line is a sentence (`2004 · 8 of 424 episodes`) where the
   design has a short mono figure. Martian Mono is wide and it wraps to two
@@ -118,6 +119,18 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-19** — The design system applied to `apps/web`. The espresso
+  palette and the Archivo / Martian Mono split live in `@theme`, with token
+  names matching the mockup so the two can be read side by side. Checked in the
+  running app rather than in the build output: gold and jade stay distinct at
+  grid size, and Martian Mono's width is fine in the episode cells even at
+  three digits. Two colours are derived rather than taken from the mockup —
+  `--color-on-jade` for text on a jade fill, which the mockup hardcodes, and
+  `--color-gap-tx`, because `--gap` as alert text is 3.97:1 and the mockup only
+  ever fills a bar or a cell border with it. Skipped cells took gold rather
+  than drift for the same reason: drift against gap is 1.22:1, and the two
+  kinds of hole have to be told apart at cell size rather than in the popover.
+  What the screens still owe the design is listed under Now.
 - **2026-09-19** — The record reads for anyone; only the owner may change it.
   The guard was global-deny with a list of open paths, which made the whole
   thing a diary behind a login. The list is now keyed on method and route

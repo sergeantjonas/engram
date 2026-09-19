@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { TITLE_STATES, type TitleState, type TitleSummary } from '../api/titles.ts';
+import { useIsOwner } from '../auth/useIsOwner.ts';
 import { STATE_LABEL, TitleCard } from './TitleCard.tsx';
 
 /** The wall's URL state. `excluded` is `true` or absent: `false` is the default and never written. */
@@ -8,9 +9,8 @@ export interface WallSearch {
   excluded?: true;
 }
 
-const CHIP =
-  'rounded-full border border-neutral-700 px-3 py-1 text-sm text-neutral-300 hover:border-neutral-500';
-const ACTIVE_CHIP = 'border-neutral-100 bg-neutral-100 text-neutral-900';
+const CHIP = 'rounded-full border border-line px-3 py-1 text-sm text-dim hover:border-dim';
+const ACTIVE_CHIP = 'border-tx bg-tx text-bg';
 
 const EMPTY: Record<TitleState, string> = {
   unwatched: 'Nothing left unwatched.',
@@ -19,6 +19,7 @@ const EMPTY: Record<TitleState, string> = {
 };
 
 export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallSearch }) {
+  const isOwner = useIsOwner();
   const withExcluded = search.excluded ? { excluded: true as const } : {};
   const withState = search.state ? { state: search.state } : {};
 
@@ -47,19 +48,21 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
             {STATE_LABEL[state]}
           </Link>
         ))}
-        <Link
-          to="/"
-          search={search.excluded ? withState : { ...withState, excluded: true }}
-          className="ml-auto text-sm text-neutral-400 underline-offset-4 hover:underline"
-        >
-          {search.excluded ? 'Hide excluded' : 'Show excluded'}
-        </Link>
+        {/* The API ignores the flag for anyone else, so offering it would be a
+            switch with nothing on the other end of it. */}
+        {isOwner ? (
+          <Link
+            to="/"
+            search={search.excluded ? withState : { ...withState, excluded: true }}
+            className="ml-auto text-sm text-dim underline-offset-4 hover:underline"
+          >
+            {search.excluded ? 'Hide excluded' : 'Show excluded'}
+          </Link>
+        ) : null}
       </nav>
 
       {titles.length === 0 ? (
-        <p className="text-neutral-400">
-          {search.state ? EMPTY[search.state] : 'Nothing on record yet.'}
-        </p>
+        <p className="text-dim">{search.state ? EMPTY[search.state] : 'Nothing on record yet.'}</p>
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-x-4 gap-y-6">
           {titles.map((title) => (

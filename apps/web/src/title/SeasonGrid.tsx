@@ -19,7 +19,7 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
   if (season.season === 0) {
     return (
       <details className="space-y-3">
-        <summary className="cursor-pointer text-sm text-neutral-400">
+        <summary className="cursor-pointer text-sm text-dim">
           {heading} · {seen} of {season.episodes.length}
         </summary>
         {grid}
@@ -31,7 +31,7 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
     <section aria-label={heading} className="space-y-3">
       <h2 className="text-sm font-medium">
         {heading}{' '}
-        <span className="font-normal text-neutral-400">
+        <span className="font-mono text-xs font-normal text-dim">
           · {seen} of {season.episodes.length}
         </span>
       </h2>

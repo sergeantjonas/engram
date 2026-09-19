@@ -36,8 +36,11 @@ export function serializeCookie(name: string, value: string, options: CookieOpti
     'Path=/',
     'HttpOnly',
     // Lax is what makes CSRF a non-issue: the cookie rides top-level
-    // navigations, so returning from GitHub carries it, but not cross-site
-    // POSTs, and every state-changing route is a POST.
+    // navigations, so returning from GitHub carries it, and a top-level
+    // navigation can only ever be a GET. Nothing cross-site can drive a POST,
+    // PUT or DELETE here with the cookie attached — a form cannot emit the
+    // latter two at all, and they are never simple requests, so they are
+    // preflighted against an origin allowlist first.
     'SameSite=Lax',
   ];
   if (options.secure) parts.push('Secure');

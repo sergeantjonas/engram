@@ -3,6 +3,12 @@ import { sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { listTitles, type TitleSummary } from './list.js';
 
+/** What the viewer has said about a hole, if anything. */
+export interface EpisodeGap {
+  reason: 'skipped' | 'missing';
+  note: string | null;
+}
+
 /** One cell of the grid. */
 export interface EpisodeCell {
   id: string;
@@ -23,6 +29,13 @@ export interface EpisodeCell {
   lastWatchedPrecision: WatchPrecision | null;
   /** True when TMDB does not list this episode, so nothing can ever label it. */
   unmatched: boolean;
+  /**
+   * Null means no comment rather than "not skipped" — the viewer has simply
+   * never said. Left on an episode that is later watched it goes stale rather
+   * than wrong: `seen` is the fact, and this was only ever an account of why
+   * it was not.
+   */
+  gap: EpisodeGap | null;
 }
 
 export interface SeasonGrid {
@@ -50,6 +63,8 @@ interface EpisodeRow extends Record<string, unknown> {
   first_watched_precision: WatchPrecision | null;
   last_watched_at: string | null;
   last_watched_precision: WatchPrecision | null;
+  gap_reason: 'skipped' | 'missing' | null;
+  gap_note: string | null;
 }
 
 /**
@@ -71,11 +86,15 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       to_json(e.air_date) as air_date,
       w.seen, w.play_count,
       to_json(w.first_watched_at) as first_watched_at, w.first_watched_precision,
-      to_json(w.last_watched_at) as last_watched_at, w.last_watched_precision
+      to_json(w.last_watched_at) as last_watched_at, w.last_watched_precision,
+      g.reason as gap_reason, g.note as gap_note
     from episode e
       -- LEFT because an episode with no history is the whole point: it is the
       -- gap the grid exists to show.
       left join watch_state w on w.episode_id = e.id
+      -- LEFT again: most episodes have no comment, and saying nothing is the
+      -- default rather than an omission.
+      left join episode_gap g on g.episode_id = e.id
     where e.title_id = ${titleId}
     order by e.season asc, e.number asc
   `);
@@ -101,6 +120,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       // while only a row TMDB has never returned lacks an id. Bleach's S17 is
       // the known case.
       unmatched: row.tmdb_episode_id === null,
+      gap: row.gap_reason == null ? null : { reason: row.gap_reason, note: row.gap_note ?? null },
     };
 
     const existing = seasons.get(row.season);

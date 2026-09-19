@@ -27,6 +27,20 @@ export interface SessionDb {
    * answers, and one shared `rows` would hand the grid query a list of titles.
    */
   executions: unknown[][];
+  /**
+   * Result sets for consecutive typed `select` calls, consumed in order.
+   *
+   * The guard's session lookup is always the first, so a test that needs a
+   * later select to come back empty has to supply the session row itself.
+   * Left empty, every select answers with the session.
+   */
+  selects: unknown[][];
+  /**
+   * Writes made through `insert`, in order, each with the conflict clause it
+   * used. The clause is recorded because it carries the semantics: an upsert
+   * silently swapped for `onConflictDoNothing` would otherwise look identical.
+   */
+  inserted: { values: unknown; onConflict: 'update' | 'nothing'; set?: unknown }[];
   /** Set when a row was reaped, and when the sliding window was rewritten. */
   deleted: number;
   extended: Date[];
@@ -58,13 +72,31 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
     extended: [],
     rows: [],
     executions: [],
+    selects: [],
+    inserted: [],
     db: {
       // `db.execute` is the raw-SQL path; the queries that use it are verified
       // against the real table, so here it only replays what a test sets up.
       execute: async () => state.executions.shift() ?? state.rows,
       select: () => ({
         from: () => ({
-          where: () => ({ limit: async () => (row === null ? [] : [row]) }),
+          // Shifted once per query, not once per builder method: a chain
+          // ending in `.limit()` would otherwise consume two answers and hand
+          // the caller the one meant for the next query.
+          where: () => {
+            const answer = state.selects.shift() ?? (row === null ? [] : [row]);
+            return Object.assign(Promise.resolve(answer), { limit: async () => answer });
+          },
+        }),
+      }),
+      insert: () => ({
+        values: (values: unknown) => ({
+          onConflictDoUpdate: async (config: { set?: unknown }) => {
+            state.inserted.push({ values, onConflict: 'update', set: config?.set });
+          },
+          onConflictDoNothing: async () => {
+            state.inserted.push({ values, onConflict: 'nothing' });
+          },
         }),
       }),
       delete: () => ({

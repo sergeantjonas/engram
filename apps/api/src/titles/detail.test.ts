@@ -34,6 +34,8 @@ const episodeRow = (over: Record<string, unknown> = {}) => ({
   first_watched_precision: 'exact',
   last_watched_at: '2026-03-01T20:00:00+00:00',
   last_watched_precision: 'exact',
+  gap_reason: null,
+  gap_note: null,
   ...over,
 });
 
@@ -123,5 +125,24 @@ describe('titleDetail', () => {
     const result = await detail([], [{ ...titleRow, excluded_at: '2026-09-17T00:00:00+00:00' }]);
 
     expect(result?.title.excluded).toBe(true);
+  });
+
+  it('carries what the viewer said about a hole', async () => {
+    const result = await detail([
+      episodeRow({ seen: null, gap_reason: 'skipped', gap_note: 'filler arc' }),
+    ]);
+
+    expect(result?.seasons[0]?.episodes[0]?.gap).toEqual({
+      reason: 'skipped',
+      note: 'filler arc',
+    });
+  });
+
+  // No comment is the default, and it must not arrive as an object of
+  // undefineds that reads as a comment to anything checking for one.
+  it('says nothing when the viewer has not', async () => {
+    const result = await detail([episodeRow()]);
+
+    expect(result?.seasons[0]?.episodes[0]?.gap).toBeNull();
   });
 });

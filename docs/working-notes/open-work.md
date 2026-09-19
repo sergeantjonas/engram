@@ -27,23 +27,19 @@ Two things have to land on the API side first, and the second was a surprise:
    S2E5 now comes back as `WAX ON, WAX OFF`, aired 2026-03-10, `seen: false` —
    a labelled hole rather than a missing row.
 
-**Open decision, and it blocks part of the title page.** The settled design says
-the UI has to let the viewer *say* whether a hole was skipped or never
-downloaded. Nothing can record that answer today: `library_presence` is keyed on
-`title_id` as its primary key, so it is per title rather than per episode, and
-it holds zero rows because only Sonarr and Radarr webhooks would write it and
-those are deferred.
+4. ~~Recording whether a hole was skipped or never downloaded.~~ Settled and
+   built 2026-09-19: the viewer declares it. `episode_gap` holds one row per
+   episode with a reason of `skipped` or `missing` and an optional note,
+   written through `PUT /episodes/:id/gap` and cleared with `DELETE`. The
+   reasoning, including why `library_presence` is not the answer, is in
+   [data-model.md](data-model.md).
 
-Two readings, and they are different work:
-
-- **The viewer declares it.** "Let you say" read literally — a per-episode
-  annotation next to `intent`, written from the grid. Needs a table, a
-  migration and a write route.
-- **The system reports it.** Per-episode presence from Sonarr, which means
-  waiting on the webhook arc and changing `library_presence`'s grain.
-
-The grid ships without it either way; the cells are already distinguishable as
-watched, unwatched, or unknown to TMDB.
+The API covers the reads the SPA needs and two of its three write paths —
+adding a title, marking episodes watched, and explaining a hole. **One is
+missing:** nothing writes `intent`, so the wall cannot set want, dropped or
+excluded, which the settled design treats as part of filtering by state. That is
+a small route over a table that already exists, and it can land alongside the
+screen that needs it rather than ahead of it.
 
 ## Next
 

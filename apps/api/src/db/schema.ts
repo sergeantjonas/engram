@@ -228,6 +228,39 @@ export const watchEvents = pgTable(
 );
 
 /**
+ * Why an unwatched episode is unwatched.
+ *
+ * `skipped` is a decision — filler, a recap, an episode deliberately passed
+ * over. `missing` is an absence — it was never on disk to watch. The two look
+ * identical in the history, which is the whole problem: ONE PIECE S2E5 sits
+ * between a rewatch of E4 and a play of E6 and nothing in the record says
+ * which of the two it was.
+ */
+export const gapReason = pgEnum('gap_reason', ['skipped', 'missing']);
+
+/**
+ * The viewer's own account of a hole in a season.
+ *
+ * Declared rather than derived. `library_presence` could in principle answer
+ * `missing`, but it is per title and written by a Sonarr webhook that does not
+ * exist yet — and more to the point, only the viewer knows whether they chose
+ * to skip something. The record is what the owner asserts.
+ *
+ * One row per episode: this is a current answer, not a history of answers.
+ * Changing your mind overwrites, and deleting the row means "no comment"
+ * rather than "not skipped".
+ */
+export const episodeGaps = pgTable('episode_gap', {
+  episodeId: uuid('episode_id')
+    .primaryKey()
+    .references(() => episodes.id, { onDelete: 'cascade' }),
+  reason: gapReason('reason').notNull(),
+  /** Free text, because "waiting for the dub" is not an enum value. */
+  note: text('note'),
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
  * A signed-in browser, which for this project is the owner's and nobody else's.
  *
  * Only the SHA-256 of the cookie's token is stored. A leaked backup then yields

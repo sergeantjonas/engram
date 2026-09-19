@@ -36,6 +36,13 @@
       "when": 1789668452404,
       "tag": "0004_short_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789828402916,
+      "tag": "0005_clean_mimic",
+      "breakpoints": true
     }
   ]
 }

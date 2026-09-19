@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. Extended 2026-09-19 with `episode_gap`, the viewer's own account of a hole. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -59,6 +59,14 @@ session           a signed-in browser, which is only ever the owner's
                   only the SHA-256 of the cookie's token is stored, so a leaked
                   backup yields nothing a caller can present
                   see authentication.md for the flow that writes these
+
+episode_gap       the viewer's own account of a hole in a season
+                  (episode_id, reason, note, recorded_at)
+                  reason is skipped | missing: a decision versus an absence,
+                  which look identical in the history
+                  one row per episode, overwritten rather than appended — this
+                  is a current answer, and no row means "no comment" rather
+                  than "not skipped"
 
 watch_state       SQL view over watch_event, not a table: it cannot drift
                   from its source and needs no rebuild step
@@ -188,6 +196,24 @@ featurettes, while Bleach's 4 are real. They are stored because dropping season
 0 would leave a watched OVA with no row to mark, and they are excluded from the
 progress fraction, so the cost is a season the grid should collapse by default
 rather than a wrong count.
+
+## Why a hole needs the viewer to explain it
+
+ONE PIECE S2E5 sits between a rewatch of E4 and a play of E6. Nothing in the
+history says whether it was skipped on purpose or never downloaded, and the two
+are the same shape: no `watch_event`.
+
+`library_presence` looks like the answer and is not. It is keyed on `title_id`
+as its primary key, so it is per title rather than per episode, and it holds no
+rows at all — only a Sonarr or Radarr webhook would write it, and those are
+deferred. Even fixed, it would answer "was it on disk", which is not the same
+question: an episode can sit on disk for a year and be deliberately skipped.
+
+So `episode_gap` records what the viewer says, settled 2026-09-19. It is
+declared, not derived, which is the same principle as `intent` and the same
+principle as the project: the record is what the owner asserts, not what the
+disk currently happens to hold. A gap on a seen episode is stale rather than
+wrong — the grid shows it as watched either way.
 
 ## Eight episodes TMDB has never heard of
 

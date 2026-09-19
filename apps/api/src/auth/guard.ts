@@ -28,7 +28,7 @@ const OPEN_PATHS = new Set([
 ]);
 
 /** What the SPA sends; the API has no other kind of caller with a browser. */
-const ALLOWED_METHODS = 'GET, POST, OPTIONS';
+const ALLOWED_METHODS = 'GET, POST, PUT, DELETE, OPTIONS';
 
 /**
  * Gates every route on an owner session, and answers the browser's preflight.

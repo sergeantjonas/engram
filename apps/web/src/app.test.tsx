@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { TitleSummary } from './api/titles.ts';
+import type { EpisodeCell, TitleDetail, TitleSummary } from './api/titles.ts';
 import { createAppRouter } from './router.tsx';
 
 type Handler = (url: string, init: RequestInit | undefined) => Response;
@@ -143,6 +143,9 @@ describe('the wall', () => {
     expect(screen.getByRole('link', { name: 'Show excluded' }).getAttribute('href')).toBe(
       '/?state=in_progress&excluded=true',
     );
+    expect(screen.getByRole('link', { name: 'Bleach, In progress' }).getAttribute('href')).toMatch(
+      /^\/titles\/[0-9a-f-]{36}$/,
+    );
   });
 
   it('asks for the excluded titles only when the URL says so', async () => {
@@ -174,5 +177,145 @@ describe('the wall', () => {
 
     await screen.findByText('Sign in to see your wall.');
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+const episode = (overrides: Partial<EpisodeCell>): EpisodeCell => ({
+  id: crypto.randomUUID(),
+  number: 1,
+  name: null,
+  airDate: null,
+  runtimeMin: null,
+  seen: false,
+  playCount: 0,
+  firstWatchedAt: null,
+  firstWatchedPrecision: null,
+  lastWatchedAt: null,
+  lastWatchedPrecision: null,
+  unmatched: false,
+  gap: null,
+  ...overrides,
+});
+
+describe('the title page', () => {
+  const hole = episode({ number: 5, name: 'WAX ON, WAX OFF', airDate: '2026-03-10' });
+  const detail = (): TitleDetail => ({
+    title: title({ name: 'ONE PIECE', state: 'in_progress', episodes: { total: 3, seen: 2 } }),
+    seasons: [
+      { season: 0, episodes: [episode({ number: 1, name: 'Recap' })] },
+      {
+        season: 2,
+        episodes: [
+          episode({
+            number: 4,
+            seen: true,
+            playCount: 2,
+            lastWatchedAt: '2026-03-01T20:00:00.000Z',
+            lastWatchedPrecision: 'exact',
+          }),
+          hole,
+          episode({
+            number: 6,
+            seen: true,
+            lastWatchedAt: '2019-01-01T00:00:00.000Z',
+            lastWatchedPrecision: 'year',
+            // Stale, not wrong: it was watched after the reason was given.
+            gap: { reason: 'skipped', note: null },
+          }),
+        ],
+      },
+    ],
+  });
+
+  /** A stub API whose one title remembers the gap the viewer declares. */
+  function stubTitle() {
+    let gap: EpisodeCell['gap'] = null;
+    const calls = stubApi((url, init) => {
+      if (url.endsWith('/gap') && init?.method === 'PUT') {
+        gap = { note: null, ...(JSON.parse(String(init.body)) as object) } as EpisodeCell['gap'];
+        return json({ gap });
+      }
+      if (url.endsWith('/gap') && init?.method === 'DELETE') {
+        gap = null;
+        return new Response(null, { status: 204 });
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        const cell = body.seasons[1]?.episodes[1];
+        if (cell) cell.gap = gap;
+        return json(body);
+      }
+      return json({ isOwner: true });
+    });
+    return calls;
+  }
+
+  it('draws the grid with specials folded away and every hole labelled', async () => {
+    stubTitle();
+    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+
+    await screen.findByRole('heading', { name: 'ONE PIECE' });
+    expect(screen.getByText('2020 · Series · In progress · 2 of 3 episodes')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Episode 4, seen' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' }),
+    ).toBeDefined();
+    expect(screen.getByRole('region', { name: 'Season 2' })).toBeDefined();
+    // Folded, not hidden: the specials are there for whoever opens them.
+    expect(screen.getByText('Specials · 0 of 1')).toBeDefined();
+
+    // Seen wins over a stale reason, but the reason is still there to clear;
+    // and a year-precision watch prints the year alone.
+    screen.getByRole('button', { name: 'Episode 6, seen' }).click();
+    await screen.findByRole('button', { name: 'Clear' });
+    expect(screen.getByText('Watched 2019')).toBeDefined();
+  });
+
+  it('records why a hole is a hole and redraws the cell', async () => {
+    const calls = stubTitle();
+    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    (await screen.findByRole('radio', { name: 'Never had it' })).click();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note' }), {
+      target: { value: 'Sonarr never grabbed it' },
+    });
+    screen.getByRole('button', { name: 'Save' }).click();
+
+    await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen, missing' });
+    const put = calls.find((call) => call.init?.method === 'PUT');
+    expect(put?.url).toBe(`http://localhost:2012/episodes/${hole.id}/gap`);
+    expect(JSON.parse(String(put?.init?.body))).toEqual({
+      reason: 'missing',
+      note: 'Sonarr never grabbed it',
+    });
+  });
+
+  it('clears a reason, which is saying nothing again', async () => {
+    const calls = stubTitle();
+    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    (await screen.findByRole('button', { name: 'Save' })).click();
+    const cell = await screen.findByRole('button', {
+      name: 'Episode 5: WAX ON, WAX OFF, not seen, skipped',
+    });
+
+    cell.click();
+    (await screen.findByRole('button', { name: 'Clear' })).click();
+
+    await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' });
+    expect(calls.filter((call) => call.init?.method === 'DELETE')).toHaveLength(1);
+  });
+
+  it('says when no title is stored under the id', async () => {
+    stubApi((url) =>
+      url.includes('/titles/')
+        ? json({ error: 'not_found', message: 'no title is stored under that id' }, 404)
+        : json({ isOwner: true }),
+    );
+    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+
+    await screen.findByText(/No title is stored under that id/);
+    expect(screen.getByRole('link', { name: 'Back to the wall' }).getAttribute('href')).toBe('/');
   });
 });

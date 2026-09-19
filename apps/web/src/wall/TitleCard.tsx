@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { posterUrl, type TitleState, type TitleSummary } from '../api/titles.ts';
 
 export const STATE_LABEL: Record<TitleState, string> = {
@@ -22,7 +23,12 @@ export function TitleCard({ title }: { title: TitleSummary }) {
 
   return (
     <article className="space-y-1.5">
-      <div className="relative aspect-2/3 overflow-hidden rounded bg-neutral-800">
+      <Link
+        to="/titles/$id"
+        params={{ id: title.id }}
+        aria-label={`${title.name}, ${STATE_LABEL[title.state]}`}
+        className="relative block aspect-2/3 overflow-hidden rounded bg-neutral-800 hover:ring-2 hover:ring-neutral-400"
+      >
         {poster ? (
           // Decorative: the heading below carries the name for a screen reader,
           // and repeating it here would read every card twice.
@@ -37,7 +43,7 @@ export function TitleCard({ title }: { title: TitleSummary }) {
         >
           {STATE_LABEL[title.state]}
         </span>
-      </div>
+      </Link>
       <h2 className="truncate text-sm font-medium" title={title.name}>
         {title.name}
       </h2>

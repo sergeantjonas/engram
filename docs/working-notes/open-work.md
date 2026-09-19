@@ -11,14 +11,14 @@ Tailwind v4 with Radix primitives and no shadcn, settled 2026-09-18.
 
 The scaffold landed 2026-09-19: the shell asks `/auth/me` and offers sign-in or
 sign-out, `/login` explains the reason the API's callback sent the browser back
-with, and the API client sends credentials to `VITE_API_ORIGIN`. Radix is not a
-dependency yet — nothing in the shell needs a primitive, and it joins with the
-first screen that does. The screens land in this order, one commit each:
+with, and the API client sends credentials to `VITE_API_ORIGIN`. Radix joined
+with the title page, which is the first screen that needed a primitive: one
+popover package, not the umbrella. The screens land in this order, one commit
+each:
 
 1. ~~The wall over `GET /titles`, filtered by state.~~ Landed 2026-09-19.
-   Cards are not links yet; they get one when the title page exists to point
-   at.
-2. The title page: episode grid plus declaring and clearing a hole's reason.
+2. ~~The title page: episode grid plus declaring and clearing a hole's
+   reason.~~ Landed 2026-09-19.
 3. Adding a title by hand over `GET /search` and `POST /titles`.
 4. The `intent` write route on the API, and the wall's want / dropped / excluded
    controls that need it.
@@ -86,6 +86,15 @@ screen that needs it rather than ahead of it.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-19** — The title page at `/titles/$id`: header from the same
+  summary the wall draws, one grid per season, specials folded into a
+  `<details>`. Every cell is a Radix popover trigger showing the episode's air
+  date and watch history, and for a hole, a form that writes `PUT
+  /episodes/:id/gap` or clears it with `DELETE`; the grid refetches rather than
+  patching the cache. Seen wins over a stale reason in the cell's colour. Wall
+  cards now link here. `@radix-ui/react-popover` is the first and only Radix
+  package; recon was clean and the install diff was manifest plus lockfile.
 
 - **2026-09-19** — The wall: `GET /titles` as a poster grid under `/`, with the
   state filter and the excluded toggle as links carrying `?state=` and

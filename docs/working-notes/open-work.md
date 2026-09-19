@@ -6,7 +6,9 @@
 
 **`apps/web`** — Vite + React SPA on port 2011, shaped by the settled design: a
 poster wall filtered by state, a title page built around the episode grid, and
-adding a title by hand as a screen of its own. TanStack Router and Query,
+adding a title by hand as a screen of its own. The design was settled
+2026-09-16 and is written down in [web-design.md](web-design.md), with the
+mockup it was approved from in `docs/design/`. TanStack Router and Query,
 Tailwind v4 with Radix primitives and no shadcn, settled 2026-09-18.
 
 The scaffold landed 2026-09-19: the shell asks `/auth/me` and offers sign-in or
@@ -23,6 +25,32 @@ each:
    2026-09-19.
 4. The `intent` write route on the API, and the wall's want / dropped / excluded
    controls that need it.
+
+The three screens above were built on Tailwind's defaults — slate greys and
+system-ui — because the design had never been written down. Applying the
+palette and the type split is the next thing to land. What the screens owe the
+design beyond that, all checked against the running app rather than guessed:
+
+- The tile's figure line is a sentence (`2004 · 8 of 424 episodes`) where the
+  design has a short mono figure. Martian Mono is wide and it wraps to two
+  lines, which is the design's own warning about mono width arriving in the
+  figures instead of the name. Shorten it before the tiles go from 144px to the
+  designed 118px, or the wrap gets worse.
+- Names truncate on one line; they should clamp to two with the subtitle past a
+  colon trimmed. "Demon Slayer: Kime…" is the case that decision was made for.
+- The state badge floats over the poster; the design puts a 3px bar under it.
+- The title page's metadata row is all Archivo. Ids, dates and counts belong in
+  mono.
+- Missing entirely: the next-up strip, the left rail, the list view behind it,
+  and the title page's figure row, twelve-month strip, presence pill, activity
+  feed and mark-season-watched control.
+
+**The wall's filter vocabulary is an API gap, not a styling one.** The design
+filters on six states with counts — still going, drifting, gaps, finished, not
+on disk, added by hand — and `GET /titles` answers three plus three booleans.
+Drifting is time-derived, gaps needs the hole count, not-on-disk needs
+`library_presence` and added-by-hand needs `source = 'manual'`. It lands with
+the `intent` route above, since both are the same endpoint growing.
 
 Two things had to land on the API side first, and the second was a surprise:
 
@@ -88,6 +116,20 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-19** — Title metadata backfilled from TMDB. The Plex importer
+  writes identity and history and never calls TMDB, so all eleven imported
+  titles reached the wall with no poster — a grid of grey rectangles, which is
+  exactly what the first round of mockups was rejected for. `pnpm
+  backfill:metadata` walks every title with a TMDB id and no
+  `metadata_fetched_at`, storing poster, overview and the fetch time; all
+  eleven resolved, and a second run is a no-op. Keyed on the timestamp rather
+  than on a null poster so a title TMDB has no artwork for is not asked about
+  forever.
+- **2026-09-19** — The settled design written down at last, in
+  [web-design.md](web-design.md), with the approved mockup committed under
+  `docs/design/`. It had been decided 2026-09-16 against real artwork and real
+  history and then left in a chat log, which is why three screens got built on
+  Tailwind's defaults.
 - **2026-09-19** — Adding a title by hand at `/add`, reachable from the header.
   The query lives in the URL so a search is a place, but it is a plain query
   rather than a route loader: a loader would hold the navigation open until

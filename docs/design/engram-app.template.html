@@ -1,0 +1,610 @@
+<title>Engram Combined Build</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Martian+Mono:wght@400;500;700&display=swap">
+<style>
+/*__ART__*/
+
+  :root{
+    --f-display:"Archivo", ui-sans-serif, system-ui, sans-serif;
+    --f-ui:"Archivo", ui-sans-serif, system-ui, sans-serif;
+    --f-data:"Martian Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --ground:#EDEFF2; --surface:#FFFFFF; --ink:#12161C; --ink-2:#48515C;
+    --ink-3:#79828E; --rule:#D3D8DF; --accent:#1F4E79;
+    --shadow:0 1px 2px rgba(18,22,28,.06), 0 12px 34px rgba(18,22,28,.09);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0E1116; --surface:#161A21; --ink:#E7EAEF; --ink-2:#A3ACB8;
+      --ink-3:#6F7783; --rule:#272D36; --accent:#8CBCEC;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 38px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0E1116; --surface:#161A21; --ink:#E7EAEF; --ink-2:#A3ACB8;
+    --ink-3:#6F7783; --rule:#272D36; --accent:#8CBCEC;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 38px rgba(0,0,0,.45);
+  }
+
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:var(--f-ui);
+    font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1140px; margin:0 auto; padding-inline:20px; padding-block:48px 72px;}
+  .masthead{display:flex; flex-direction:column; gap:13px; padding-bottom:24px; border-bottom:1px solid var(--rule);}
+  .eyebrow{font-family:var(--f-data); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3);}
+  h1{margin:0; font-size:clamp(30px,5vw,46px); line-height:1.06; font-weight:600; letter-spacing:-.022em; text-wrap:balance;}
+  .lede{margin:0; max-width:66ch; color:var(--ink-2); font-size:17px;}
+
+  .sec{margin-top:56px; padding-top:30px; border-top:1px solid var(--rule);}
+  .sec-head{display:flex; flex-wrap:wrap; gap:14px 28px; align-items:flex-start; justify-content:space-between;}
+  .sec-id{display:flex; align-items:baseline; gap:12px;}
+  .sec-id .idx{font-family:var(--f-data); font-size:12px; color:var(--ink-3); letter-spacing:.1em;}
+  .sec-id h3{margin:0; font-size:25px; font-weight:600; letter-spacing:-.015em;}
+  .sec p.note{margin:10px 0 0; max-width:60ch; color:var(--ink-2);}
+  .frame{margin-top:20px; border:1px solid var(--rule); box-shadow:var(--shadow); overflow:hidden;}
+  .frame-bar{
+    display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--surface);
+    border-bottom:1px solid var(--rule); font-family:var(--f-data); font-size:11px; color:var(--ink-3);
+  }
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--rule);}
+  .after{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:18px;}
+  .after div{background:var(--surface); padding:13px 16px;}
+  .after h4{margin:0 0 5px; font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; font-family:var(--f-data); font-weight:500; color:var(--ink-3);}
+  .after p{margin:0; font-size:14px; color:var(--ink-2);}
+  @media (max-width:640px){.after{grid-template-columns:1fr;}}
+
+  /* ============================ APP SHELL ============================ */
+  .ap{
+    --bg:#100E0C; --surf:#1A1714; --raise:#221E1A; --line:#2C2621;
+    --tx:#F2EDE4; --dim:#9C9288; --faint:#6B635A;
+    --jade:#4E9C86; --gold:#D9A441; --drift:#C4662F; --gap:#C0485E;
+    background:var(--bg); color:var(--tx);
+    font-family:var(--f-ui); display:flex; min-height:520px;
+  }
+  .ap-rail{
+    width:58px; flex:none; background:var(--surf); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center; padding:14px 0; gap:6px;
+  }
+  .ap-mark{
+    width:30px; height:30px; background:var(--jade); color:#0B1713; display:grid; place-items:center;
+    font-family:var(--f-display); font-weight:700; font-size:18px; margin-bottom:12px;
+  }
+  .ap-ico{
+    width:38px; height:34px; display:grid; place-items:center; color:var(--dim);
+    font-family:var(--f-data); font-size:9px; letter-spacing:.06em; cursor:pointer;
+    border-left:2px solid transparent;
+  }
+  .ap-ico.on{color:var(--tx); background:var(--raise); border-left-color:var(--jade);}
+  .ap-body{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .ap-top{
+    display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; justify-content:space-between;
+    padding:12px 18px; border-bottom:1px solid var(--line);
+  }
+  .ap-find{
+    flex:1 1 220px; min-width:0; padding:7px 11px; background:var(--surf); border:1px solid var(--line);
+    font-family:var(--f-data); font-size:9.5px; color:var(--dim);
+  }
+  .ap-add{
+    font-family:var(--f-ui); font-size:12.5px; font-weight:600; letter-spacing:.01em;
+    padding:8px 14px; background:var(--jade); border:1px solid var(--jade); color:#0B1713; cursor:pointer; flex:none;
+  }
+  .ap-ghostbtn{
+    font-family:var(--f-ui); font-size:12.5px; font-weight:500;
+    padding:8px 13px; background:transparent; border:1px solid var(--line); color:var(--tx); cursor:pointer; flex:none;
+  }
+
+  /* ---- next up strip ---- */
+  .nx{position:relative; display:flex; align-items:center; gap:16px; padding:14px 18px; border-bottom:1px solid var(--line); overflow:hidden;}
+  .nx-bg{position:absolute; inset:0; background-size:cover; background-position:center 25%; opacity:.5;}
+  .nx-bg::after{content:""; position:absolute; inset:0; background:linear-gradient(to right,#100E0C 26%, rgba(16,14,12,.72) 62%, rgba(16,14,12,.45) 100%);}
+  .nx-poster{position:relative; width:52px; aspect-ratio:2/3; background-size:cover; flex:none; box-shadow:0 4px 14px rgba(0,0,0,.5);}
+  .nx-text{position:relative; flex:1; min-width:0;}
+  .nx-text .k{font-family:var(--f-data); font-size:9.5px; letter-spacing:.15em; text-transform:uppercase; color:var(--gold);}
+  .nx-text h4{margin:2px 0 1px; font-family:var(--f-display); font-weight:700; font-size:23px; letter-spacing:-.03em; line-height:1.1;}
+  .nx-text p{margin:0; font-size:12.5px; color:var(--dim);}
+  .nx-text p b{color:var(--tx); font-weight:500;}
+  .nx-act{position:relative; display:flex; gap:8px; flex:none;}
+
+  /* ---- filter chips ---- */
+  .chips{display:flex; flex-wrap:wrap; gap:6px; padding:14px 18px 12px;}
+  .chip{
+    font-family:var(--f-data); font-size:8.5px; letter-spacing:.09em; text-transform:uppercase;
+    padding:6px 10px; background:transparent; border:1px solid var(--line); color:var(--dim); cursor:pointer;
+  }
+  .chip.on{border-color:var(--tx); color:var(--tx);}
+  .chip b{font-weight:600;}
+  .chip.warn.on{border-color:var(--drift); color:var(--drift);}
+
+  /* ---- wall ---- */
+  .wall{display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:13px; padding:0 18px 18px;}
+  .tile{position:relative; cursor:pointer;}
+  .tile-img{aspect-ratio:2/3; background-size:cover; background-position:center; background-color:var(--surf);}
+  .tile.off .tile-img{filter:grayscale(1) brightness(.45);}
+  .tile-state{display:block; height:3px;}
+  .tile-info{display:flex; justify-content:space-between; gap:8px; align-items:flex-start; margin-top:6px; min-height:30px;}
+  .tile-info b{
+    font-family:var(--f-display); font-size:11.5px; font-weight:500; line-height:1.25;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .tile-info span{font-family:var(--f-data); font-size:8.5px; color:var(--dim); flex:none;}
+  .badge{
+    position:absolute; top:6px; right:6px; font-family:var(--f-data); font-size:8.5px;
+    letter-spacing:.07em; text-transform:uppercase; padding:3px 5px; background:rgba(16,14,12,.9); border:1px solid currentColor;
+  }
+  .legend{display:flex; flex-wrap:wrap; gap:14px; padding:0 18px 18px; font-family:var(--f-data); font-size:8.5px; color:var(--faint); letter-spacing:.05em;}
+  .legend i{display:inline-block; width:15px; height:3px; margin-right:5px; vertical-align:middle;}
+
+  /* ---- detail ---- */
+  .ap-split{display:grid; grid-template-columns:216px 1fr; min-width:0;}
+  .ap-list{border-right:1px solid var(--line); padding:10px 0; min-width:0;}
+  .ap-lgroup{padding:9px 14px 5px; font-family:var(--f-data); font-size:8px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint);}
+  .ap-li{display:flex; gap:9px; align-items:center; padding:6px 12px; cursor:pointer;}
+  .ap-li.on{background:var(--raise); box-shadow:inset 2px 0 0 var(--jade);}
+  .ap-li .th{width:24px; height:36px; flex:none; background-size:cover; background-color:var(--line);}
+  .ap-li .m{min-width:0; flex:1;}
+  .ap-li .m b{display:block; font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ap-li .bar{height:2px; background:var(--line); margin-top:4px;}
+  .ap-li .bar span{display:block; height:100%; background:var(--jade);}
+  .ap-li .bar.w span{background:var(--drift);}
+  .ap-li .t{font-family:var(--f-data); font-size:8px; color:var(--faint); flex:none;}
+
+  .dt{min-width:0;}
+  .dt-hero{position:relative; height:158px; background-size:cover; background-position:center 28%;}
+  .dt-hero::after{content:""; position:absolute; inset:0; background:linear-gradient(to top,#100E0C 3%, rgba(16,14,12,.55) 60%, rgba(16,14,12,.1) 100%);}
+  .dt-head{position:relative; margin:-46px 22px 0; display:flex; gap:16px; align-items:flex-end;}
+  .dt-poster{width:92px; aspect-ratio:2/3; background-size:cover; flex:none; box-shadow:0 8px 24px rgba(0,0,0,.6);}
+  .dt-name{min-width:0;}
+  .dt-name h4{margin:0 0 3px; font-family:var(--f-display); font-weight:700; font-size:30px; line-height:1.05; letter-spacing:-.032em;}
+  .dt-ids{font-family:var(--f-data); font-size:8.5px; color:var(--faint); letter-spacing:.04em;}
+  .dt-pills{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .pill{
+    font-family:var(--f-data); font-size:8px; letter-spacing:.06em; text-transform:uppercase;
+    padding:3px 7px; border:1px solid var(--line); color:var(--dim);
+  }
+  .pill.ok{color:var(--jade); border-color:rgba(78,156,134,.45);}
+  .pill.bad{color:var(--gap); border-color:rgba(192,72,94,.45);}
+
+  .dt-stats{display:flex; flex-wrap:wrap; margin:18px 22px 0; border:1px solid var(--line);}
+  .dt-stat{flex:1 1 104px; padding:10px 13px; border-right:1px solid var(--line);}
+  .dt-stat:last-child{border-right:0;}
+  .dt-stat b{display:block; font-family:var(--f-data); font-size:17px; font-weight:500; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
+  .dt-stat i{font-style:normal; font-size:9px; letter-spacing:.11em; text-transform:uppercase; color:var(--faint);}
+
+  .dt-sec{margin:20px 22px 0;}
+  .dt-sec > h5{
+    margin:0 0 9px; font-family:var(--f-data); font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--faint); display:flex; justify-content:space-between; gap:10px; font-weight:400;
+  }
+  .yearbar{position:relative; height:26px; background:var(--surf); border:1px solid var(--line);}
+  .yearbar .mk{position:absolute; top:5px; bottom:5px; background:var(--jade);}
+  .yearticks{display:flex; justify-content:space-between; font-family:var(--f-data); font-size:7.5px; color:var(--faint); margin-top:4px; letter-spacing:.06em;}
+
+  .season{margin-bottom:11px;}
+  .season-h{display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .season-h span{font-family:var(--f-data); font-size:9.5px; color:var(--dim); letter-spacing:.08em;}
+  .season-h button{
+    font-family:var(--f-data); font-size:9px; letter-spacing:.08em; text-transform:uppercase;
+    padding:4px 8px; background:transparent; border:1px solid var(--line); color:var(--dim); cursor:pointer;
+  }
+  .eps{display:flex; flex-wrap:wrap; gap:4px;}
+  .ep{
+    width:34px; height:28px; background:var(--jade); color:#0B1713; display:grid; place-items:center;
+    font-family:var(--f-data); font-size:10px; font-weight:500; position:relative;
+  }
+  .ep.re::after{content:"2×"; position:absolute; top:1px; right:2px; font-size:7px; opacity:.85;}
+  .ep.miss{background:transparent; border:1px solid var(--gap); color:var(--gap); font-weight:600;}
+  .ep.un{background:var(--surf); border:1px solid var(--line); color:var(--faint);}
+
+  .feed{border-top:1px solid var(--line);}
+  .fev{display:flex; gap:11px; padding:6px 0; border-bottom:1px solid var(--line); align-items:baseline; font-size:12px;}
+  .fev time{font-family:var(--f-data); font-size:8.5px; color:var(--faint); width:96px; flex:none;}
+  .fev em{font-style:normal; color:var(--dim);}
+  .fev .tag{font-family:var(--f-data); font-size:9px; color:var(--gold); letter-spacing:.06em;}
+  .fev .tag.man{color:var(--jade);}
+  .dt-cta{display:flex; flex-wrap:wrap; gap:8px; margin:18px 22px 20px;}
+  .dt-cta button{
+    font-family:var(--f-ui); font-size:12px; font-weight:600;
+    padding:9px 14px; background:transparent; border:1px solid var(--line); color:var(--tx); cursor:pointer;
+  }
+  .dt-cta button.go{background:var(--jade); border-color:var(--jade); color:#0B1713;}
+  @media (max-width:760px){ .ap-split{grid-template-columns:1fr;} .ap-list{border-right:0; border-bottom:1px solid var(--line);} }
+
+  /* ---- add / backfill ---- */
+  .add{padding:18px; min-width:0;}
+  .add-why{
+    padding:12px 14px; border-left:2px solid var(--gold); background:rgba(217,164,65,.07);
+    font-size:13.5px; color:var(--dim); margin-bottom:16px;
+  }
+  .add-why b{color:var(--tx); font-weight:600;}
+  .add-find{
+    display:flex; gap:8px; align-items:center; padding:10px 13px; background:var(--surf); border:1px solid var(--line);
+  }
+  .add-find span{font-family:var(--f-data); font-size:10px; color:var(--faint); letter-spacing:.1em;}
+  .add-find input{
+    flex:1; min-width:0; background:transparent; border:0; color:var(--tx); font-family:var(--f-ui);
+    font-size:15px; padding:0; outline:none;
+  }
+  .add-res{margin-top:12px; display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line);}
+  .add-row{display:flex; gap:13px; align-items:center; padding:11px 13px; background:var(--bg);}
+  .add-row.on{background:var(--raise);}
+  .gen{
+    width:42px; aspect-ratio:2/3; flex:none; display:grid; place-items:center; padding:5px; text-align:center;
+    font-family:var(--f-display); font-weight:600; font-size:8.5px; line-height:1.15; color:rgba(255,255,255,.9);
+  }
+  .add-meta{flex:1; min-width:0;}
+  .add-meta b{display:block; font-family:var(--f-display); font-weight:600; font-size:17px; letter-spacing:-.02em;}
+  .add-meta span{font-family:var(--f-data); font-size:8.5px; color:var(--faint); letter-spacing:.04em;}
+  .add-row > button{
+    font-family:var(--f-ui); font-size:11.5px; font-weight:600; padding:7px 12px;
+    background:transparent; border:1px solid var(--line); color:var(--tx); cursor:pointer; flex:none;
+  }
+  .add-row.on > button{background:var(--jade); border-color:var(--jade); color:#0B1713;}
+
+  .panel{margin-top:1px; background:var(--raise); border:1px solid var(--line); border-top:0; padding:15px 14px;}
+  .panel h6{margin:0 0 10px; font-family:var(--f-data); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint); font-weight:400;}
+  .seasons{display:flex; flex-direction:column; gap:5px;}
+  .srow{display:flex; gap:11px; align-items:center; padding:7px 10px; background:var(--surf); border:1px solid var(--line);}
+  .box{width:15px; height:15px; border:1px solid var(--dim); flex:none; display:grid; place-items:center; font-size:10px; color:#0B1713;}
+  .box.tick{background:var(--jade); border-color:var(--jade);}
+  .box.part{background:linear-gradient(135deg,var(--jade) 50%, transparent 50%);}
+  .srow b{font-size:13px; font-weight:500; flex:1;}
+  .srow span{font-family:var(--f-data); font-size:10px; color:var(--faint);}
+
+  .when{margin-top:16px;}
+  .seg{display:flex; flex-wrap:wrap; gap:0; border:1px solid var(--line); width:fit-content; max-width:100%;}
+  .seg button{
+    font-family:var(--f-data); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+    padding:7px 12px; background:transparent; border:0; border-right:1px solid var(--line); color:var(--dim); cursor:pointer;
+  }
+  .seg button:last-child{border-right:0;}
+  .seg button.on{background:var(--jade); color:#0B1713; font-weight:600;}
+  .when-in{
+    margin-top:9px; display:flex; gap:9px; align-items:center; flex-wrap:wrap;
+  }
+  .when-in .val{
+    font-family:var(--f-data); font-size:15px; padding:7px 13px; background:var(--surf);
+    border:1px solid var(--jade); color:var(--tx); letter-spacing:.06em;
+  }
+  .when-in p{margin:0; font-size:12.5px; color:var(--faint); max-width:46ch;}
+
+  .commit{
+    margin-top:16px; padding-top:13px; border-top:1px solid var(--line); display:flex;
+    flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
+  }
+  .commit code{
+    font-family:var(--f-data); font-size:10.5px; color:var(--dim); letter-spacing:.02em;
+  }
+  .commit code b{color:var(--jade); font-weight:500;}
+  .commit button{
+    font-family:var(--f-ui); font-size:13px; font-weight:600; padding:10px 18px;
+    background:var(--jade); border:1px solid var(--jade); color:#0B1713; cursor:pointer;
+  }
+
+  .close{margin-top:56px; padding-top:30px; border-top:1px solid var(--rule);}
+  .close h2{margin:0 0 13px; font-size:13px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); font-family:var(--f-data);}
+  .close p{max-width:66ch; color:var(--ink-2);}
+  .close strong{color:var(--ink);}
+  .picks{display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:18px;}
+  .picks div{background:var(--surface); padding:13px 16px; display:flex; gap:14px; align-items:baseline;}
+  .picks b{font-family:var(--f-data); font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); flex:none; width:96px;}
+  .picks p{margin:0; font-size:14.5px;}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important; transition:none!important;}}
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Engram · combined build · 17 Sep 2026</div>
+    <h1>One app, three screens</h1>
+    <p class="lede">The wall from 3, the detail page and episode grid from 2, the next-up hero and the gone-from-disk state from 1 — on a new palette and typeface, and rebuilt around the thing you flagged: a record you can write to by hand, for everything you watched before Plex was keeping score.</p>
+  </header>
+
+  <section class="sec" style="border-top:0; padding-top:18px;">
+    <div class="sec-head">
+      <div>
+        <div class="sec-id"><span class="idx">SYSTEM</span><h3>Palette and type</h3></div>
+        <p class="note">Espresso rather than slate, so artwork is the only saturated thing on screen. Jade is the affirmative accent and is deliberately not gold, so "finished" never collides with "in progress". Archivo names every title and every control; Martian Mono sets every figure, date, count and external id, and nothing else. Splitting the two families by job rather than by size is what keeps a count from reading like a label — and it keeps the mono out of the one place it hurts, which is a show name under a 118px tile.</p>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <span style="width:24px;height:24px;background:#100E0C;border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:24px;height:24px;background:#1A1714;border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:24px;height:24px;background:#F2EDE4;border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:24px;height:24px;background:#4E9C86;border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:24px;height:24px;background:#D9A441;border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:24px;height:24px;background:#C4662F;border:1px solid rgba(128,128,128,.3)"></span>
+        <span style="width:24px;height:24px;background:#C0485E;border:1px solid rgba(128,128,128,.3)"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== SCREEN 1 =============== -->
+  <section class="sec">
+    <div class="sec-head">
+      <div>
+        <div class="sec-id"><span class="idx">01</span><h3>Home</h3></div>
+        <p class="note">The wall, because it is the only layout that still works at 300 titles, with the next-up strip pulled down to a single band instead of a 330px hero. Filters replace shelves. <b>Add watched</b> sits in the chrome on every screen, because it is a primary verb here, not a settings page.</p>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><span class="dot"></span> engram</div>
+      <div class="ap">
+        <nav class="ap-rail">
+          <div class="ap-mark">E</div>
+          <div class="ap-ico on">HOME</div>
+          <div class="ap-ico">LIST</div>
+          <div class="ap-ico">ADD</div>
+          <div class="ap-ico">YEAR</div>
+        </nav>
+        <div class="ap-body">
+          <div class="ap-top">
+            <div class="ap-find">Search your record…</div>
+            <button class="ap-ghostbtn" type="button">Import</button>
+            <button class="ap-add" type="button">+ Add watched</button>
+          </div>
+
+          <div class="nx">
+            <div class="nx-bg" style="background-image:var(--a-bleach)"></div>
+            <div class="nx-poster" style="background-image:var(--p-bleach)"></div>
+            <div class="nx-text">
+              <div class="k">Next up</div>
+              <h4>Bleach</h4>
+              <p>You stopped after <b>S17E48</b> four days ago · next is <b>S17E49</b></p>
+            </div>
+            <div class="nx-act">
+              <button class="ap-add" type="button">Play in Plex</button>
+              <button class="ap-ghostbtn" type="button">Not now</button>
+            </div>
+          </div>
+
+          <div class="chips">
+            <button class="chip on" type="button">All <b>11</b></button>
+            <button class="chip" type="button">Still going <b>3</b></button>
+            <button class="chip warn" type="button">Drifting <b>2</b></button>
+            <button class="chip" type="button">Gaps <b>1</b></button>
+            <button class="chip" type="button">Finished <b>8</b></button>
+            <button class="chip" type="button">Not on disk <b>0</b></button>
+            <button class="chip" type="button">Added by hand <b>0</b></button>
+          </div>
+
+          <div class="wall">
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-bleach)"></div><i class="tile-state" style="background:linear-gradient(to right,#D9A441 88%,#2C2621 88%)"></i><div class="tile-info"><b title="Bleach">Bleach</b><span>4d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-hotd)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="House of the Dragon">House of the Dragon</b><span>38d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-boys)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="The Boys">The Boys</b><span>120d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-daredevil)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="Daredevil: Born Again">Daredevil</b><span>131d</span></div></div>
+            <div class="tile"><span class="badge" style="color:#C0485E">Gap</span><div class="tile-img" style="background-image:var(--p-onepiece)"></div><i class="tile-state" style="background:linear-gradient(to right,#C0485E 0 47%,#2C2621 47% 53%,#C0485E 53% 94%,#2C2621 94%)"></i><div class="tile-info"><b title="ONE PIECE (2023)">ONE PIECE</b><span>173d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-knight)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="A Knight of the Seven Kingdoms">A Knight of the Seven Kingdoms</b><span>199d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-demon)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="Demon Slayer: Kimetsu no Yaiba Infinity Castle">Demon Slayer</b><span>207d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-fallout)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="Fallout">Fallout</b><span>225d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-stranger)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="Stranger Things">Stranger Things</b><span>259d</span></div></div>
+            <div class="tile"><span class="badge" style="color:#C4662F">Drifting</span><div class="tile-img" style="background-image:var(--p-witcher)"></div><i class="tile-state" style="background:linear-gradient(to right,#C4662F 25%,#2C2621 25%)"></i><div class="tile-info"><b title="The Witcher">The Witcher</b><span>289d</span></div></div>
+            <div class="tile"><div class="tile-img" style="background-image:var(--p-genv)"></div><i class="tile-state" style="background:#4E9C86"></i><div class="tile-info"><b title="Gen V">Gen V</b><span>327d</span></div></div>
+          </div>
+
+          <div class="legend">
+            <span><i style="background:#4E9C86"></i>finished</span>
+            <span><i style="background:#D9A441"></i>in progress</span>
+            <span><i style="background:#C4662F"></i>drifting</span>
+            <span><i style="background:#C0485E"></i>gap in the run</span>
+            <span style="opacity:.75">names wrap to two lines · a subtitle past a colon is trimmed, full name on hover</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== SCREEN 2 =============== -->
+  <section class="sec">
+    <div class="sec-head">
+      <div>
+        <div class="sec-id"><span class="idx">02</span><h3>Title</h3></div>
+        <p class="note">The episode grid survives intact — it is still the best thing in any of the mockups. Added underneath the header: the twelve-month strip from the first round, so the season's shape is visible without reading the feed, and a presence pill that says whether the files are still there. A season can be marked watched in one action, which is the same control the backfill screen uses.</p>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><span class="dot"></span> engram · one piece</div>
+      <div class="ap">
+        <nav class="ap-rail">
+          <div class="ap-mark">E</div>
+          <div class="ap-ico">HOME</div>
+          <div class="ap-ico on">LIST</div>
+          <div class="ap-ico">ADD</div>
+          <div class="ap-ico">YEAR</div>
+        </nav>
+        <div class="ap-body">
+          <div class="ap-top">
+            <div class="ap-find">Search your record…</div>
+            <button class="ap-add" type="button">+ Add watched</button>
+          </div>
+          <div class="ap-split">
+            <aside class="ap-list">
+              <div class="ap-lgroup">Still going</div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-bleach)"></div><div class="m"><b>Bleach</b><div class="bar"><span style="width:88%"></span></div></div><div class="t">4d</div></div>
+              <div class="ap-li on"><div class="th" style="background-image:var(--p-onepiece)"></div><div class="m"><b>ONE PIECE</b><div class="bar"><span style="width:94%"></span></div></div><div class="t">173d</div></div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-witcher)"></div><div class="m"><b>The Witcher</b><div class="bar w"><span style="width:25%"></span></div></div><div class="t">289d</div></div>
+              <div class="ap-lgroup">Finished</div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-hotd)"></div><div class="m"><b>House of the Dragon</b><div class="bar"><span style="width:100%"></span></div></div><div class="t">38d</div></div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-boys)"></div><div class="m"><b>The Boys</b><div class="bar"><span style="width:100%"></span></div></div><div class="t">120d</div></div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-daredevil)"></div><div class="m"><b>Daredevil: Born Again</b><div class="bar"><span style="width:100%"></span></div></div><div class="t">131d</div></div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-knight)"></div><div class="m"><b>A Knight of the Seven Kingdoms</b><div class="bar"><span style="width:100%"></span></div></div><div class="t">199d</div></div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-demon)"></div><div class="m"><b>Demon Slayer</b><div class="bar"><span style="width:100%"></span></div></div><div class="t">207d</div></div>
+              <div class="ap-li"><div class="th" style="background-image:var(--p-fallout)"></div><div class="m"><b>Fallout</b><div class="bar"><span style="width:100%"></span></div></div><div class="t">225d</div></div>
+            </aside>
+
+            <div class="dt">
+              <div class="dt-hero" style="background-image:var(--a-onepiece)"></div>
+              <div class="dt-head">
+                <div class="dt-poster" style="background-image:var(--p-onepiece)"></div>
+                <div class="dt-name">
+                  <h4>ONE PIECE</h4>
+                  <div class="dt-ids">2023 · tvdb 392276 · tmdb 111110 · imdb tt11737520</div>
+                  <div class="dt-pills">
+                    <span class="pill ok">On disk</span>
+                    <span class="pill">From Plex</span>
+                    <span class="pill bad">1 gap</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dt-stats">
+                <div class="dt-stat"><b>19</b><i>plays</i></div>
+                <div class="dt-stat"><b>15</b><i>episodes seen</i></div>
+                <div class="dt-stat"><b>4</b><i>rewatched</i></div>
+                <div class="dt-stat"><b>14 Mar</b><i>first watched</i></div>
+                <div class="dt-stat"><b>173d</b><i>since last</i></div>
+              </div>
+
+              <div class="dt-sec">
+                <h5><span>When you watched it</span><span>14 — 28 Mar 2026, two weeks</span></h5>
+                <div class="yearbar">
+                  <div class="mk" style="left:45.2%; width:3.9%"></div>
+                </div>
+                <div class="yearticks"><span>OCT 2025</span><span>JAN</span><span>APR</span><span>JUL</span><span>SEP 2026</span></div>
+              </div>
+
+              <div class="dt-sec">
+                <h5><span>Episodes</span><span>15 of 16 · 1 gap · 4 rewatched</span></h5>
+                <div class="season">
+                  <div class="season-h"><span>SEASON 1 · COMPLETE</span><button type="button">Mark season watched</button></div>
+                  <div class="eps">
+                    <div class="ep">1</div><div class="ep">2</div><div class="ep">3</div><div class="ep">4</div>
+                    <div class="ep">5</div><div class="ep re">6</div><div class="ep re">7</div><div class="ep">8</div>
+                  </div>
+                </div>
+                <div class="season">
+                  <div class="season-h"><span>SEASON 2 · ONE MISSING</span><button type="button">Mark season watched</button></div>
+                  <div class="eps">
+                    <div class="ep">1</div><div class="ep">2</div><div class="ep">3</div><div class="ep re">4</div>
+                    <div class="ep miss">5</div><div class="ep">6</div><div class="ep re">7</div><div class="ep">8</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dt-sec">
+                <h5><span>Activity</span><span>last 5 of 19</span></h5>
+                <div class="feed">
+                  <div class="fev"><time>28 Mar · 09:19</time><span>S2E8 <em>Deer and Loathing in Drum Kingdom</em></span></div>
+                  <div class="fev"><time>28 Mar · 08:15</time><span>S2E7 <em>Reindeer Shames</em></span><span class="tag">rewatch</span></div>
+                  <div class="fev"><time>24 Mar · 22:16</time><span>S2E6 <em>Nami Deerest</em></span></div>
+                  <div class="fev"><time>24 Mar · 12:56</time><span>S2E4 <em>Big Trouble in Little Garden</em></span><span class="tag">rewatch</span></div>
+                  <div class="fev"><time>22 Mar · 18:45</time><span>S2E4 <em>Big Trouble in Little Garden</em></span></div>
+                </div>
+              </div>
+
+              <div class="dt-cta">
+                <button class="go" type="button">Still watching</button>
+                <button type="button">Dropped after S2</button>
+                <button type="button">S2E5 — I skipped it</button>
+                <button type="button">Add an episode by hand</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== SCREEN 3 =============== -->
+  <section class="sec">
+    <div class="sec-head">
+      <div>
+        <div class="sec-id"><span class="idx">03</span><h3>Add watched</h3></div>
+        <p class="note">The screen your note was missing. Nothing here requires the title to be on disk, in Sonarr, or in Plex at all — it searches TMDB, writes a permanent <code>title</code>, and marks whole seasons in one go. TMDB returns <code>poster_path</code> inline with each search result and its image CDN needs no key, so results normally arrive with real artwork; the generated covers here are the fallback for a title TMDB has no poster for.</p>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-bar"><span class="dot"></span> engram · add watched</div>
+      <div class="ap">
+        <nav class="ap-rail">
+          <div class="ap-mark">E</div>
+          <div class="ap-ico">HOME</div>
+          <div class="ap-ico">LIST</div>
+          <div class="ap-ico on">ADD</div>
+          <div class="ap-ico">YEAR</div>
+        </nav>
+        <div class="ap-body">
+          <div class="add">
+            <div class="add-why">
+              <b>Your record starts 24 October 2025.</b> Plex kept nothing older and there is no Trakt export to import, so everything before that date is yours to put in by hand. This screen is how the archive gets deeper instead of just longer.
+            </div>
+
+            <div class="add-find">
+              <span>TMDB</span>
+              <input id="add-query" type="text" value="breaking bad" aria-label="Search for a title you have watched">
+            </div>
+
+            <div class="add-res">
+              <div class="add-row on">
+                <div class="gen" style="background:linear-gradient(160deg,#3E5C55,#1E2E2B)">Breaking Bad</div>
+                <div class="add-meta"><b>Breaking Bad</b><span>2008 · TV · 5 seasons · 62 episodes · tvdb 81189</span></div>
+                <button type="button">Selected</button>
+              </div>
+              <div class="add-row">
+                <div class="gen" style="background:linear-gradient(160deg,#4A4066,#241F33)">Better Call Saul</div>
+                <div class="add-meta"><b>Better Call Saul</b><span>2015 · TV · 6 seasons · 63 episodes · tvdb 273181</span></div>
+                <button type="button">Add</button>
+              </div>
+              <div class="add-row">
+                <div class="gen" style="background:linear-gradient(160deg,#6B3B33,#2E1A16)">El Camino</div>
+                <div class="add-meta"><b>El Camino: A Breaking Bad Movie</b><span>2019 · Film · tmdb 559969</span></div>
+                <button type="button">Add</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h6>What did you watch?</h6>
+              <div class="seasons">
+                <div class="srow"><span class="box tick">✓</span><b>Season 1</b><span>7 episodes</span></div>
+                <div class="srow"><span class="box tick">✓</span><b>Season 2</b><span>13 episodes</span></div>
+                <div class="srow"><span class="box tick">✓</span><b>Season 3</b><span>13 episodes</span></div>
+                <div class="srow"><span class="box tick">✓</span><b>Season 4</b><span>13 episodes</span></div>
+                <div class="srow"><span class="box part"></span><b>Season 5</b><span>8 of 16 episodes</span></div>
+              </div>
+
+              <div class="when">
+                <h6 style="margin-bottom:8px;">When, roughly?</h6>
+                <div class="seg">
+                  <button type="button">Exact date</button>
+                  <button type="button">Month</button>
+                  <button class="on" type="button">Year</button>
+                  <button type="button">No idea</button>
+                </div>
+                <div class="when-in">
+                  <span class="val">2019</span>
+                  <p>Precision is stored with the event, so the record can say “2019” instead of pretending you watched 62 episodes on 1 January.</p>
+                </div>
+              </div>
+
+              <div class="commit">
+                <code>writes <b>54 episodes</b> · source <b>manual</b> · precision <b>year</b> · presence <b>not on disk</b></code>
+                <button type="button">Add to record</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="after">
+      <div><h4>Why it is shaped like this</h4><p>Season-level checkboxes, not 62 rows. Backfilling a decade of television one episode at a time is how a feature like this quietly never gets used.</p></div>
+      <div><h4>What it costs you first</h4><p>A TMDB key, which is currently blank in <code>.env</code>. Nothing on this screen works without one — it is the only search that can find a show you do not own.</p></div>
+    </div>
+  </section>
+
+  <section class="close">
+    <h2>What this changes underneath</h2>
+    <p><strong><code>watch_event.watched_at</code> is <code>notNull()</code>, and manual backfill cannot honour that.</strong> "Breaking Bad, sometime around 2019" has no timestamp. Two ways out, and the second is better: make the column nullable and teach <code>watch_state</code> to ignore nulls, or keep it non-null and add a <code>watched_precision</code> column — <code>exact | day | month | year | unknown</code> — where the timestamp is a representative instant and precision says how much of it to believe. The view keeps working, sorting stays sane, and the UI renders "2019" rather than a fake January date.</p>
+    <p>Three smaller consequences, all of which the schema already absorbs: manual rows are just another <code>source</code>, so <code>UNIQUE (source, source_event_id)</code> still makes re-entry idempotent with a synthetic id; <code>raw</code> is <code>notNull()</code> and would hold the form input rather than a payload; and a title that was never on disk simply has no <code>library_presence</code> row, which is already distinct from one that had files and lost them.</p>
+    <div class="picks">
+      <div><b>Promote</b><p>Manual entry from "unglamorous but worth doing early" in the idea pool to a core write path, alongside ingest.</p></div>
+      <div><b>Decide</b><p>Nullable <code>watched_at</code> versus a precision column, before any manual-entry code is written.</p></div>
+      <div><b>Unblock</b><p>Fill in <code>TMDB_API_KEY</code>. It gates both this screen and the enrichment queue.</p></div>
+      <div><b>Reframe</b><p>The notes describe Engram as durable watch history. It is a record you keep, and Plex is one of the things that writes to it.</p></div>
+    </div>
+    <p style="margin-top:20px; font-size:14px; color:var(--ink-3);">Artwork is your own, pulled from the Plex server and embedded. Breaking Bad is an illustrative search result, not something in your record. Buttons do nothing.</p>
+  </section>
+</div>

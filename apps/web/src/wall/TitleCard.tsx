@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { posterUrl, type TitleState, type TitleSummary } from '../api/titles.ts';
+import { formatSince } from '../title/format.ts';
 
 export const STATE_LABEL: Record<TitleState, string> = {
   unwatched: 'Unwatched',
@@ -7,14 +8,27 @@ export const STATE_LABEL: Record<TitleState, string> = {
   seen: 'Seen',
 };
 
-const STATE_BADGE: Record<TitleState, string> = {
-  unwatched: 'border border-line bg-raise text-tx',
-  in_progress: 'bg-gold text-bg',
-  seen: 'bg-jade text-on-jade',
+/**
+ * State is a bar under the poster rather than a badge over it, so the artwork
+ * is never covered. It carries no text: the link's `aria-label` is what states
+ * the title's state, and it has to keep doing so for as long as this is colour.
+ */
+const STATE_BAR: Record<TitleState, string> = {
+  unwatched: 'bg-line',
+  in_progress: 'bg-gold',
+  seen: 'bg-jade',
 };
+
+/**
+ * "Demon Slayer: Kimetsu no Yaiba Infinity Castle" under a 118px tile is a
+ * wall of type. The part before the colon identifies it; the rest is on hover
+ * and on the title page.
+ */
+const shortTitle = (name: string) => name.split(':')[0]?.trim() ?? name;
 
 export function TitleCard({ title }: { title: TitleSummary }) {
   const poster = posterUrl(title.posterPath);
+  const since = formatSince(title.lastWatchedAt, title.lastWatchedPrecision);
   const flags = [
     title.want ? 'want' : null,
     title.dropped ? 'dropped' : null,
@@ -22,38 +36,43 @@ export function TitleCard({ title }: { title: TitleSummary }) {
   ].filter((flag) => flag !== null);
 
   return (
-    <article className="space-y-1.5">
+    <article>
       <Link
         to="/titles/$id"
         params={{ id: title.id }}
         aria-label={`${title.name}, ${STATE_LABEL[title.state]}`}
-        className="relative block aspect-2/3 overflow-hidden rounded bg-surf hover:ring-2 hover:ring-dim"
+        className="block rounded-t hover:ring-2 hover:ring-dim"
       >
-        {poster ? (
-          // Decorative: the heading below carries the name for a screen reader,
-          // and repeating it here would read every card twice.
-          <img src={poster} alt="" loading="lazy" className="size-full object-cover" />
-        ) : (
-          <span className="flex size-full items-center justify-center p-3 text-center text-sm text-faint">
-            {title.name}
-          </span>
-        )}
-        <span
-          className={`absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-xs font-medium ${STATE_BADGE[title.state]}`}
+        <div
+          // Greyscaled rather than badged: a title whose files are gone should
+          // read as faded from the shelf at a glance across the whole wall.
+          className={`aspect-2/3 overflow-hidden rounded-t bg-surf ${
+            title.onDisk === false ? 'brightness-[.45] grayscale' : ''
+          }`}
         >
-          {STATE_LABEL[title.state]}
-        </span>
+          {poster ? (
+            // Decorative: the heading below carries the name for a screen
+            // reader, and repeating it here would read every card twice.
+            <img src={poster} alt="" loading="lazy" className="size-full object-cover" />
+          ) : (
+            <span className="flex size-full items-center justify-center p-3 text-center text-xs text-faint">
+              {title.name}
+            </span>
+          )}
+        </div>
+        <span className={`block h-[3px] ${STATE_BAR[title.state]}`} />
       </Link>
-      <h2 className="truncate text-sm font-medium" title={title.name}>
-        {title.name}
-      </h2>
-      <p className="font-mono text-xs text-dim">
-        {title.year ?? 'Year unknown'}
-        {title.kind === 'show'
-          ? ` · ${title.episodes.seen} of ${title.episodes.total} episodes`
-          : ''}
-      </p>
-      {flags.length > 0 ? <p className="text-xs text-faint">{flags.join(' · ')}</p> : null}
+      {/* Two lines' worth of height whether the name needs it or not, so a row
+          of one-line names does not sit ragged against its two-line neighbour. */}
+      <div className="mt-1.5 flex min-h-[30px] items-start justify-between gap-2">
+        <h2 className="line-clamp-2 text-xs leading-tight font-medium" title={title.name}>
+          {shortTitle(title.name)}
+        </h2>
+        {since ? <span className="shrink-0 font-mono text-[10px] text-dim">{since}</span> : null}
+      </div>
+      {flags.length > 0 ? (
+        <p className="mt-0.5 font-mono text-[10px] text-faint">{flags.join(' · ')}</p>
+      ) : null}
     </article>
   );
 }

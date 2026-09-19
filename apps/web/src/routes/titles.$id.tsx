@@ -29,12 +29,20 @@ function TitlePage() {
         </div>
         <div className="min-w-0 space-y-2">
           <h1 className="text-2xl font-semibold">{title.name}</h1>
+          {/* Figures in mono, words in Archivo, so a count reads as a
+              different kind of thing from the label beside it. */}
           <p className="text-sm text-dim">
-            {title.year ?? 'Year unknown'} · {title.kind === 'show' ? 'Series' : 'Film'} ·{' '}
-            {STATE_LABEL[title.state]}
-            {title.kind === 'show'
-              ? ` · ${title.episodes.seen} of ${title.episodes.total} episodes`
-              : ''}
+            <span className="font-mono text-xs">{title.year ?? '????'}</span> ·{' '}
+            {title.kind === 'show' ? 'Series' : 'Film'} · {STATE_LABEL[title.state]}
+            {title.kind === 'show' ? (
+              <>
+                {' · '}
+                <span className="font-mono text-xs">
+                  {title.episodes.seen} of {title.episodes.total}
+                </span>{' '}
+                episodes
+              </>
+            ) : null}
           </p>
           {title.excluded ? <p className="text-sm text-faint">Excluded from the wall.</p> : null}
         </div>

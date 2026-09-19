@@ -119,6 +119,10 @@ describe('the wall', () => {
                 state: 'in_progress',
                 episodes: { total: 424, seen: 8 },
                 want: true,
+                // Year precision so the figure does not move with the clock;
+                // the days-since form is covered in format.test.ts.
+                lastWatchedAt: '2019-01-01T00:00:00.000Z',
+                lastWatchedPrecision: 'year',
               }),
               title({
                 kind: 'movie',
@@ -137,10 +141,11 @@ describe('the wall', () => {
     expect(calls.find((call) => call.url.includes('/titles'))?.url).toBe(
       'http://localhost:2012/titles?state=in_progress',
     );
-    expect(screen.getByText('2020 · 8 of 424 episodes')).toBeDefined();
+    // The tile carries a name and one figure, not a sentence: the fraction and
+    // the year live on the title page, where there is room for them.
+    expect(screen.getByText('2019')).toBeDefined();
     expect(screen.getByText('want')).toBeDefined();
-    // A movie has no grid, so "0 of 0 episodes" would be a lie about it.
-    expect(screen.getByText('1995')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Heat' })).toBeDefined();
     expect(screen.getByRole('link', { name: 'In progress' }).getAttribute('aria-current')).toBe(
       'page',
     );
@@ -275,7 +280,12 @@ describe('the title page', () => {
     await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
 
     await screen.findByRole('heading', { name: 'ONE PIECE' });
-    expect(screen.getByText('2020 · Series · In progress · 2 of 3 episodes')).toBeDefined();
+    // Read off the element rather than matched as one string: the figures sit
+    // in their own mono spans, so the row is several nodes deep now.
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    expect(heading.parentElement?.textContent).toContain(
+      '2020 · Series · In progress · 2 of 3 episodes',
+    );
     expect(screen.getByRole('button', { name: 'Episode 4, seen' })).toBeDefined();
     expect(
       screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' }),

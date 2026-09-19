@@ -32,16 +32,10 @@ type split landed 2026-09-19, so the shell, the wall, the grid and the add
 screen are on espresso and Archivo / Martian Mono now. What the screens still
 owe the design, all checked against the running app rather than guessed:
 
-- The tile's figure line is a sentence (`2004 · 8 of 424 episodes`) where the
-  design has a short mono figure. Martian Mono is wide and it wraps to two
-  lines, which is the design's own warning about mono width arriving in the
-  figures instead of the name. Shorten it before the tiles go from 144px to the
-  designed 118px, or the wrap gets worse.
-- Names truncate on one line; they should clamp to two with the subtitle past a
-  colon trimmed. "Demon Slayer: Kime…" is the case that decision was made for.
-- The state badge floats over the poster; the design puts a 3px bar under it.
-- The title page's metadata row is all Archivo. Ids, dates and counts belong in
-  mono.
+- The title page's identity line is missing its ids. The design prints `tvdb
+  392276 · tmdb 111110 · imdb tt11737520` under the name, and `GET /titles/:id`
+  answers a `TitleSummary` that carries none of the three. An API change, not a
+  styling one.
 - Missing entirely: the next-up strip, the left rail, the list view behind it,
   and the title page's figure row, twelve-month strip, presence pill, activity
   feed and mark-season-watched control.
@@ -112,6 +106,12 @@ screen that needs it rather than ahead of it.
 
 ## Decisions still open
 
+- **Whether `want`, `dropped` and `onDisk` are public.** They ride along on
+  every card and a stranger sees all three. The first two read as annotations
+  rather than facts about a title, and `onDisk` discloses what the library
+  holds. Left public when the read/write split landed because the wall is the
+  library — but that was not argued, it was defaulted. See
+  [authentication.md](authentication.md) § What a stranger may read.
 - **Whether legacy-agent libraries exist here.** If they do, the season and
   episode in a legacy GUID are the only carrier of that information and
   `parseGuid` currently discards it. See
@@ -119,6 +119,17 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-19** — The wall rebuilt to the designed tile. 118px columns on a
+  13px grid, the state as a 3px bar under the poster rather than a badge over
+  the artwork, names clamped to two lines with the subtitle past a colon
+  trimmed and the full name on hover, and a title no longer on disk greyscaled
+  instead of labelled. The tile's sentence became one mono figure: days since
+  the last watch, or the period itself where the record only knows a month or a
+  year, because counting days from a coarse entry's first instant would dress a
+  guess up as a measurement. The year and the fraction moved to the title page,
+  whose own metadata row now sets its figures in mono. Removing the badge makes
+  state colour-only on the tile, so the link's `aria-label` is what carries it
+  and has to keep doing so.
 - **2026-09-19** — The design system applied to `apps/web`. The espresso
   palette and the Archivo / Martian Mono split live in `@theme`, with token
   names matching the mockup so the two can be read side by side. Checked in the

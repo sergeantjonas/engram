@@ -12,6 +12,12 @@ export interface WallSearch {
 const CHIP = 'rounded-full border border-line px-3 py-1 text-sm text-dim hover:border-dim';
 const ACTIVE_CHIP = 'border-tx bg-tx text-bg';
 
+/**
+ * 118px is the width the design's type was judged at: a wider tile reads as a
+ * shop, and a narrower one cannot hold a show's name in two lines.
+ */
+const GRID = 'grid grid-cols-[repeat(auto-fill,minmax(118px,1fr))] gap-[13px]';
+
 const EMPTY: Record<TitleState, string> = {
   unwatched: 'Nothing left unwatched.',
   in_progress: 'Nothing in progress.',
@@ -64,7 +70,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
       {titles.length === 0 ? (
         <p className="text-dim">{search.state ? EMPTY[search.state] : 'Nothing on record yet.'}</p>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-x-4 gap-y-6">
+        <ul className={GRID}>
           {titles.map((title) => (
             <li key={title.id}>
               <TitleCard title={title} />

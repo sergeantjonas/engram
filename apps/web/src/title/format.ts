@@ -23,6 +23,34 @@ export function formatWatched(at: string | null, precision: WatchPrecision | nul
   return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
+/**
+ * The wall's figure: how long ago, in the shortest form that is still true.
+ *
+ * Days only where the record knows the day. A coarse entry stores the first
+ * instant of the period it names, so counting days from it would dress a guess
+ * up as a measurement — those print the period instead. Null when there is no
+ * date at all, which the tile renders as nothing rather than as a zero.
+ */
+export function formatSince(
+  at: string | null,
+  precision: WatchPrecision | null,
+  now: Date = new Date(),
+): string | null {
+  if (at === null || precision === null || precision === 'unknown') return null;
+  const date = new Date(at);
+
+  if (precision === 'year' || precision === 'month') {
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: 'UTC',
+      year: 'numeric',
+      ...(precision === 'month' ? { month: 'short' } : {}),
+    }).format(date);
+  }
+
+  const days = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
+  return days < 1 ? 'today' : `${days}d`;
+}
+
 /** An air date is a plain `YYYY-MM-DD`, with no instant to shift. */
 export function formatAirDate(airDate: string | null): string {
   if (airDate === null) return 'unaired';

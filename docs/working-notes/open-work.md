@@ -19,7 +19,8 @@ each:
 1. ~~The wall over `GET /titles`, filtered by state.~~ Landed 2026-09-19.
 2. ~~The title page: episode grid plus declaring and clearing a hole's
    reason.~~ Landed 2026-09-19.
-3. Adding a title by hand over `GET /search` and `POST /titles`.
+3. ~~Adding a title by hand over `GET /search` and `POST /titles`.~~ Landed
+   2026-09-19.
 4. The `intent` write route on the API, and the wall's want / dropped / excluded
    controls that need it.
 
@@ -86,6 +87,15 @@ screen that needs it rather than ahead of it.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-19** — Adding a title by hand at `/add`, reachable from the header.
+  The query lives in the URL so a search is a place, but it is a plain query
+  rather than a route loader: a loader would hold the navigation open until
+  TMDB answers. Adding posts the candidate's kind and TMDB id, invalidates the
+  wall and lands on the new title's page, treating 200 and 201 alike because
+  either way the title now exists. A missing `TMDB_API_KEY` and an upstream
+  failure are named rather than shown as a status, since one is the owner's to
+  fix and the other is worth retrying.
 
 - **2026-09-19** — The title page at `/titles/$id`: header from the same
   summary the wall draws, one grid per season, specials folded into a

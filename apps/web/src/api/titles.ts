@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
-import { apiFetch } from './client.ts';
+import { apiFetch, postJson } from './client.ts';
 
 export type WatchPrecision = 'exact' | 'day' | 'month' | 'year' | 'unknown';
 
@@ -123,4 +123,51 @@ export function setGap(episodeId: string, gap: { reason: GapReason; note: string
 /** Clearing is saying nothing again; the API answers 204 whether or not there was anything to clear. */
 export function clearGap(episodeId: string) {
   return apiFetch<void>(`/episodes/${encodeURIComponent(episodeId)}/gap`, { method: 'DELETE' });
+}
+
+/** A TMDB search hit, as `GET /search` answers it. Not stored until it is added. */
+export interface TmdbCandidate {
+  kind: 'show' | 'movie';
+  tmdbId: string;
+  name: string;
+  year: number | null;
+  posterPath: string | null;
+  overview: string | null;
+}
+
+export function searchQuery(q: string) {
+  return queryOptions({
+    queryKey: ['search', q],
+    queryFn: () => apiFetch<{ results: TmdbCandidate[] }>(`/search?q=${encodeURIComponent(q)}`),
+    // A search for nothing is not a search. The route rejects an empty `q`
+    // with a 400, and asking it to is a round trip to learn what is already
+    // known here.
+    enabled: q !== '',
+    // The same query typed twice in a minute is the same twenty films, and
+    // every miss is a TMDB call against the owner's key.
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** What `POST /titles` returns. */
+export interface AddedTitle {
+  title: { id: string; name: string };
+  seasons: Array<{ season: number; episodeCount: number }>;
+}
+
+/**
+ * Adds a title by TMDB id. Answers 201 when it was created and 200 when it was
+ * already stored, which read the same here: either way the title now exists
+ * and the page that shows it is where the viewer wants to be.
+ */
+export function addTitle(candidate: Pick<TmdbCandidate, 'kind' | 'tmdbId'>): Promise<AddedTitle> {
+  return postJson<AddedTitle>('/titles', { kind: candidate.kind, tmdbId: candidate.tmdbId });
+}
+
+/**
+ * Identity for a candidate on screen. TMDB numbers films and series in
+ * separate namespaces, so the id alone can name two different things.
+ */
+export function candidateKey(candidate: Pick<TmdbCandidate, 'kind' | 'tmdbId'>): string {
+  return `${candidate.kind}:${candidate.tmdbId}`;
 }

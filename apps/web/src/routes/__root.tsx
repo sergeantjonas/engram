@@ -13,7 +13,12 @@ function Shell() {
         <Link to="/" className="font-semibold tracking-tight">
           Engram
         </Link>
-        <AuthStatus />
+        <div className="flex items-center gap-4">
+          <Link to="/add" className="text-sm text-neutral-300 underline-offset-4 hover:underline">
+            Add a title
+          </Link>
+          <AuthStatus />
+        </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">
         <Outlet />

@@ -1,0 +1,157 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
+import { CandidateRow } from '../add/CandidateRow.tsx';
+import { ApiError } from '../api/client.ts';
+import { addTitle, candidateKey, searchQuery, type TmdbCandidate } from '../api/titles.ts';
+
+interface AddSearch {
+  q?: string;
+}
+
+export const Route = createFileRoute('/add')({
+  validateSearch: (search: Record<string, unknown>): AddSearch =>
+    typeof search.q === 'string' && search.q.trim() !== '' ? { q: search.q.trim() } : {},
+  component: Add,
+});
+
+/**
+ * The query lives in the URL, so a search is a place: the back button returns
+ * to the results rather than to an empty box. It is deliberately not a route
+ * loader, though, unlike the wall — a loader would hold the navigation open
+ * until TMDB answers, and the address bar would lag the typing by a round
+ * trip.
+ */
+function Add() {
+  const { q } = Route.useSearch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState(q ?? '');
+  const [failed, setFailed] = useState<{ key: string; message: string } | null>(null);
+
+  // Only the search params change between one search and the next, so the
+  // component is never remounted and the initializer above runs once. Without
+  // this, going Back leaves the box holding a query the results no longer
+  // match.
+  const [lastQ, setLastQ] = useState(q);
+  if (q !== lastQ) {
+    setLastQ(q);
+    setDraft(q ?? '');
+  }
+
+  const results = useQuery(searchQuery(q ?? ''));
+
+  const add = useMutation({
+    mutationFn: addTitle,
+    onMutate: () => setFailed(null),
+    onSuccess: async (added) => {
+      // The wall is now wrong by one title, whatever filter it is showing.
+      await queryClient.invalidateQueries({ queryKey: ['titles'] });
+      await navigate({ to: '/titles/$id', params: { id: added.title.id } });
+    },
+    onError: (error, candidate) =>
+      setFailed({ key: candidateKey(candidate), message: describe(error) }),
+  });
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold">Add a title</h1>
+
+      <form
+        className="flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void navigate({ to: '/add', search: draft.trim() ? { q: draft.trim() } : {} });
+        }}
+      >
+        <input
+          aria-label="Search TMDB"
+          placeholder="Search for a film or series"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          className="flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2"
+        />
+        <button
+          type="submit"
+          className="rounded bg-neutral-100 px-4 py-2 font-medium text-neutral-900"
+        >
+          Search
+        </button>
+      </form>
+
+      <Results
+        q={q}
+        results={results}
+        onAdd={(candidate) => add.mutate(candidate)}
+        pending={add.isPending ? candidateKey(add.variables) : null}
+        failed={failed}
+      />
+    </div>
+  );
+}
+
+function Results({
+  q,
+  results,
+  onAdd,
+  pending,
+  failed,
+}: {
+  q: string | undefined;
+  results: ReturnType<typeof useQuery<{ results: TmdbCandidate[] }>>;
+  onAdd: (candidate: TmdbCandidate) => void;
+  pending: string | null;
+  failed: { key: string; message: string } | null;
+}) {
+  if (q === undefined) {
+    return <p className="text-neutral-400">Search TMDB for something to put on the record.</p>;
+  }
+  if (results.isPending) return <p className="text-neutral-400">Searching…</p>;
+  if (results.isError) {
+    return (
+      <p role="alert" className="text-red-400">
+        {describe(results.error)}
+      </p>
+    );
+  }
+  if (results.data.results.length === 0) {
+    return <p className="text-neutral-400">TMDB has nothing for “{q}”.</p>;
+  }
+
+  return (
+    <ul className="space-y-5">
+      {results.data.results.map((candidate) => {
+        const key = candidateKey(candidate);
+        return (
+          <li key={key}>
+            <CandidateRow
+              candidate={candidate}
+              onAdd={() => onAdd(candidate)}
+              adding={pending === key}
+              // Every row waits on the one in flight: two adds in parallel
+              // would race to navigate, and the loser's page is not the one
+              // that was asked for.
+              disabled={pending !== null}
+              error={failed?.key === key ? failed.message : null}
+            />
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * The API's own message, except where its code names a condition the viewer
+ * can act on. A missing key is the owner's to fix, and "TMDB did not answer"
+ * is worth retrying; neither reads that way as a bare status.
+ */
+function describe(error: unknown): string {
+  if (!(error instanceof ApiError)) return error instanceof Error ? error.message : String(error);
+  if (error.status === 401) return 'Sign in to add a title.';
+  if (error.code === 'search_unavailable' || error.code === 'tmdb_unavailable') {
+    return 'TMDB is not configured, so nothing can be looked up or added.';
+  }
+  if (error.code === 'upstream_failed') return 'TMDB did not answer. Try again.';
+  return error.message;
+}

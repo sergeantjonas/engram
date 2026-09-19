@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { EpisodeCell, TitleDetail, TitleSummary } from './api/titles.ts';
+import type { EpisodeCell, TitleDetail, TitleSummary, TmdbCandidate } from './api/titles.ts';
 import { createAppRouter } from './router.tsx';
 
 type Handler = (url: string, init: RequestInit | undefined) => Response;
@@ -35,6 +35,7 @@ async function renderAt(path: string) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
+  return router;
 }
 
 afterEach(() => {
@@ -317,5 +318,130 @@ describe('the title page', () => {
 
     await screen.findByText(/No title is stored under that id/);
     expect(screen.getByRole('link', { name: 'Back to the wall' }).getAttribute('href')).toBe('/');
+  });
+});
+
+const candidate = (overrides: Partial<TmdbCandidate>): TmdbCandidate => ({
+  kind: 'movie',
+  tmdbId: '949',
+  name: 'Heat',
+  year: 1995,
+  posterPath: null,
+  overview: null,
+  ...overrides,
+});
+
+describe('adding a title', () => {
+  it('searches TMDB for what the URL asks and lists what comes back', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search')
+        ? json({
+            results: [
+              candidate({ overview: 'A crew of thieves.' }),
+              candidate({ kind: 'show', tmdbId: '1396', name: 'Breaking Bad', year: 2008 }),
+            ],
+          })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=heat');
+
+    await screen.findByRole('heading', { name: /^Heat/ });
+    expect(calls.find((call) => call.url.includes('/search'))?.url).toBe(
+      'http://localhost:2012/search?q=heat',
+    );
+    expect(screen.getByText('A crew of thieves.')).toBeDefined();
+    expect(screen.getByRole('heading', { name: /Breaking Bad/ }).textContent).toContain('series');
+  });
+
+  it('puts the typed query in the URL so the search is a place', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),
+    );
+    await renderAt('/add');
+
+    // Nothing is asked of TMDB until there is something to ask.
+    expect(screen.getByText('Search TMDB for something to put on the record.')).toBeDefined();
+    expect(calls.some((call) => call.url.includes('/search'))).toBe(false);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search TMDB' }), {
+      target: { value: 'one piece' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Search' }));
+
+    await screen.findByText(/TMDB has nothing for/);
+    expect(calls.find((call) => call.url.includes('/search'))?.url).toBe(
+      'http://localhost:2012/search?q=one%20piece',
+    );
+  });
+
+  it('adds the chosen candidate and lands on its title page', async () => {
+    const id = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({})] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json({ title: { id, name: 'Heat' }, seasons: [] }, 201);
+      }
+      if (url.includes(`/titles/${id}`)) {
+        return json({
+          title: title({ id, name: 'Heat', kind: 'movie', year: 1995, state: 'unwatched' }),
+          seasons: [],
+        });
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt('/add?q=heat');
+
+    (await screen.findByRole('button', { name: 'Add Heat' })).click();
+
+    await screen.findByRole('heading', { level: 1, name: 'Heat' });
+    const post = calls.find((call) => call.init?.method === 'POST');
+    expect(JSON.parse(String(post?.init?.body))).toEqual({ kind: 'movie', tmdbId: '949' });
+    expect(calls.some((call) => call.url.includes(`/titles/${id}`))).toBe(true);
+  });
+
+  it('puts the previous query back in the box on the way back', async () => {
+    stubApi((url) => (url.includes('/search') ? json({ results: [] }) : json({ isOwner: true })));
+    const router = await renderAt('/add?q=heat');
+
+    const box = screen.getByRole('textbox', { name: 'Search TMDB' });
+    fireEvent.change(box, { target: { value: 'blade runner' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Search' }));
+    await waitFor(() => expect(screen.getByText(/nothing for .blade runner./)).toBeDefined());
+
+    // Only the search params change between searches, so nothing remounts and
+    // the box would otherwise keep whatever was last typed into it.
+    router.history.back();
+    await waitFor(() => expect((box as HTMLInputElement).value).toBe('heat'));
+  });
+
+  it('says so when the record cannot reach TMDB at all', async () => {
+    stubApi((url) =>
+      url.includes('/search')
+        ? json({ error: 'search_unavailable', message: 'TMDB_API_KEY is not configured' }, 503)
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=heat');
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('TMDB is not configured'),
+    );
+  });
+
+  it('keeps the viewer on the results when adding one of them fails', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({})] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json({ error: 'upstream_failed', message: 'TMDB did not answer' }, 502);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt('/add?q=heat');
+
+    (await screen.findByRole('button', { name: 'Add Heat' })).click();
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('TMDB did not answer'),
+    );
+    expect(screen.getByRole('button', { name: 'Add Heat' })).toBeDefined();
   });
 });

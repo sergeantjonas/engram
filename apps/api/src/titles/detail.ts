@@ -49,6 +49,30 @@ export interface TitleDetail {
   seasons: SeasonGrid[];
 }
 
+/**
+ * The same grid as a stranger may see it.
+ *
+ * A gap's reason is a fact about the run and the cell is coloured by it, so it
+ * stays. The note is the owner's own prose about why — "lent the box set out",
+ * "walked out halfway" — and the record being readable does not make the
+ * commentary on it readable. Dropped on the way out rather than left out of the
+ * query: one statement builds the grid, and a second one that differed only in
+ * a column is how the two views start disagreeing about everything else.
+ */
+export function withoutGapNotes(detail: TitleDetail): TitleDetail {
+  return {
+    title: detail.title,
+    seasons: detail.seasons.map((season) => ({
+      season: season.season,
+      episodes: season.episodes.map((episode) =>
+        episode.gap === null || episode.gap.note === null
+          ? episode
+          : { ...episode, gap: { reason: episode.gap.reason, note: null } },
+      ),
+    })),
+  };
+}
+
 interface EpisodeRow extends Record<string, unknown> {
   id: string;
   season: number;

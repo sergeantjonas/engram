@@ -1,11 +1,14 @@
 # Authentication
 
-**Status:** Shipped — the whole build order landed 2026-09-17/18. Read before
-changing any auth code; the reasoning here is why it is shaped the way it is.
+**Status:** Shipped — the whole build order landed 2026-09-17/18, and the
+read/write split on 2026-09-19. Read before changing any auth code; the
+reasoning here is why it is shaped the way it is.
 
-Engram has exactly one human user. The question is not which of several people
-is calling, it is whether the caller is the owner at all, and every answer other
-than yes is the same answer.
+Engram has exactly one human user, and exactly one of them may write. The
+question at a write is not which of several people is calling, it is whether the
+caller is the owner at all, and every answer other than yes is the same answer.
+At a read the question is softer, and the answer decides how much of the record
+comes back rather than whether any of it does.
 
 ## GitHub OAuth, owner-only
 
@@ -151,16 +154,58 @@ use-side call is what survives someone later adding a second way to mint one.
 site is public by design, so every gated endpoint is a deliberate exception and
 forgetting an annotation leaks one page.
 
-Here it is inverted. This API is private by design and has no public
-projection, so the list is of exceptions to being closed — `/health`, `/ready`
-and the four auth routes. Forgetting an entry locks a route rather than opening
-it, which is the failure mode worth having. An unmatched path answers 401 rather
-than 404 for the same reason: a stranger learns nothing about what exists.
+Here it is inverted. The list is of exceptions to being closed, so forgetting an
+entry locks a route rather than opening it, which is the failure mode worth
+having. That stayed true when reads joined the list, because the list is keyed
+on method and route pattern together: `GET /titles` is on it and `POST /titles`
+is not, and no write can be opened by omission because omission closes. An
+unmatched path answers 401 rather than 404 for the same reason — it has no
+route pattern to match, so a stranger learns nothing about what exists.
 
 The guard throws rather than answering "not the owner" when the session cannot
-be read. `vyoh.gg` swallows that failure because it can serve the visitor's
-version of a page; there is no such version here, and a database outage quietly
-becoming a permissions error is the kind of thing that costs an afternoon.
+be read. There is a public projection to fall back to now, which is exactly why
+it must not: a session store that cannot be answered would otherwise hand the
+owner a stranger's narrower view of their own record and look like it worked. A
+database outage quietly becoming a permissions error is the kind of thing that
+costs an afternoon.
+
+## What a stranger may read
+
+Decided 2026-09-19. The record is the product, and a record nobody can read is
+a diary. Everything a stranger is refused is refused for a reason that is about
+them acting or about the owner's own annotations, never about the watching
+itself.
+
+Open: `GET /titles` and `GET /titles/:id`. The wall, and any title page on it.
+
+Closed, and each for its own reason:
+
+- **Every write.** `POST /titles`, `POST /watch-events`, `PUT`/`DELETE
+  /episodes/:id/gap`. This is the whole of what "cannot manage anything" means.
+- **`GET /search`.** A read, but one that spends the owner's TMDB key on every
+  call and exists only to feed the add screen. Open, it would be a free TMDB
+  proxy attached to someone else's quota.
+- **`?includeExcluded=true`.** Clamped rather than refused: the flag exists to
+  tidy the owner's own listing, and a 401 would tell a stranger it was worth
+  asking for. For the same reason an excluded title answers 404 by id — hiding
+  it from the wall and then handing it over to anyone holding the id would make
+  the flag decorative.
+- **A gap's note.** The reason survives, because the cell is coloured by it and
+  that is a fact about the run. The note is the owner writing to themselves, and
+  the record being readable does not make the commentary on it readable.
+
+The guard resolves the session for every request, open or not, and decorates
+`request.isOwner` with the answer. That is what lets the two open reads serve
+the owner more than they serve a stranger without asking the session store a
+second time — `/auth/me` reads the same decoration rather than repeating the
+lookup its entire job is to report.
+
+On the web side the rule is that a control a visitor cannot use is not shown at
+all: no gap form in the popover, no "Add a title" in the header, no excluded
+toggle on the wall, and `/add` redirects to `/login` with the way back attached
+rather than rendering a screen whose every row ends in a refusal. The root route
+primes `/auth/me` before the first paint so those controls are absent from the
+start rather than vanishing a tick after the page arrives.
 
 ## CORS is hand-rolled too
 

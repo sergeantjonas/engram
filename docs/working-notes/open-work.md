@@ -95,8 +95,10 @@ screen that needs it rather than ahead of it.
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs
    either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`, and
-   must be added to the guard's open-path list when they land — they have no
-   cookie jar, so the secret is their authentication rather than a session.
+   must be added to the guard's open list when they land — they have no cookie
+   jar, so the secret is their authentication rather than a session. The list
+   is keyed on method and route pattern together, so the entry is `POST
+   /webhooks/...` and nothing else about the path is opened with it.
 
 ## Blocked
 
@@ -115,6 +117,21 @@ screen that needs it rather than ahead of it.
   [ingest-architecture.md](ingest-architecture.md).
 
 ## Done
+
+- **2026-09-19** — The record reads for anyone; only the owner may change it.
+  The guard was global-deny with a list of open paths, which made the whole
+  thing a diary behind a login. The list is now keyed on method and route
+  pattern together, so `GET /titles` and `GET /titles/:id` are open and `POST
+  /titles` is not, and a write still cannot be opened by forgetting an entry.
+  The guard resolves the session for every request and decorates
+  `request.isOwner`, which is what lets the two open reads answer the owner
+  more fully than a stranger: `GET /search` stays shut because it spends the
+  TMDB key, `?includeExcluded=true` is clamped rather than refused, an excluded
+  title is a 404 by id, and a gap's note is dropped on the way out while its
+  reason survives. On the web side no control a visitor cannot use is shown at
+  all — no gap form, no "Add a title", no excluded toggle, and `/add`
+  redirects to `/login` with the way back attached. Reasoning in
+  [authentication.md](authentication.md) § What a stranger may read.
 
 - **2026-09-19** — Title metadata backfilled from TMDB. The Plex importer
   writes identity and history and never calls TMDB, so all eleven imported

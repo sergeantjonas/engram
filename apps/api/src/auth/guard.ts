@@ -4,46 +4,73 @@ import type { Database } from '../db/client.js';
 import { parseCookieHeader, SESSION_COOKIE } from './cookies.js';
 import { resolveOwner } from './store.js';
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    /**
+     * Whether this request carries the owner's session.
+     *
+     * Resolved once, ahead of every route, because the open reads below are not
+     * the same answer for both callers: the owner sees excluded titles and the
+     * notes they wrote, and a stranger sees the record without them.
+     */
+    isOwner: boolean;
+  }
+}
+
 /**
- * The only paths reachable without a session.
+ * Everything reachable without a session, keyed by method and route pattern.
  *
  * `/health` and `/ready` because a reverse proxy has to reach them to decide
  * whether to route here at all, and the auth routes because they are how a
- * session comes to exist, is asked about, and ends. Each of those resolves the
- * session itself; being outside the gate is not the same as being unchecked.
+ * session comes to exist, is asked about, and ends. The two title reads because
+ * the record is meant to be readable: what watching happened is the thing this
+ * project exists to keep, and keeping it behind a login makes it a diary rather
+ * than a record. Being outside the gate is not the same as being unchecked —
+ * each of those handlers still varies on who is asking.
+ *
+ * The method is part of the key, which is the whole shape of the change: `GET
+ * /titles` is open and `POST /titles` is not, and nothing else about the wall
+ * distinguishes them.
  *
  * The webhook receivers will join this list when they land, and are not an
  * exception to being authenticated: Tautulli and Sonarr have no browser and no
  * cookie jar, so they present `WEBHOOK_SECRET` instead of a session.
  */
-const OPEN_PATHS = new Set([
-  '/health',
-  '/ready',
-  '/auth/github/login',
-  '/auth/github/callback',
+const OPEN_ROUTES = new Set([
+  'GET /health',
+  'GET /ready',
+  'GET /auth/github/login',
+  'GET /auth/github/callback',
   // Both answer for a caller who has no session, which is why they are here
   // rather than behind the gate. Their handlers say why.
-  '/auth/me',
-  '/auth/logout',
+  'GET /auth/me',
+  'POST /auth/logout',
+  // The record. Every other read — TMDB search above all, which spends the
+  // owner's key and exists only to feed the add screen — stays behind the gate.
+  'GET /titles',
+  'GET /titles/:id',
 ]);
 
 /** What the SPA sends; the API has no other kind of caller with a browser. */
 const ALLOWED_METHODS = 'GET, POST, PUT, DELETE, OPTIONS';
 
 /**
- * Gates every route on an owner session, and answers the browser's preflight.
+ * Resolves who is asking, and gates everything the answer does not open.
  *
- * Global with an opt-out list, which is the opposite of how `vyoh.gg` applies
- * the same guard — and deliberately so. That site is public with a few owner
- * routes, so forgetting an annotation there leaks a page; this API is private
- * with a few open ones, so forgetting an entry here locks a route rather than
- * opening it. The failure mode should be the recoverable one.
+ * Global with an opt-in list, which is the opposite of how `vyoh.gg` applies
+ * the same guard — and deliberately so. That site annotates the owner routes,
+ * so forgetting an annotation there leaks a page; here, forgetting an entry
+ * locks a route rather than opening it. The failure mode should be the
+ * recoverable one, and it stays that way now that the list has reads on it: a
+ * write can never be opened by omission, because omission closes.
  *
  * Registered before the routes so it runs ahead of them, and CORS before the
  * gate so that a 401 still carries the headers that let the SPA read it as a
  * 401 rather than as an opaque CORS failure.
  */
 export function registerOwnerGuard(app: FastifyInstance, db: Database, config: Config): void {
+  app.decorateRequest('isOwner', false);
+
   app.addHook('onRequest', async (request, reply) => {
     // Set whether or not the origin matched: a cache keyed on the path alone
     // would otherwise hand one origin's allow header to another.
@@ -71,15 +98,20 @@ export function registerOwnerGuard(app: FastifyInstance, db: Database, config: C
   });
 
   app.addHook('onRequest', async (request, reply) => {
-    // The path alone: a query string is not part of what is open, and an
-    // unmatched route has no route pattern to compare against. An unknown path
-    // therefore answers 401 rather than 404, which is the right way round on
+    // The registered pattern rather than the path, so that `/titles/:id` is one
+    // entry instead of one per id, and a query string is not mistaken for part
+    // of what is open. A request that matched no route has no pattern at all,
+    // so an unknown path answers 401 rather than 404 — the right way round on
     // an API that tells strangers nothing.
-    const path = request.url.split('?')[0] ?? '';
-    if (OPEN_PATHS.has(path)) return;
+    const route = `${request.method} ${request.routeOptions.url ?? ''}`;
 
+    // Resolved even for an open route, and before the open check rather than
+    // after: a failure to read the session must not quietly serve the owner the
+    // stranger's narrower answer. If this throws, the request is a 500.
     const token = parseCookieHeader(request.headers.cookie)[SESSION_COOKIE];
-    if (await resolveOwner(db, token, config.OWNER_GITHUB_USER_ID, new Date())) return;
+    request.isOwner = await resolveOwner(db, token, config.OWNER_GITHUB_USER_ID, new Date());
+
+    if (request.isOwner || OPEN_ROUTES.has(route)) return;
 
     return reply.code(401).send({ error: 'unauthorized', message: 'an owner session is required' });
   });

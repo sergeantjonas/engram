@@ -158,12 +158,15 @@ const listRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** No session cookie at all: the read is open, so this reaches the route. */
+const stranger: Record<string, string> = {};
+
 describe('GET /titles', () => {
-  const list = (query = '', rows: unknown[] = []) => {
+  const list = (query = '', rows: unknown[] = [], headers = signedIn) => {
     const stub = sessionDb();
     stub.rows = rows;
     app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
-    return app.inject({ method: 'GET', url: `/titles${query}`, headers: signedIn });
+    return app.inject({ method: 'GET', url: `/titles${query}`, headers });
   };
 
   it('rejects a state nothing can be in', async () => {
@@ -199,6 +202,16 @@ describe('GET /titles', () => {
     expect((await list('?includeExcluded=true', rows)).json().titles).toHaveLength(2);
   });
 
+  // Asking is the owner's privilege. A stranger gets the flag ignored rather
+  // than refused, so nothing tells them it was worth asking for.
+  it('will not un-hide an excluded title for a stranger that asks', async () => {
+    const rows = [listRow(), listRow({ id: 'x', name: 'Not Mine', excluded_at: '2026-09-17' })];
+    const response = await list('?includeExcluded=true', rows, stranger);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().titles).toHaveLength(1);
+  });
+
   it('filters on the derived state rather than a stored one', async () => {
     const rows = [listRow(), listRow({ id: 'y', name: 'Halfway', seen_count: 3 })];
 
@@ -209,11 +222,11 @@ describe('GET /titles', () => {
 });
 
 describe('GET /titles/:id', () => {
-  const detail = (id: string, executions: unknown[][] = []) => {
+  const detail = (id: string, executions: unknown[][] = [], headers = signedIn) => {
     const stub = sessionDb();
     stub.executions = executions;
     app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
-    return app.inject({ method: 'GET', url: `/titles/${id}`, headers: signedIn });
+    return app.inject({ method: 'GET', url: `/titles/${id}`, headers });
   };
 
   it('rejects an id that is not one', async () => {
@@ -258,5 +271,55 @@ describe('GET /titles/:id', () => {
     expect(response.json().seasons).toEqual([
       { season: 1, episodes: [expect.objectContaining({ number: 1, seen: true })] },
     ]);
+  });
+
+  // Hiding it from the wall and then handing it over to anyone holding the id
+  // would make the flag decorative.
+  it('hides an excluded title from a stranger who has its id', async () => {
+    // Built per call: the stub shifts result sets off the array it is given, so
+    // one shared array leaves the second request with nothing to answer from.
+    const rows = () => [[listRow({ excluded_at: '2026-09-17' })], []];
+    const id = '0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701';
+
+    expect((await detail(id, rows(), stranger)).statusCode).toBe(404);
+    // The owner still arrives by link or by back button.
+    expect((await detail(id, rows())).statusCode).toBe(200);
+  });
+
+  // The colour of the cell is a fact about the run; the sentence explaining it
+  // is the owner talking to themselves.
+  it('gives a stranger the reason for a hole but not the note about it', async () => {
+    const rows = () => [
+      [listRow()],
+      [
+        {
+          id: 'e1',
+          season: 1,
+          number: 1,
+          name: 'A Grain of Truth',
+          air_date: '2019-12-20',
+          runtime_min: 60,
+          tmdb_episode_id: '1859369',
+          seen: false,
+          play_count: 0,
+          first_watched_at: null,
+          first_watched_precision: null,
+          last_watched_at: null,
+          last_watched_precision: null,
+          gap_reason: 'skipped',
+          gap_note: 'lent the box set out',
+        },
+      ],
+    ];
+    const id = '0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701';
+
+    const seen = await detail(id, rows(), stranger);
+    expect(seen.json().seasons[0].episodes[0].gap).toEqual({ reason: 'skipped', note: null });
+
+    const mine = await detail(id, rows());
+    expect(mine.json().seasons[0].episodes[0].gap).toEqual({
+      reason: 'skipped',
+      note: 'lent the box set out',
+    });
   });
 });

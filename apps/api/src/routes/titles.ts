@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
 import { episodes as episodeTable, titles as titleTable } from '../db/schema.js';
-import { titleDetail } from '../titles/detail.js';
+import { titleDetail, withoutGapNotes } from '../titles/detail.js';
 import { listTitles } from '../titles/list.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
 import {
@@ -79,7 +79,10 @@ export function registerTitleRoutes(
 
     const titles = await listTitles(db, {
       state: parsed.data.state,
-      includeExcluded: parsed.data.includeExcluded,
+      // Clamped for a stranger rather than refused: the flag exists to tidy the
+      // owner's own listing, and answering 401 to it would tell them the flag
+      // is worth having, which is more than ignoring it tells them.
+      includeExcluded: parsed.data.includeExcluded && request.isOwner,
     });
 
     return { titles };
@@ -88,9 +91,10 @@ export function registerTitleRoutes(
   /**
    * One title and its grid, which is where the work happens.
    *
-   * Excluded titles are served here even though the wall hides them: arriving
-   * by link or by back button should not 404 because of a flag that exists to
-   * tidy a listing.
+   * Excluded titles are served to the owner even though the wall hides them:
+   * arriving by link or by back button should not 404 because of a flag that
+   * exists to tidy a listing. A stranger gets the 404, because otherwise the
+   * flag hides a title from the listing and an id still hands it over.
    */
   app.get('/titles/:id', async (request, reply) => {
     const parsed = detailParams.safeParse(request.params);
@@ -100,13 +104,13 @@ export function registerTitleRoutes(
     }
 
     const detail = await titleDetail(db, parsed.data.id);
-    if (!detail) {
+    if (!detail || (detail.title.excluded && !request.isOwner)) {
       return reply
         .code(404)
         .send({ error: 'not_found', message: 'no title is stored under that id' });
     }
 
-    return detail;
+    return request.isOwner ? detail : withoutGapNotes(detail);
   });
 
   app.post('/titles', async (request, reply) => {

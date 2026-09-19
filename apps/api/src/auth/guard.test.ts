@@ -63,8 +63,33 @@ describe('the owner guard', () => {
     expect(response.statusCode).toBe(401);
   });
 
-  // Global with an opt-out list, so a path nobody registered is closed rather
-  // than announcing that it does not exist.
+  // The whole shape of the read/write split: one path, two verbs, and only the
+  // method distinguishes what a stranger may do with it.
+  it('opens the wall to a stranger while keeping the write shut', async () => {
+    const server = start(null).app;
+
+    expect((await get(server, '/titles')).statusCode).toBe(200);
+    expect((await server.inject({ method: 'POST', url: '/titles' })).statusCode).toBe(401);
+  });
+
+  // One entry covers every id, which is why the list is keyed on the route
+  // pattern rather than on the path that arrived.
+  it('opens a title page under any id', async () => {
+    const response = await get(start(null).app, '/titles/0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701');
+
+    // 404 rather than 200 because the stubbed database holds no rows; what
+    // matters is that the request reached the route instead of the gate.
+    expect(response.statusCode).toBe(404);
+  });
+
+  // It spends the owner's TMDB key and exists only to feed the add screen, so
+  // it stays shut even though it only reads.
+  it('keeps the TMDB search shut to a stranger', async () => {
+    expect((await get(start(null).app, '/search?q=witcher')).statusCode).toBe(401);
+  });
+
+  // Global with an opt-in list, so a path nobody registered has no pattern to
+  // match and is closed rather than announcing that it does not exist.
   it('answers an unknown path with 401 rather than 404', async () => {
     expect((await get(start(null).app, '/not-a-route')).statusCode).toBe(401);
   });
@@ -107,8 +132,9 @@ describe('the owner guard', () => {
     expect(fresh.stub.extended).toHaveLength(0);
   });
 
-  // There is no public projection to degrade to, so a read that cannot happen
-  // is a failure rather than a quiet "not the owner".
+  // There is a public projection now, which is exactly why this must not fall
+  // back to it: a session store that cannot be read would otherwise serve the
+  // owner the stranger's narrower answer and look like it worked.
   it('fails closed when the session cannot be read', async () => {
     app = buildApp({ config: testConfig, db: {} as Database, tmdb: null, github: githubStub });
 

@@ -18,7 +18,7 @@ import {
   signState,
   verifyState,
 } from '../auth/state.js';
-import { createSession, resolveOwner, revokeSession } from '../auth/store.js';
+import { createSession, revokeSession } from '../auth/store.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
 import { GITHUB_ISSUER, type GithubClient, type GithubIdentity } from '../github/client.js';
@@ -91,10 +91,10 @@ export function registerAuthRoutes(
    * API today.
    */
   app.get('/auth/me', async (request, reply) => {
-    const token = parseCookieHeader(request.headers.cookie)[SESSION_COOKIE];
-    const owner = await resolveOwner(db, token, config.OWNER_GITHUB_USER_ID, new Date());
-
-    return reply.header('cache-control', 'no-store').send({ isOwner: owner });
+    // The guard has already resolved this for every route, open or not; asking
+    // the session store a second time on the one request whose entire job is to
+    // report the first answer would be a second read of the same row.
+    return reply.header('cache-control', 'no-store').send({ isOwner: request.isOwner });
   });
 
   /**

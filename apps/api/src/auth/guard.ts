@@ -98,12 +98,17 @@ export function registerOwnerGuard(app: FastifyInstance, db: Database, config: C
   });
 
   app.addHook('onRequest', async (request, reply) => {
+    // HEAD is GET without the body, and Fastify registers one for every GET
+    // route on its own. Keyed literally, a proxy's `HEAD /health` would answer
+    // 401 — the one thing the probes are on this list to prevent.
+    const method = request.method === 'HEAD' ? 'GET' : request.method;
+
     // The registered pattern rather than the path, so that `/titles/:id` is one
     // entry instead of one per id, and a query string is not mistaken for part
     // of what is open. A request that matched no route has no pattern at all,
     // so an unknown path answers 401 rather than 404 — the right way round on
     // an API that tells strangers nothing.
-    const route = `${request.method} ${request.routeOptions.url ?? ''}`;
+    const route = `${method} ${request.routeOptions.url ?? ''}`;
 
     // Resolved even for an open route, and before the open check rather than
     // after: a failure to read the session must not quietly serve the owner the

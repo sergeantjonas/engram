@@ -8,7 +8,6 @@ import {
   setGap,
   titleQuery,
 } from '../api/titles.ts';
-import { useIsOwner } from '../auth/useIsOwner.ts';
 import { formatAirDate, formatWatched } from './format.ts';
 
 type CellStatus = 'seen' | 'skipped' | 'missing' | 'unmatched' | 'hole';
@@ -44,9 +43,16 @@ const REASON_LABEL: Record<GapReason, string> = {
   missing: 'Never had it',
 };
 
-export function EpisodeCell({ episode, titleId }: { episode: Cell; titleId: string }) {
+export function EpisodeCell({
+  episode,
+  titleId,
+  isOwner,
+}: {
+  episode: Cell;
+  titleId: string;
+  isOwner: boolean;
+}) {
   const [open, setOpen] = useState(false);
-  const isOwner = useIsOwner();
   const status = statusOf(episode);
   const label = `Episode ${episode.number}${episode.name ? `: ${episode.name}` : ''}, ${STATUS_LABEL[status]}`;
 

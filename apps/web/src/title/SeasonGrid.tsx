@@ -1,14 +1,19 @@
 import type { SeasonGrid as Season } from '../api/titles.ts';
+import { useIsOwner } from '../auth/useIsOwner.ts';
 import { EpisodeCell } from './EpisodeCell.tsx';
 
 export function SeasonGrid({ season, titleId }: { season: Season; titleId: string }) {
+  // Asked once per season rather than once per cell: ONE PIECE is 1100
+  // episodes, and that many subscriptions to the same query is a thousand
+  // observers doing the same bookkeeping for one answer.
+  const isOwner = useIsOwner();
   const seen = season.episodes.filter((episode) => episode.seen).length;
   const heading = season.season === 0 ? 'Specials' : `Season ${season.season}`;
   const grid = (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-1.5">
       {season.episodes.map((episode) => (
         <li key={episode.id} className="contents">
-          <EpisodeCell episode={episode} titleId={titleId} />
+          <EpisodeCell episode={episode} titleId={titleId} isOwner={isOwner} />
         </li>
       ))}
     </ul>

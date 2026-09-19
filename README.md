@@ -94,8 +94,11 @@ are strict, so a collision fails loudly instead of quietly breaking CORS.
 Use `localhost` for both, not `127.0.0.1`: the session cookie is host-only in
 development, and the registered callback URL names `localhost`.
 
-Every route except `/health`, `/ready` and the four `/auth/*` routes needs an
-owner session, so a bare `curl` answers 401 by design. Sign in from the SPA's
+The record reads without a session: `GET /titles` and `GET /titles/:id` answer
+anyone, so a bare `curl` gets the wall and any title page on it. Everything that
+writes needs an owner session, and so does `GET /search`, which spends the TMDB
+key. The two open reads answer the owner more fully than a stranger — excluded
+titles and the notes on a hole are the owner's alone. Sign in from the SPA's
 header, or by opening `http://localhost:2012/auth/github/login` in a browser.
 
 ## Notes

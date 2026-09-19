@@ -14,7 +14,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
    * mounted `AuthStatus` still asks again on every mount, so this primes the
    * answer rather than becoming the only one.
    */
-  beforeLoad: ({ context }) => context.queryClient.ensureQueryData(meQuery),
+  beforeLoad: async ({ context }) => {
+    // Awaited, not returned: what `beforeLoad` returns is merged into the route
+    // context, and a non-reactive snapshot of `Me` sitting there would read as
+    // the authoritative answer to the next person who finds it.
+    await context.queryClient.ensureQueryData(meQuery);
+  },
   component: Shell,
 });
 

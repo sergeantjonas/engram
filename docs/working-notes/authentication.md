@@ -172,9 +172,9 @@ costs an afternoon.
 ## What a stranger may read
 
 Decided 2026-09-19. The record is the product, and a record nobody can read is
-a diary. Everything a stranger is refused is refused for a reason that is about
-them acting or about the owner's own annotations, never about the watching
-itself.
+a diary. Nothing about the watching itself is refused; what is refused is
+refused because a stranger would be acting, or because the field is the owner
+writing to themselves rather than a fact about a title.
 
 Open: `GET /titles` and `GET /titles/:id`. The wall, and any title page on it.
 
@@ -193,6 +193,19 @@ Closed, and each for its own reason:
 - **A gap's note.** The reason survives, because the cell is coloured by it and
   that is a fact about the run. The note is the owner writing to themselves, and
   the record being readable does not make the commentary on it readable.
+
+Still open: `want`, `dropped` and `onDisk` ride along on every card
+(`TitleSummary` in `apps/api/src/titles/list.ts`) and a stranger sees all three.
+The first two are closer to a note than to a fact about the title, and `onDisk`
+discloses what the library holds rather than what was watched. They were left
+public because the wall is the library and hiding a badge is not the same
+decision as hiding a title — but it is a decision, and it has not been made. If
+they should close, they blank in the route the way `includeExcluded` clamps.
+
+HEAD is normalised to GET before the lookup. Fastify registers a HEAD route for
+every GET on its own, so a key built from the literal method would answer 401 to
+the reverse proxy's `HEAD /health` — the one thing the probes are on the list to
+prevent.
 
 The guard resolves the session for every request, open or not, and decorates
 `request.isOwner` with the answer. That is what lets the two open reads serve

@@ -72,6 +72,30 @@ describe('the owner guard', () => {
     expect((await server.inject({ method: 'POST', url: '/titles' })).statusCode).toBe(401);
   });
 
+  // Every verb that writes, not just the one on the path that is also open:
+  // the key is per method, so each of these is its own chance to be missed.
+  it('keeps every write shut to a stranger', async () => {
+    const server = start(null).app;
+    const id = '0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701';
+
+    for (const write of [
+      { method: 'POST' as const, url: '/watch-events' },
+      { method: 'PUT' as const, url: `/episodes/${id}/gap` },
+      { method: 'DELETE' as const, url: `/episodes/${id}/gap` },
+    ]) {
+      expect((await server.inject(write)).statusCode).toBe(401);
+    }
+  });
+
+  // Fastify registers a HEAD for every GET on its own, so a key built from the
+  // literal method would 401 the probes a reverse proxy sends.
+  it('treats HEAD as the GET it is', async () => {
+    const server = start(null).app;
+
+    expect((await server.inject({ method: 'HEAD', url: '/health' })).statusCode).toBe(200);
+    expect((await server.inject({ method: 'HEAD', url: '/titles' })).statusCode).toBe(200);
+  });
+
   // One entry covers every id, which is why the list is keyed on the route
   // pattern rather than on the path that arrived.
   it('opens a title page under any id', async () => {

@@ -45,10 +45,10 @@ export async function createSession(
  * make, and telling apart "no such session" from "expired" from "not the
  * owner" only says which half of a guess was right.
  *
- * Throws rather than answering false if the database is unreachable. On an API
- * with no public projection there is nothing to degrade to, and a read failure
- * that quietly became "not the owner" would lock the owner out while looking
- * like a permissions problem.
+ * Throws rather than answering false if the database is unreachable. There is a
+ * public projection to degrade to, which is the reason not to: a read failure
+ * that quietly became "not the owner" would serve the owner a stranger's
+ * narrower view of their own record and look like a permissions problem.
  */
 export async function resolveOwner(
   db: Database,

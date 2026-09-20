@@ -1,7 +1,6 @@
-import type { SeasonGrid, TitleSummary } from '../api/titles.ts';
+import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { posterUrl } from '../api/titles.ts';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
-import { titleFigures } from './figures.ts';
 import { formatSince, formatWatched } from './format.ts';
 
 /** A fact about the title as a whole: mono figure, Archivo label, in that order. */
@@ -34,17 +33,35 @@ function Presence({ onDisk }: { onDisk: boolean | null }) {
   );
 }
 
-export function TitleHeader({ title, seasons }: { title: TitleSummary; seasons: SeasonGrid[] }) {
+/**
+ * What the title survives a redownload by, and the reason this project exists.
+ *
+ * Every id it has, named — a bare number says nothing about which catalogue it
+ * belongs to, and TMDB numbers films and series in separate namespaces.
+ */
+function Identity({ ids, kind }: { ids: ExternalIds; kind: TitleSummary['kind'] }) {
+  // Canonical first — tvdb for a show, tmdb for a film — because that is the
+  // one the title is keyed by and the one that survives a redownload.
+  const order =
+    kind === 'show' ? (['tvdb', 'tmdb', 'imdb'] as const) : (['tmdb', 'tvdb', 'imdb'] as const);
+  const named = order
+    .map((source) => (ids[source] === null ? null : `${source} ${ids[source]}`))
+    .filter((id) => id !== null);
+
+  if (named.length === 0) return null;
+  return <p className="font-mono text-[10px] text-faint">{named.join(' · ')}</p>;
+}
+
+export function TitleHeader({
+  title,
+  ids,
+  figures,
+}: Pick<TitleDetail, 'title' | 'ids' | 'figures'>) {
   const poster = posterUrl(title.posterPath, 'w500');
   const isShow = title.kind === 'show';
-  const figures = titleFigures(seasons);
-  const { plays, rewatched, firstWatchedAt, firstWatchedPrecision } = figures;
+  const { plays, rewatched, firstWatchedAt, firstWatchedPrecision, lastWatchedPrecision } = figures;
 
-  // A film has no grid to count, so its last watch stays as the API summarised
-  // it. A show's comes off the grid, where specials are already excluded.
-  const lastWatchedAt = isShow ? figures.lastWatchedAt : title.lastWatchedAt;
-  const lastWatchedPrecision = isShow ? figures.lastWatchedPrecision : title.lastWatchedPrecision;
-  const since = formatSince(lastWatchedAt, lastWatchedPrecision);
+  const since = formatSince(figures.lastWatchedAt, lastWatchedPrecision);
   // A coarse entry formats as the period itself, not a duration, so "since
   // last" beside "2019" would read as nineteen years having passed.
   const sinceLabel =
@@ -72,11 +89,9 @@ export function TitleHeader({ title, seasons }: { title: TitleSummary; seasons: 
             <span className="text-xs text-dim">{STATE_LABEL[title.state]}</span>
             <Presence onDisk={title.onDisk} />
           </div>
+          <Identity ids={ids} kind={title.kind} />
         </div>
 
-        {/* Counted off the grid rather than asked for: the page already holds
-            every episode, and a second request for a sum of what is on screen
-            would be a round trip to learn what it can see. */}
         <div className="flex flex-wrap gap-x-4 gap-y-1">
           {plays > 0 ? (
             <Figure value={String(plays)} label={plays === 1 ? 'play' : 'plays'} />

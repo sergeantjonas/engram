@@ -14,11 +14,11 @@ export const Route = createFileRoute('/titles/$id')({
 function TitlePage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(titleQuery(id));
-  const { title, seasons } = data;
+  const { seasons } = data;
 
   return (
     <div className="space-y-8">
-      <TitleHeader title={title} seasons={seasons} />
+      <TitleHeader {...data} />
 
       {seasons.map((season) => (
         <SeasonGrid key={season.season} season={season} titleId={id} />

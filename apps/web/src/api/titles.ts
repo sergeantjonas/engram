@@ -66,8 +66,33 @@ export interface SeasonGrid {
   episodes: EpisodeCell[];
 }
 
+/** What the title is keyed and cross-referenced by. Any of the three may be absent. */
+export interface ExternalIds {
+  tmdb: string | null;
+  tvdb: string | null;
+  imdb: string | null;
+}
+
+/**
+ * The header's figure row, counted by the API over the same set as the seen
+ * fraction — specials excluded, and a null episode counted only for a film.
+ *
+ * `lastWatchedAt` here is not `title.lastWatchedAt`, which includes specials.
+ * This is the one to show beside the other figures.
+ */
+export interface TitleFigures {
+  plays: number;
+  rewatched: number;
+  firstWatchedAt: string | null;
+  firstWatchedPrecision: WatchPrecision | null;
+  lastWatchedAt: string | null;
+  lastWatchedPrecision: WatchPrecision | null;
+}
+
 export interface TitleDetail {
   title: TitleSummary;
+  ids: ExternalIds;
+  figures: TitleFigures;
   /** Ascending, season 0 first when it exists; collapsing it is the page's job. */
   seasons: SeasonGrid[];
 }

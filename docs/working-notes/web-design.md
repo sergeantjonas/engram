@@ -110,6 +110,12 @@ Around it:
 - Header: name in Archivo display, then `2023 · tvdb 392276 · tmdb 111110 ·
   imdb tt11737520` in mono, and a presence pill saying whether the files are
   still there.
+
+  Built differently on purpose: the year sits with the kind, the state and the
+  pill on one line, and the ids are a quieter mono line under it. Kind and
+  state earn the space beside the year more than the ids do, and the ids read
+  better as a block that can be scanned for one source than as the tail of a
+  sentence. Canonical id first — tvdb for a show, tmdb for a film.
 - A figure row — plays, episodes seen, rewatched, first watched, days since
   last.
 - The twelve-month strip from the first round, so a season's shape is visible

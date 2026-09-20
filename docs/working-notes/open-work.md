@@ -32,9 +32,6 @@ type split landed 2026-09-19, so the shell, the wall, the grid and the add
 screen are on espresso and Archivo / Martian Mono now. What the screens still
 owe the design, all checked against the running app rather than guessed:
 
-- **The identity line and the film figures are answered but not drawn.** `GET
-  /titles/:id` now returns `ids` and a `figures` block covering both kinds; the
-  header still prints neither the ids nor the API's figures. Web work only.
 - Missing entirely: the next-up strip, the left rail, the list view behind it,
   and the title page's twelve-month strip, activity feed and
   mark-season-watched control.
@@ -118,6 +115,15 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-20** — The title page draws its identity line and reads its figures
+  off the API. `tvdb 392276 · tmdb 111110 · imdb tt11737520` under the name,
+  each id named because a bare number says nothing about which catalogue it
+  belongs to and TMDB numbers films and series separately; an id the title does
+  not have is left out rather than printed empty. A film has a figure row for
+  the first time — Infinity Castle reads `1 play · Feb 22 2026 first watched ·
+  209d since last` where it previously showed nothing. `apps/web/src/title/
+  figures.ts` is gone with its tests: it was the browser summing the grid, and
+  the API now counts the same figures over a set a film is in too.
 - **2026-09-20** — `GET /titles/:id` answers the identity line and the figure
   row: `ids` for the three external ids, and a `figures` block of plays,
   rewatched, first watched and last watched with each boundary's own precision.

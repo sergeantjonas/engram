@@ -231,6 +231,15 @@ describe('the title page', () => {
       episodes: { total: 3, seen: 2 },
       onDisk: false,
     }),
+    ids: { tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' },
+    figures: {
+      plays: 19,
+      rewatched: 4,
+      firstWatchedAt: '2019-01-01T00:00:00.000Z',
+      firstWatchedPrecision: 'year',
+      lastWatchedAt: '2026-03-28T20:00:00.000Z',
+      lastWatchedPrecision: 'exact',
+    },
     seasons: [
       { season: 0, episodes: [episode({ number: 1, name: 'Recap' })] },
       {
@@ -296,6 +305,13 @@ describe('the title page', () => {
     // The pill says it in words as well as in colour, and it only appears at
     // all once something has reported on the files.
     expect(header).toContain('Not on disk');
+    // Named, because a bare number says nothing about which catalogue it is in.
+    expect(header).toContain('tvdb 392276 · tmdb 111110 · imdb tt11737520');
+    // Value and label together: "19" alone also matches the 2019 below it.
+    expect(header).toMatch(/19\s*plays/);
+    expect(header).toMatch(/4\s*rewatched/);
+    // Year precision, so the period itself rather than a day within it.
+    expect(header).toMatch(/2019\s*first watched/);
     expect(screen.getByRole('button', { name: 'Episode 4, seen' })).toBeDefined();
     expect(
       screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' }),
@@ -452,6 +468,17 @@ describe('adding a title', () => {
       if (url.includes(`/titles/${id}`)) {
         return json({
           title: title({ id, name: 'Heat', kind: 'movie', year: 1995, state: 'unwatched' }),
+          // A film found on TMDB and nothing else yet. Its header has to render
+          // from the API's figures, because it has no grid to count.
+          ids: { tmdb: '949', tvdb: null, imdb: null },
+          figures: {
+            plays: 2,
+            rewatched: 0,
+            firstWatchedAt: null,
+            firstWatchedPrecision: null,
+            lastWatchedAt: null,
+            lastWatchedPrecision: null,
+          },
           seasons: [],
         });
       }
@@ -461,7 +488,15 @@ describe('adding a title', () => {
 
     (await screen.findByRole('button', { name: 'Add Heat' })).click();
 
-    await screen.findByRole('heading', { level: 1, name: 'Heat' });
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Heat' });
+    // A film's header renders from the API's figures alone — it has no grid to
+    // count — and an id it does not have is left out rather than separated by
+    // a dangling dot.
+    const header = heading.closest('header')?.textContent ?? '';
+    expect(header).toContain('tmdb 949');
+    expect(header).not.toContain('·  ');
+    expect(header).toMatch(/2\s*plays/);
+
     const post = calls.find((call) => call.init?.method === 'POST');
     expect(JSON.parse(String(post?.init?.body))).toEqual({ kind: 'movie', tmdbId: '949' });
     expect(calls.some((call) => call.url.includes(`/titles/${id}`))).toBe(true);

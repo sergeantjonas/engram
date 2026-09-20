@@ -240,14 +240,31 @@ describe('GET /titles', () => {
 describe('GET /titles/:id', () => {
   const identityRow = { tmdb_id: '71912', tvdb_id: '362696', imdb_id: 'tt5180504', plays: 1 };
 
-  const detail = (id: string, executions: unknown[][] = [], headers = signedIn) => {
+  const activityRow = {
+    id: 'w1',
+    season: 1,
+    number: 1,
+    name: 'A Grain of Truth',
+    watched_at: '2025-12-02T21:00:00+00:00',
+    watched_precision: 'exact',
+    source: 'plex-history',
+    rewatch: false,
+  };
+
+  const detail = (
+    id: string,
+    executions: unknown[][] = [],
+    headers = signedIn,
+    activity: unknown[] = [activityRow],
+  ) => {
     const stub = sessionDb();
-    // Three statements: the summary, the identity and play total, then the
-    // grid. A test supplies the first and the last; the middle is the same
-    // every time and is spliced in so the cases stay about what they test.
+    // Four statements: the summary, the identity and figures, the grid, then
+    // the activity. A test supplies the first and the grid; the other two are
+    // the same every time and are spliced in so the cases stay about what they
+    // test.
     stub.executions =
       executions.length > 1
-        ? [executions[0] ?? [], [identityRow], ...executions.slice(1)]
+        ? [executions[0] ?? [], [identityRow], ...executions.slice(1), activity]
         : executions;
     app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
     return app.inject({ method: 'GET', url: `/titles/${id}`, headers });
@@ -343,6 +360,26 @@ describe('GET /titles/:id', () => {
     // and the figures are facts about the record, which reads for anyone.
     expect(seen.json().ids).toEqual({ tmdb: '71912', tvdb: '362696', imdb: 'tt5180504' });
     expect(seen.json().figures.plays).toBe(1);
+    // The plays are the record. `withoutGapNotes` enumerates what a stranger
+    // receives precisely so adding a field is a decision rather than a
+    // default, and this is the decision: an event carries its episode, its
+    // date and its source, and nothing about the device or the account.
+    expect(seen.json().recentActivity).toHaveLength(1);
+    expect(seen.json().recentActivity[0]).toMatchObject({
+      number: 1,
+      source: 'plex-history',
+      rewatch: false,
+    });
+    expect(Object.keys(seen.json().recentActivity[0]).sort()).toEqual([
+      'id',
+      'name',
+      'number',
+      'precision',
+      'rewatch',
+      'season',
+      'source',
+      'watchedAt',
+    ]);
 
     const mine = await detail(id, rows());
     expect(mine.json().seasons[0].episodes[0].gap).toEqual({

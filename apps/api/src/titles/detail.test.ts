@@ -51,14 +51,27 @@ const identityRow = {
   last_watched_precision: 'exact',
 };
 
-/** The three statements the route runs, in the order it runs them. */
+const activityRow = (over: Record<string, unknown> = {}) => ({
+  id: 'w1',
+  season: 2,
+  number: 4,
+  name: 'Big Trouble in Little Garden',
+  watched_at: '2026-03-24T12:56:00+00:00',
+  watched_precision: 'exact',
+  source: 'plex-history',
+  rewatch: false,
+  ...over,
+});
+
+/** The four statements the route runs, in the order it runs them. */
 const detail = (
   episodes: unknown[],
   titles: unknown[] = [titleRow],
   identities: unknown[] = [identityRow],
+  activity: unknown[] = [activityRow()],
 ) => {
   const stub = sessionDb();
-  stub.executions = [titles, identities, episodes];
+  stub.executions = [titles, identities, episodes, activity];
   return titleDetail(stub.db, 't1');
 };
 
@@ -209,6 +222,36 @@ describe('titleDetail', () => {
       lastWatchedAt: null,
       lastWatchedPrecision: null,
     });
+  });
+
+  it('maps a play row onto the shape the feed reads', async () => {
+    const result = await detail(
+      [episodeRow()],
+      [titleRow],
+      [identityRow],
+      [
+        activityRow({ id: 'w2', number: 6, name: 'Nami Deerest' }),
+        activityRow({ id: 'w1', rewatch: true, source: 'manual' }),
+      ],
+    );
+
+    expect(result?.recentActivity).toEqual([
+      expect.objectContaining({ id: 'w2', number: 6, rewatch: false, source: 'plex-history' }),
+      expect.objectContaining({ id: 'w1', rewatch: true, source: 'manual' }),
+    ]);
+  });
+
+  // A film's events name no episode, and the feed has to render a line for
+  // them anyway.
+  it('carries a play that names no episode', async () => {
+    const result = await detail(
+      [],
+      [{ ...titleRow, kind: 'movie' }],
+      [identityRow],
+      [activityRow({ season: null, number: null, name: null })],
+    );
+
+    expect(result?.recentActivity[0]).toMatchObject({ season: null, number: null, name: null });
   });
 
   it('carries what the viewer said about a hole', async () => {

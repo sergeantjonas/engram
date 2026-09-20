@@ -37,9 +37,9 @@ owe the design, all checked against the running app rather than guessed:
   no `backdrop_path` column exists, so that is a migration, a TMDB field and a
   re-fetch of the eleven rows already marked fetched, not a styling change. It
   also puts a 216px list of every title down the left as a second pane, and
-  below the grid a twelve-month strip, an activity feed and a CTA row. The last
-  two need the events behind a title, which no route returns: `watch_event`
-  rows are summarised into `watch_state` and never listed.
+  below the grid a twelve-month strip, an activity feed and a CTA row. The
+  events those two are drawn from now arrive as `recentActivity`; nothing
+  renders them yet.
 - Missing entirely: the next-up strip, the list view behind the rail's LIST,
   and the title page's twelve-month strip, activity feed and
   mark-season-watched control. The rail carries only HOME and ADD until the
@@ -135,6 +135,20 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-20** — `GET /titles/:id` answers the plays themselves, not only
+  what they add up to. `recentActivity` is every event the figures count,
+  newest first, each carrying its episode, its date with the precision that
+  date was recorded at, its source and whether it was a rewatch. It is what the
+  activity feed and the twelve-month strip are drawn from, and `watch_event`
+  rows had never been listed anywhere — they were summarised into `watch_state`
+  and that was all anything could see.
+
+  Capped at 400 rows: a title watched daily for a decade would otherwise put
+  four thousand on the wire to draw five lines of feed. How many there are in
+  total is `figures.plays`, counted over the same set — specials out, a null
+  episode only for a film — so the feed can say "last 5 of 19" without carrying
+  nineteen. The rewatch flag is ranked over everything the filter kept rather
+  than over the page, so it does not change with how many rows were asked for.
 - **2026-09-20** — The title page's figures became the design's stat box: a
   ruled row of cells, each a 17px mono figure over a 9px uppercase name, rather
   than a sentence. They are readings off the record and the design treats them

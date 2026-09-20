@@ -83,10 +83,46 @@ export interface TitleFigures {
   lastWatchedPrecision: WatchPrecision | null;
 }
 
+/** One play, as the feed and the twelve-month strip read it. */
+export interface WatchMoment {
+  id: string;
+  /** Null for a film, whose events name no episode. */
+  season: number | null;
+  number: number | null;
+  name: string | null;
+  /**
+   * Null when the viewer genuinely does not know. Read it with `precision`: a
+   * coarse entry holds the first instant of the period it names.
+   */
+  watchedAt: string | null;
+  precision: WatchPrecision;
+  /** `plex-history`, `manual`, and whatever else comes to write here. */
+  source: string;
+  /** Not the first play of this episode, so the feed can say so. */
+  rewatch: boolean;
+}
+
+/** How many events the detail route will send, newest first. */
+export const ACTIVITY_LIMIT = 400;
+
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
   figures: TitleFigures;
+  /**
+   * What has happened to this title, as against what it adds up to — newest
+   * first and capped at `ACTIVITY_LIMIT`.
+   *
+   * Capped because a title watched daily for a decade would otherwise put four
+   * thousand rows on the wire to draw a twelve-month strip and five lines of
+   * feed. How many there are in total is `figures.plays`, counted over exactly
+   * the same set, so the feed can say "last 5 of 19" without this carrying
+   * them all — and `figures.plays > recentActivity.length` is how a caller
+   * knows it is holding a truncated list. Four hundred is about thirteen
+   * months of daily watching, so a long enough binge does lose its older
+   * months off a twelve-month strip drawn from this.
+   */
+  recentActivity: WatchMoment[];
   /** Ascending, season 0 first when it exists — the UI collapses it, not this. */
   seasons: SeasonGrid[];
 }
@@ -109,6 +145,7 @@ export function withoutGapNotes(detail: TitleDetail): TitleDetail {
     title: detail.title,
     ids: detail.ids,
     figures: detail.figures,
+    recentActivity: detail.recentActivity,
     seasons: detail.seasons.map((season) => ({
       season: season.season,
       episodes: season.episodes.map((episode) =>
@@ -130,6 +167,17 @@ interface IdentityRow extends Record<string, unknown> {
   first_watched_precision: WatchPrecision | null;
   last_watched_at: string | null;
   last_watched_precision: WatchPrecision | null;
+}
+
+interface ActivityRow extends Record<string, unknown> {
+  id: string;
+  season: number | null;
+  number: number | null;
+  name: string | null;
+  watched_at: string | null;
+  watched_precision: WatchPrecision;
+  source: string;
+  rewatch: boolean;
 }
 
 interface EpisodeRow extends Record<string, unknown> {
@@ -231,6 +279,38 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     order by e.season asc, e.number asc
   `);
 
+  const activity = await db.execute<ActivityRow>(sql`
+    select
+      we.id, e.season, e.number, e.name,
+      to_json(we.watched_at) as watched_at,
+      we.watched_precision,
+      we.source,
+      -- Anything but the first play of this episode. Ranked over every event
+      -- the WHERE kept, which is before the LIMIT trims, so the flag does not
+      -- change with how many rows are asked for. A film's events all carry a
+      -- null episode and Postgres groups those as one partition, which is
+      -- right: the second viewing of a film is a rewatch.
+      -- Nulls first here, where the boundaries elsewhere put them last: this
+      -- asks which play came first, and an undated one is a remembered watch
+      -- from before the record existed. At the front, every dated play after
+      -- it is a rewatch, which is what it was. The id breaks the tie a bulk
+      -- backfill creates by sharing one transaction's timestamp across every
+      -- row it writes.
+      row_number() over (
+        partition by we.episode_id
+        order by we.watched_at asc nulls first, we.ingested_at asc, we.id asc
+      ) > 1 as rewatch
+    from watch_event we
+      left join episode e on e.id = we.episode_id
+      join title t on t.id = we.title_id
+    where we.title_id = ${titleId}
+      -- The same set the figures count, or the feed and the play total it is
+      -- printed beside would be talking about different things.
+      and (e.season <> 0 or (e.season is null and t.kind = 'movie'))
+    order by we.watched_at desc nulls last, we.ingested_at desc, we.id desc
+    limit ${ACTIVITY_LIMIT}
+  `);
+
   const seasons = new Map<number, EpisodeCell[]>();
   for (const row of rows) {
     const cell: EpisodeCell = {
@@ -275,6 +355,16 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       lastWatchedAt: identity?.last_watched_at ?? null,
       lastWatchedPrecision: identity?.last_watched_precision ?? null,
     },
+    recentActivity: [...activity].map((row) => ({
+      id: row.id,
+      season: row.season,
+      number: row.number,
+      name: row.name,
+      watchedAt: row.watched_at,
+      precision: row.watched_precision,
+      source: row.source,
+      rewatch: row.rewatch,
+    })),
     seasons: [...seasons.entries()].map(([season, episodes]) => ({ season, episodes })),
   };
 }

@@ -38,7 +38,9 @@ describe('loadConfig', () => {
       'OWNER_GITHUB_USER_ID',
       'OAUTH_STATE_SECRET',
       'WEB_ORIGIN',
-    ]) {
+      // Literal types, so the destructure below knows these are keys of `base`
+      // rather than any string.
+    ] as const) {
       const { [key]: _omitted, ...without } = base;
       expect(() => loadConfig(without), key).toThrow(new RegExp(key));
     }

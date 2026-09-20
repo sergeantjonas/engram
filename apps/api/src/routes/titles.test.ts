@@ -165,7 +165,7 @@ const listRow = (over: Record<string, unknown> = {}) => ({
 const stranger: Record<string, string> = {};
 
 describe('GET /titles', () => {
-  const list = (query = '', rows: unknown[] = [], headers = signedIn) => {
+  const list = (query = '', rows: unknown[] = [], headers: Record<string, string> = signedIn) => {
     const stub = sessionDb();
     stub.rows = rows;
     app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
@@ -255,7 +255,7 @@ describe('GET /titles/:id', () => {
   const detail = (
     id: string,
     executions: unknown[][] = [],
-    headers = signedIn,
+    headers: Record<string, string> = signedIn,
     activity: unknown[] = [activityRow],
   ) => {
     const stub = sessionDb();

@@ -130,6 +130,25 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-21** — `typecheck:cc`'s second pass had never checked anything.
+  `tsconfig.test.json` included `{apps,packages}/*/src/**/*.test.ts`, and
+  TypeScript's include globs are not shell globs — it has no brace expansion,
+  so the pattern matched no files and the pass compiled `vitest.config.ts`
+  alone. The pass exists precisely because tests sit outside the build graph,
+  so for as long as it has existed, no API test file has been typechecked.
+
+  Found because a required field added to `TmdbTitleDetails` left four fixtures
+  broken and `check:cc` still passed. Repairing the include surfaced 22 errors
+  across six test files, all of them real and all mechanical: `RequestInfo` is
+  a DOM type and this package is checked against Node's lib, stubs missing
+  half of `TmdbClient`, and several places where `exactOptionalPropertyTypes`
+  distinguishes a key set to undefined from a key that is absent — which in
+  `plex-dump.test.ts` is exactly the distinction the tests are about, since
+  Plex omits fields rather than nulling them.
+
+  `apps/web` is deliberately not in that include: it has its own solution whose
+  browser lib already covers its tests, and checking them against Node's lib
+  fails on every `document`.
 - **2026-09-21** — The title page opens on a backdrop, which needed a column
   before it needed any CSS. `backdrop_path` on `title` (migration
   `0006_fancy_falcon`), the field on TMDB's details response, and every write

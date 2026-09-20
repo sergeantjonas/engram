@@ -19,6 +19,17 @@ let app: FastifyInstance | undefined;
 // `/search` never reaches Postgres itself. The stub answers the guard's
 // session lookup and nothing else, so a route that started querying would get
 // a session row rather than data.
+/** Only `search` is ever exercised here; the rest satisfy the interface. */
+const searching = (search: TmdbClient['search']): TmdbClient => ({
+  search,
+  details: async () => {
+    throw new Error('not reached');
+  },
+  seasonEpisodes: async () => {
+    throw new Error('not reached');
+  },
+});
+
 const start = (tmdb: TmdbClient | null): FastifyInstance => {
   app = buildApp({ config: testConfig, db: sessionDb().db, tmdb, github: githubStub });
   return app;
@@ -31,7 +42,7 @@ afterEach(async () => {
 
 describe('GET /search', () => {
   it('returns the candidates TMDB found', async () => {
-    const server = start({ search: async () => [witcher] });
+    const server = start(searching(async () => [witcher]));
 
     const response = await server.inject({
       method: 'GET',
@@ -45,7 +56,7 @@ describe('GET /search', () => {
 
   it('caps the results at the requested limit', async () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ ...witcher, tmdbId: String(i) }));
-    const server = start({ search: async () => many });
+    const server = start(searching(async () => many));
 
     const response = await server.inject({
       method: 'GET',
@@ -57,7 +68,7 @@ describe('GET /search', () => {
   });
 
   it('refuses a limit larger than the one page it fetches', async () => {
-    const server = start({ search: async () => [witcher] });
+    const server = start(searching(async () => [witcher]));
 
     const response = await server.inject({
       method: 'GET',
@@ -69,7 +80,7 @@ describe('GET /search', () => {
   });
 
   it('rejects a query that asks for nothing', async () => {
-    const server = start({ search: async () => [witcher] });
+    const server = start(searching(async () => [witcher]));
 
     const response = await server.inject({
       method: 'GET',
@@ -95,11 +106,11 @@ describe('GET /search', () => {
   });
 
   it('reports an upstream failure as a bad gateway, without leaking the key', async () => {
-    const server = start({
-      search: async () => {
+    const server = start(
+      searching(async () => {
         throw new TmdbError('TMDB responded 401', 401);
-      },
-    });
+      }),
+    );
 
     const response = await server.inject({
       method: 'GET',

@@ -14,7 +14,7 @@ const client = (answers: { token?: () => Response | Promise<Response>; user?: ()
     clientSecret: CLIENT_SECRET,
     tokenUrl: 'https://github.test/token',
     userUrl: 'https://api.github.test/user',
-    fetch: (async (input: RequestInfo | URL) => {
+    fetch: (async (input: Parameters<typeof globalThis.fetch>[0]) => {
       const url = String(input);
       if (url.includes('/token')) {
         return answers.token?.() ?? json({ access_token: 'an-access-token' });
@@ -50,13 +50,13 @@ describe('exchangeCode', () => {
   // exchange is a POST carrying the credentials, or that the lookup presents
   // the token it just traded for.
   it('presents the credentials the way each endpoint expects', async () => {
-    const calls: { url: string; init?: RequestInit }[] = [];
+    const calls: { url: string; init: RequestInit | undefined }[] = [];
     const recording = createGithubClient({
       clientId: 'Ov23liexample',
       clientSecret: CLIENT_SECRET,
       tokenUrl: 'https://github.test/token',
       userUrl: 'https://api.github.test/user',
-      fetch: (async (url: RequestInfo | URL, init?: RequestInit) => {
+      fetch: (async (url: Parameters<typeof globalThis.fetch>[0], init?: RequestInit) => {
         calls.push({ url: String(url), init });
         return String(url).includes('/token')
           ? json({ access_token: 'an-access-token' })

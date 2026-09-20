@@ -62,8 +62,8 @@ const cookieNamed = (response: { headers: Record<string, unknown> }, name: strin
 const nonceOf = (response: { headers: Record<string, unknown> }): string =>
   (cookieNamed(response, STATE_COOKIE) ?? '').slice(`${STATE_COOKIE}=`.length).split(';')[0] ?? '';
 
-const stateOf = (response: { headers: Record<string, string> }): string =>
-  new URL(response.headers.location).searchParams.get('state') ?? '';
+const stateOf = (response: { headers: Record<string, unknown> }): string =>
+  new URL(String(response.headers.location)).searchParams.get('state') ?? '';
 
 const callback = (
   server: FastifyInstance,

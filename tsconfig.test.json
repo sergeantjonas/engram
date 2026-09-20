@@ -7,9 +7,19 @@
     "declarationMap": false,
     "types": ["node"]
   },
+  // Named one root at a time, and only the roots that need it. TypeScript's
+  // include globs are not shell globs — it has no brace expansion, so
+  // `{apps,packages}/...` matched nothing at all and this pass spent two years'
+  // worth of CI checking vitest.config.ts.
+  //
+  // `apps/web` is absent on purpose: it has its own solution, whose browser lib
+  // and JSX settings already cover its tests. Pulling them in here would check
+  // them against Node's lib and fail on every `document`.
   "include": [
-    "{apps,packages}/*/src/**/*.test.ts",
-    "{apps,packages}/*/src/**/*.fixture.ts",
+    "apps/api/src/**/*.test.ts",
+    "apps/api/src/**/*.fixture.ts",
+    "packages/*/src/**/*.test.ts",
+    "packages/*/src/**/*.fixture.ts",
     "vitest.config.ts"
   ]
 }

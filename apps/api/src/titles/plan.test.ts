@@ -104,7 +104,7 @@ describe('planEpisodes', () => {
     const rows = planEpisodes([episode({ name: 'first' }), episode({ name: 'second' })]);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].name).toBe('first');
+    expect(rows[0]?.name).toBe('first');
   });
 
   it('separates the same number in different seasons', () => {

@@ -15,18 +15,35 @@ const movie: ResolvedTitle = {
   ids: { tmdb: '1311031', tvdb: '357931' },
 };
 
-const episodeRow = (over: Partial<PlexHistoryRow> = {}): PlexHistoryRow => ({
-  historyKey: '/status/sessions/history/1',
-  grandparentKey: '/library/metadata/100',
-  grandparentTitle: 'ONE PIECE',
-  title: 'Romance Dawn',
-  parentIndex: 1,
-  index: 4,
-  type: 'episode',
-  viewedAt: 1761349088,
-  accountID: 1,
-  ...over,
-});
+/**
+ * A row with fields knocked out, the way Plex actually sends them.
+ *
+ * `undefined` here means absent, and it has to be deleted rather than assigned:
+ * under `exactOptionalPropertyTypes` a key present and set to undefined is not
+ * the same as a key that is not there, and it is the second one Plex sends.
+ */
+const episodeRow = (
+  over: { [K in keyof PlexHistoryRow]?: PlexHistoryRow[K] | undefined } = {},
+): PlexHistoryRow => {
+  const row: Record<string, unknown> = {
+    historyKey: '/status/sessions/history/1',
+    grandparentKey: '/library/metadata/100',
+    grandparentTitle: 'ONE PIECE',
+    title: 'Romance Dawn',
+    parentIndex: 1,
+    index: 4,
+    type: 'episode',
+    viewedAt: 1761349088,
+    accountID: 1,
+  };
+
+  for (const [field, value] of Object.entries(over)) {
+    if (value === undefined) delete row[field];
+    else row[field] = value;
+  }
+
+  return row as PlexHistoryRow;
+};
 
 describe('planImport', () => {
   it('keys titles canonically and links events to them', () => {

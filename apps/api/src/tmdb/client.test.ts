@@ -1,10 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { createTmdbClient, TmdbError } from './client.js';
 
+/**
+ * The URL of the first call, as a URL.
+ *
+ * `noUncheckedIndexedAccess` makes `calls[0]` possibly undefined, and a test
+ * asserting on `new URL(undefined)` would fail with a parse error rather than
+ * the thing it meant to say.
+ */
+function firstCall(calls: string[]): URL {
+  const [first] = calls;
+  if (first === undefined) throw new Error('the client made no request');
+  return new URL(first);
+}
+
 /** Captures what the client asked for and answers with a canned body. */
 function fakeFetch(body: unknown, status = 200) {
   const calls: string[] = [];
-  const fetch = (async (url: URL | RequestInfo) => {
+  // Taken off `fetch` itself rather than named: `RequestInfo` is a DOM type,
+  // and this package is checked against Node's lib.
+  const fetch = (async (url: Parameters<typeof globalThis.fetch>[0]) => {
     calls.push(String(url));
     return new Response(JSON.stringify(body), {
       status,
@@ -85,7 +100,7 @@ describe('createTmdbClient', () => {
     await tmdb.search('dune');
 
     expect(calls).toHaveLength(1);
-    const url = new URL(calls[0]);
+    const url = firstCall(calls);
     expect(url.pathname).toBe('/3/search/multi');
     expect(url.searchParams.get('api_key')).toBe('test-key');
     expect(url.searchParams.get('query')).toBe('dune');
@@ -105,7 +120,7 @@ describe('createTmdbClient', () => {
 
     const details = await tmdb.details('show', '71912');
 
-    const url = new URL(calls[0]);
+    const url = firstCall(calls);
     expect(url.pathname).toBe('/3/tv/71912');
     expect(url.searchParams.get('append_to_response')).toBe('external_ids');
     expect(details.ids).toEqual({ tmdb: '71912', tvdb: '362696' });
@@ -120,7 +135,7 @@ describe('createTmdbClient', () => {
 
     const details = await tmdb.details('movie', '603');
 
-    expect(new URL(calls[0]).pathname).toBe('/3/movie/603');
+    expect(firstCall(calls).pathname).toBe('/3/movie/603');
     expect(details).toMatchObject({
       kind: 'movie',
       name: 'The Matrix',
@@ -175,7 +190,7 @@ describe('createTmdbClient', () => {
 
     const episodes = await tmdb.seasonEpisodes('71912', 2);
 
-    expect(new URL(calls[0]).pathname).toBe('/3/tv/71912/season/2');
+    expect(firstCall(calls).pathname).toBe('/3/tv/71912/season/2');
     expect(episodes).toEqual([
       {
         season: 2,

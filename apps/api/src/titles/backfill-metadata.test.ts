@@ -44,12 +44,19 @@ const stubDb = (rows = pending) => {
   return { db, updates, selected };
 };
 
-const details = (over: Partial<{ posterPath: string | null; overview: string | null }> = {}) => ({
+const details = (
+  over: Partial<{
+    posterPath: string | null;
+    backdropPath: string | null;
+    overview: string | null;
+  }> = {},
+) => ({
   kind: 'show' as const,
   ids: { tmdb: '1', tvdb: '2' },
   name: 'A Show',
   year: 2019,
   posterPath: '/poster.jpg',
+  backdropPath: '/backdrop.jpg',
   overview: 'Something happens.',
   seasons: [],
   ...over,
@@ -91,6 +98,34 @@ describe('backfillMetadata', () => {
     // Two titles, two different rows — not one predicate applied to the table.
     expect(render(updates[0]?.predicate)).toContain('"id" =');
     expect(updates[0]?.predicate).not.toEqual(updates[1]?.predicate);
+  });
+
+  // The flag exists so a column added after a backfill reaches rows that ran
+  // before it existed, which means dropping the clause that skips them.
+  it('revisits titles already marked fetched when asked to refresh', async () => {
+    const { db, selected } = stubDb();
+
+    await backfillMetadata(db, stubTmdb(), { refresh: true });
+
+    const rendered = new PgDialect().sqlToQuery(selected[0] as SQL).sql;
+    expect(rendered).toContain('"tmdb_id" is not null');
+    expect(rendered).not.toContain('metadata_fetched_at');
+  });
+
+  // A refresh runs over rows that already hold artwork. TMDB answering without
+  // a field today must not erase what a previous run stored.
+  it('never writes a null over something already there', async () => {
+    const { db, updates } = stubDb();
+
+    await backfillMetadata(
+      db,
+      stubTmdb({ details: async () => details({ posterPath: null, overview: null }) }),
+      { refresh: true },
+    );
+
+    expect(updates[0]?.values).not.toHaveProperty('posterPath');
+    expect(updates[0]?.values).not.toHaveProperty('overview');
+    expect(updates[0]?.values).toMatchObject({ backdropPath: '/backdrop.jpg' });
   });
 
   it('asks TMDB with each title’s own kind, so a film is not looked up as a show', async () => {

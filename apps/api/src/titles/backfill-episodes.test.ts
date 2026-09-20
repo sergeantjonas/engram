@@ -59,6 +59,7 @@ const stubTmdb = (over: Partial<TmdbClient> = {}): TmdbClient => ({
     name: 'A Show',
     year: 2019,
     posterPath: null,
+    backdropPath: null,
     overview: null,
     seasons: [{ season: 1, episodeCount: 2 }],
   }),

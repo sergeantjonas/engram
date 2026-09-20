@@ -32,13 +32,10 @@ type split landed 2026-09-19, so the shell, the wall, the grid and the add
 screen are on espresso and Archivo / Martian Mono now. What the screens still
 owe the design, all checked against the running app rather than guessed:
 
-- **The title page is still missing its hero and its lower half.** The design
-  opens `02 · Title` with a 158px backdrop that the poster overlaps by 46px —
-  no `backdrop_path` column exists, so that is a migration, a TMDB field and a
-  re-fetch of the eleven rows already marked fetched, not a styling change. It
-  also puts a 216px list of every title down the left as a second pane, and a
-  CTA row under everything. The twelve-month strip and the activity feed
-  landed 2026-09-20.
+- **The title page still has no second pane and no CTA row.** The design puts a
+  216px list of every title down the left, and a row of actions under
+  everything. The hero, the stat box, the twelve-month strip and the activity
+  feed all landed.
 - Missing entirely: the next-up strip, the list view behind the rail's LIST,
   and the title page's mark-season-watched control. The rail carries only HOME
   and ADD until the screens behind LIST and YEAR exist.
@@ -133,6 +130,21 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-21** — The title page opens on a backdrop, which needed a column
+  before it needed any CSS. `backdrop_path` on `title` (migration
+  `0006_fancy_falcon`), the field on TMDB's details response, and every write
+  path that stores a poster now storing this beside it. The eleven imported
+  rows were already marked fetched, so `backfill:metadata` grew `--refresh` to
+  ignore `metadata_fetched_at` — which is how any column added after a backfill
+  reaches rows that ran before it existed.
+
+  The still bleeds past the 18px the rest of the page is padded by and fades
+  into the background rather than ending at an edge, with the poster overlapping
+  it and dropped to the design's 92px. Nothing but atmosphere sits on the image:
+  the name and everything under it stay on solid ground, so a pale backdrop
+  cannot take the text with it. Null is the ordinary case — TMDB has a poster
+  for nearly everything and a backdrop for rather less — and the header simply
+  starts at the poster when there is none.
 - **2026-09-20** — The title page draws what the plays were, not only what they
   come to. A twelve-month strip under *When you watched it* — ONE PIECE's binge
   shows as a tight cluster in March against nine empty months — and an activity

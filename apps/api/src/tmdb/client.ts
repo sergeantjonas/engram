@@ -59,6 +59,8 @@ export interface TmdbTitleDetails {
   name: string;
   year: number | null;
   posterPath: string | null;
+  /** The wide still a title page opens with. Absent far more often than a poster. */
+  backdropPath: string | null;
   overview: string | null;
   /** Empty for a movie. Includes season 0, which is where specials live. */
   seasons: TmdbSeason[];
@@ -99,6 +101,7 @@ interface DetailsBody {
   first_air_date?: string;
   release_date?: string;
   poster_path?: string | null;
+  backdrop_path?: string | null;
   overview?: string;
   imdb_id?: string | null;
   external_ids?: { tvdb_id?: number | null; imdb_id?: string | null };
@@ -196,6 +199,7 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
         name,
         year: yearOf(kind === 'show' ? body.first_air_date : body.release_date),
         posterPath: body.poster_path ?? null,
+        backdropPath: body.backdrop_path ?? null,
         overview: body.overview || null,
         seasons: (body.seasons ?? [])
           .filter((s) => typeof s.season_number === 'number' && (s.episode_count ?? 0) > 0)

@@ -277,6 +277,7 @@ describe('the title page', () => {
       onDisk: false,
     }),
     ids: { tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' },
+    backdropPath: '/backdrop.jpg',
     // Relative to today, or the twelve-month strip these are drawn on would
     // stop finding them once the wall clock moves past the window.
     recentActivity: [
@@ -378,6 +379,9 @@ describe('the title page', () => {
     expect(screen.getByRole('heading', { name: /Activity\s*last 2 of 19/ })).toBeDefined();
     expect(screen.getByText('DEER AND LOATHING')).toBeDefined();
     expect(screen.getByRole('heading', { name: /When you watched it/i })).toBeDefined();
+    // The backdrop is atmosphere, so it is hidden from the reader rather than
+    // described — but it has to be on the page for the header to sit on it.
+    expect(document.querySelector('header [aria-hidden="true"]')).not.toBeNull();
     expect(screen.getByText('rewatch')).toBeDefined();
     expect(screen.getByText('by hand')).toBeDefined();
     // The pill says it in words as well as in colour, and it only appears at
@@ -549,6 +553,9 @@ describe('adding a title', () => {
           // A film found on TMDB and nothing else yet. Its header has to render
           // from the API's figures, because it has no grid to count.
           ids: { tmdb: '949', tvdb: null, imdb: null },
+          // TMDB has a poster for nearly everything and a backdrop for rather
+          // less, so the header has to read without one.
+          backdropPath: null,
           // Two plays the API did not send with this response: nothing on the
           // page may assume the feed accounts for the figures beside it.
           recentActivity: [],
@@ -573,6 +580,9 @@ describe('adding a title', () => {
     // A film's header renders from the API's figures alone — it has no grid to
     // count — and an id it does not have is left out rather than separated by
     // a dangling dot.
+    // TMDB has a backdrop for far less than it has posters, so the header has
+    // to read with nothing behind it.
+    expect(document.querySelector('header [aria-hidden="true"]')).toBeNull();
     const header = heading.closest('header')?.textContent ?? '';
     expect(header).toContain('tmdb 949');
     expect(header).not.toContain('·  ');

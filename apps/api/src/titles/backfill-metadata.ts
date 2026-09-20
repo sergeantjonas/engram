@@ -7,6 +7,8 @@ export interface MetadataBackfillResult {
   name: string;
   /** What TMDB had. Null is an answer, not a failure: some titles have no poster. */
   posterPath: string | null;
+  /** Null far more often than the poster, which is why the run reports both. */
+  backdropPath: string | null;
   /** Set when TMDB could not answer; the row is left exactly as it was. */
   failed?: string;
 }
@@ -27,7 +29,7 @@ export interface MetadataBackfillResult {
 export async function backfillMetadata(
   db: Database,
   tmdb: TmdbClient,
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; refresh?: boolean } = {},
 ): Promise<MetadataBackfillResult[]> {
   const pending = await db
     .select({
@@ -39,7 +41,13 @@ export async function backfillMetadata(
     .from(titleTable)
     // Keyed on `metadata_fetched_at`, not on a null poster: a title TMDB has no
     // artwork for would otherwise be asked about again on every future run.
-    .where(and(isNull(titleTable.metadataFetchedAt), isNotNull(titleTable.tmdbId)))
+    // `refresh` ignores the timestamp, which is how a column added after the
+    // first run gets filled for rows already marked done.
+    .where(
+      options.refresh
+        ? isNotNull(titleTable.tmdbId)
+        : and(isNull(titleTable.metadataFetchedAt), isNotNull(titleTable.tmdbId)),
+    )
     .orderBy(titleTable.name);
 
   const results: MetadataBackfillResult[] = [];
@@ -49,28 +57,40 @@ export async function backfillMetadata(
     if (!tmdbId) continue;
 
     let posterPath: string | null;
+    let backdropPath: string | null;
     let overview: string | null;
     try {
       // Sequential, like the episode backfill: this runs against one API key
       // shared with the live app.
       const details = await tmdb.details(title.kind, tmdbId);
       posterPath = details.posterPath;
+      backdropPath = details.backdropPath;
       overview = details.overview;
     } catch (error) {
       // One title TMDB cannot answer for must not abandon the other ten.
       const reason = error instanceof TmdbError ? error.message : 'TMDB lookup failed';
-      results.push({ name: title.name, posterPath: null, failed: reason });
+      results.push({ name: title.name, posterPath: null, backdropPath: null, failed: reason });
       continue;
     }
 
     if (!options.dryRun) {
       await db
         .update(titleTable)
-        .set({ posterPath, overview, metadataFetchedAt: new Date() })
+        .set({
+          // Null fields are left out rather than written. A refresh runs over
+          // rows that already hold artwork, and TMDB answering with one field
+          // missing today — a poster pulled, an overview emptied — would
+          // otherwise erase what a previous run stored. The other two refresh
+          // paths coalesce for the same reason; this can only ever add.
+          ...(posterPath === null ? {} : { posterPath }),
+          ...(backdropPath === null ? {} : { backdropPath }),
+          ...(overview === null ? {} : { overview }),
+          metadataFetchedAt: new Date(),
+        })
         .where(eq(titleTable.id, title.id));
     }
 
-    results.push({ name: title.name, posterPath });
+    results.push({ name: title.name, posterPath, backdropPath });
   }
 
   return results;

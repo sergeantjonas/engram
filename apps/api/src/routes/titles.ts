@@ -166,6 +166,7 @@ export function registerTitleRoutes(
             tvdbId: sql`coalesce(excluded.tvdb_id, ${titleTable.tvdbId})`,
             imdbId: sql`coalesce(excluded.imdb_id, ${titleTable.imdbId})`,
             posterPath: sql`coalesce(excluded.poster_path, ${titleTable.posterPath})`,
+            backdropPath: sql`coalesce(excluded.backdrop_path, ${titleTable.backdropPath})`,
             overview: sql`coalesce(excluded.overview, ${titleTable.overview})`,
             metadataFetchedAt: new Date(),
           },

@@ -1,5 +1,5 @@
 import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
-import { posterUrl } from '../api/titles.ts';
+import { backdropUrl, posterUrl } from '../api/titles.ts';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
 import { formatSince, formatWatchedShort } from './format.ts';
 
@@ -67,9 +67,11 @@ function Identity({ ids, kind }: { ids: ExternalIds; kind: TitleSummary['kind'] 
 export function TitleHeader({
   title,
   ids,
+  backdropPath,
   figures,
-}: Pick<TitleDetail, 'title' | 'ids' | 'figures'>) {
+}: Pick<TitleDetail, 'title' | 'ids' | 'backdropPath' | 'figures'>) {
   const poster = posterUrl(title.posterPath, 'w500');
+  const backdrop = backdropUrl(backdropPath);
   const isShow = title.kind === 'show';
   const { plays, rewatched, firstWatchedAt, firstWatchedPrecision, lastWatchedPrecision } = figures;
 
@@ -96,41 +98,58 @@ export function TitleHeader({
   ].filter((cell) => cell !== null);
 
   return (
-    <header className="flex gap-6">
-      <div className="w-32 shrink-0 overflow-hidden rounded bg-surf sm:w-40">
-        {poster ? (
-          <img src={poster} alt="" className="aspect-2/3 size-full object-cover" />
-        ) : (
-          <div className="aspect-2/3" />
-        )}
-      </div>
-      <div className="min-w-0 flex-1 space-y-3">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold">{title.name}</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-dim">{title.year ?? '????'}</span>
-            <span className="text-xs text-faint">·</span>
-            <span className="text-xs text-dim">{isShow ? 'Series' : 'Film'}</span>
-            <span className="text-xs text-faint">·</span>
-            <span className="text-xs text-dim">{STATE_LABEL[title.state]}</span>
-            <Presence onDisk={title.onDisk} />
-          </div>
-          <Identity ids={ids} kind={title.kind} />
+    <header>
+      {/* The still is the page's ground, so it bleeds past the 18px the rest
+          of the content is padded by and fades into the page rather than
+          ending at an edge. Nothing but atmosphere sits on it — the name and
+          everything else stay on the solid part below. */}
+      {backdrop === null ? null : (
+        <div
+          aria-hidden="true"
+          className="relative -mx-[18px] -mt-[18px] -mb-[46px] h-[158px] bg-cover bg-[center_28%] after:absolute after:inset-0 after:bg-gradient-to-t after:from-bg after:from-3% after:via-bg/55 after:via-60% after:to-bg/10"
+          style={{ backgroundImage: `url(${backdrop})` }}
+        />
+      )}
+
+      {/* Poster and name only, so what rises into the hero is a fixed height.
+          With the stat box in this row its column would be the taller one, and
+          the name would climb to wherever the figures happened to reach — over
+          the part of the image the gradient has not finished covering. */}
+      <div className="relative flex items-end gap-4">
+        <div className="w-23 shrink-0 overflow-hidden bg-surf shadow-[0_8px_24px_rgba(0,0,0,.6)]">
+          {poster ? (
+            <img src={poster} alt="" className="aspect-2/3 size-full object-cover" />
+          ) : (
+            <div className="aspect-2/3" />
+          )}
         </div>
-
-        {/* Only the readings that exist, and no box at all when none do: an
-            empty ruled strip under a title nobody has watched says less than
-            nothing. */}
-        {figureCells.length > 0 ? (
-          <div className="flex flex-wrap border border-line">
-            {figureCells.map((cell) => (
-              <Figure key={cell.label} value={cell.value} label={cell.label} />
-            ))}
+        <div className="min-w-0 flex-1">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold">{title.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs text-dim">{title.year ?? '????'}</span>
+              <span className="text-xs text-faint">·</span>
+              <span className="text-xs text-dim">{isShow ? 'Series' : 'Film'}</span>
+              <span className="text-xs text-faint">·</span>
+              <span className="text-xs text-dim">{STATE_LABEL[title.state]}</span>
+              <Presence onDisk={title.onDisk} />
+            </div>
+            <Identity ids={ids} kind={title.kind} />
           </div>
-        ) : null}
-
-        {title.excluded ? <p className="text-sm text-faint">Excluded from the wall.</p> : null}
+        </div>
       </div>
+
+      {/* Only the readings that exist, and no box at all when none do: an empty
+          ruled strip under a title nobody has watched says less than nothing. */}
+      {figureCells.length > 0 ? (
+        <div className="mt-3 flex flex-wrap border border-line">
+          {figureCells.map((cell) => (
+            <Figure key={cell.label} value={cell.value} label={cell.label} />
+          ))}
+        </div>
+      ) : null}
+
+      {title.excluded ? <p className="mt-2 text-sm text-faint">Excluded from the wall.</p> : null}
     </header>
   );
 }

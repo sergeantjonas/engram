@@ -108,6 +108,12 @@ export const ACTIVITY_LIMIT = 400;
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
+  /**
+   * The wide still the page opens on. Null often enough that the header has to
+   * read without one — TMDB has a poster for nearly everything and a backdrop
+   * for rather less.
+   */
+  backdropPath: string | null;
   figures: TitleFigures;
   /**
    * What has happened to this title, as against what it adds up to — newest
@@ -144,6 +150,7 @@ export function withoutGapNotes(detail: TitleDetail): TitleDetail {
     // here until someone has said so, not arrive on the wire by default.
     title: detail.title,
     ids: detail.ids,
+    backdropPath: detail.backdropPath,
     figures: detail.figures,
     recentActivity: detail.recentActivity,
     seasons: detail.seasons.map((season) => ({
@@ -161,6 +168,7 @@ interface IdentityRow extends Record<string, unknown> {
   tmdb_id: string | null;
   tvdb_id: string | null;
   imdb_id: string | null;
+  backdrop_path: string | null;
   plays: number;
   rewatched: number;
   first_watched_at: string | null;
@@ -215,7 +223,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
   const [identity] = [
     ...(await db.execute<IdentityRow>(sql`
       select
-        t.tmdb_id, t.tvdb_id, t.imdb_id,
+        t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path,
         coalesce(f.plays, 0)::int as plays,
         coalesce(f.rewatched, 0)::int as rewatched,
         -- to_json for the same reason listTitles uses it: Postgres prints a
@@ -347,6 +355,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       tvdb: identity?.tvdb_id ?? null,
       imdb: identity?.imdb_id ?? null,
     },
+    backdropPath: identity?.backdrop_path ?? null,
     figures: {
       plays: identity?.plays ?? 0,
       rewatched: identity?.rewatched ?? 0,

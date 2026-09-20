@@ -70,6 +70,8 @@ export const titles = pgTable('title', {
   name: text('name').notNull(),
   year: integer('year'),
   posterPath: text('poster_path'),
+  /** The wide still, for a title page's header. Null far more often than a poster. */
+  backdropPath: text('backdrop_path'),
   overview: text('overview'),
 
   metadataFetchedAt: timestamp('metadata_fetched_at', { withTimezone: true }),

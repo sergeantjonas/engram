@@ -105,6 +105,8 @@ export interface WatchMoment {
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
+  /** Null often enough that the header has to read without one. */
+  backdropPath: string | null;
   figures: TitleFigures;
   /**
    * Newest first, and capped by the API. `figures.plays` counts the same set
@@ -145,6 +147,11 @@ export function posterUrl(
   size: 'w342' | 'w500' = 'w342',
 ): string | null {
   return posterPath === null ? null : `https://image.tmdb.org/t/p/${size}${posterPath}`;
+}
+
+/** A backdrop is wide and sits behind text, so it is fetched at its own sizes. */
+export function backdropUrl(backdropPath: string | null, size: 'w780' | 'w1280' = 'w1280') {
+  return backdropPath === null ? null : `https://image.tmdb.org/t/p/${size}${backdropPath}`;
 }
 
 export function titleQuery(id: string) {

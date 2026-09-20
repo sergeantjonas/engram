@@ -11,6 +11,7 @@ const witcher: TmdbTitleDetails = {
   name: 'The Witcher',
   year: 2019,
   posterPath: null,
+  backdropPath: null,
   overview: null,
   seasons: [],
 };

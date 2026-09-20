@@ -8,6 +8,7 @@ const witcher: TmdbTitleDetails = {
   name: 'The Witcher',
   year: 2019,
   posterPath: '/AoGsDM02UVt0npBA8OvpDcZbaMi.jpg',
+  backdropPath: null,
   overview: 'Geralt of Rivia.',
   seasons: [
     { season: 1, episodeCount: 8 },
@@ -21,6 +22,7 @@ const matrix: TmdbTitleDetails = {
   name: 'The Matrix',
   year: 1999,
   posterPath: '/p96dm7sCMn4VYAStA6siNz30G1r.jpg',
+  backdropPath: null,
   overview: 'A computer hacker learns.',
   seasons: [],
 };
@@ -50,6 +52,7 @@ describe('planTitle', () => {
         name: 'The Witcher',
         year: 2019,
         posterPath: '/AoGsDM02UVt0npBA8OvpDcZbaMi.jpg',
+        backdropPath: null,
         overview: 'Geralt of Rivia.',
       },
       seasons: [1, 2],

@@ -7,10 +7,13 @@ const config = loadConfig();
 if (!config.TMDB_API_KEY) throw new Error('TMDB_API_KEY is required to backfill title metadata');
 
 const dryRun = process.argv.includes('--dry-run');
+// Ignores `metadata_fetched_at`, which is how a column added after the first
+// run reaches rows already marked done.
+const refresh = process.argv.includes('--refresh');
 const { db, sql } = createDatabase(config.DATABASE_URL);
 const tmdb = createTmdbClient({ apiKey: config.TMDB_API_KEY });
 
-const results = await backfillMetadata(db, tmdb, { dryRun });
+const results = await backfillMetadata(db, tmdb, { dryRun, refresh });
 
 for (const result of results) {
   // A title TMDB has no artwork for is named rather than counted: the wall will
@@ -18,14 +21,18 @@ for (const result of results) {
   const outcome = result.failed
     ? `failed: ${result.failed}`
     : (result.posterPath ?? 'no poster on TMDB');
-  console.log(`  ${outcome.padEnd(36)} ${result.name}`);
+  // Both, because a refresh is usually run for one of them and the run should
+  // say which ones actually came back.
+  const backdrop = result.failed ? '' : (result.backdropPath ?? 'no backdrop');
+  console.log(`  ${outcome.padEnd(36)} ${backdrop.padEnd(36)} ${result.name}`);
 }
 
 const withPoster = results.filter((result) => !result.failed && result.posterPath).length;
+const withBackdrop = results.filter((result) => !result.failed && result.backdropPath).length;
 const failed = results.filter((result) => result.failed).length;
 console.log(
   `\n${dryRun ? 'would fetch' : 'fetched'} metadata for ${results.length - failed} titles` +
-    `, ${withPoster} with a poster` +
+    `, ${withPoster} with a poster, ${withBackdrop} with a backdrop` +
     (failed > 0 ? `, ${failed} failed` : ''),
 );
 

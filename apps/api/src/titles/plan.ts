@@ -11,6 +11,7 @@ export interface PlannedTitleRow {
   name: string;
   year: number | null;
   posterPath: string | null;
+  backdropPath: string | null;
   overview: string | null;
 }
 
@@ -54,6 +55,7 @@ export function planTitle(details: TmdbTitleDetails): TitlePlan {
       name: details.name,
       year: details.year,
       posterPath: details.posterPath,
+      backdropPath: details.backdropPath,
       overview: details.overview,
     },
     seasons: details.seasons.map((season) => season.season),

@@ -43,8 +43,50 @@ export interface SeasonGrid {
   episodes: EpisodeCell[];
 }
 
+/**
+ * What the title is keyed and cross-referenced by.
+ *
+ * On the detail response rather than on `TitleSummary`: identity is the first
+ * thing this project is about, but the wall draws three hundred cards that have
+ * no use for it.
+ */
+export interface ExternalIds {
+  tmdb: string | null;
+  tvdb: string | null;
+  imdb: string | null;
+}
+
+/**
+ * The title page's figure row, specials excluded so it agrees with the seen
+ * fraction beside it.
+ *
+ * Derived here rather than summed from the grid on the page. A film has no
+ * episode rows at all — its `watch_state` row carries a null episode — so a
+ * client counting cells can only ever answer for a show. Each boundary keeps
+ * the precision of the event it came from, not the finest precision present: a
+ * remembered 2019 is genuinely the first watch even when a play last week knows
+ * the minute.
+ */
+export interface TitleFigures {
+  plays: number;
+  /** Episodes watched more than once, not the number of extra plays. */
+  rewatched: number;
+  firstWatchedAt: string | null;
+  firstWatchedPrecision: WatchPrecision | null;
+  /**
+   * Not the same figure as `title.lastWatchedAt`, which is the maximum over
+   * every row including season 0. This one excludes specials like the rest of
+   * the block, so a special watched yesterday cannot drive a date standing
+   * beside a play count that pretends specials do not exist.
+   */
+  lastWatchedAt: string | null;
+  lastWatchedPrecision: WatchPrecision | null;
+}
+
 export interface TitleDetail {
   title: TitleSummary;
+  ids: ExternalIds;
+  figures: TitleFigures;
   /** Ascending, season 0 first when it exists — the UI collapses it, not this. */
   seasons: SeasonGrid[];
 }
@@ -61,7 +103,12 @@ export interface TitleDetail {
  */
 export function withoutGapNotes(detail: TitleDetail): TitleDetail {
   return {
+    // Listed rather than spread: this is the function that decides what a
+    // stranger may see, and a new field on `TitleDetail` should fail the build
+    // here until someone has said so, not arrive on the wire by default.
     title: detail.title,
+    ids: detail.ids,
+    figures: detail.figures,
     seasons: detail.seasons.map((season) => ({
       season: season.season,
       episodes: season.episodes.map((episode) =>
@@ -71,6 +118,18 @@ export function withoutGapNotes(detail: TitleDetail): TitleDetail {
       ),
     })),
   };
+}
+
+interface IdentityRow extends Record<string, unknown> {
+  tmdb_id: string | null;
+  tvdb_id: string | null;
+  imdb_id: string | null;
+  plays: number;
+  rewatched: number;
+  first_watched_at: string | null;
+  first_watched_precision: WatchPrecision | null;
+  last_watched_at: string | null;
+  last_watched_precision: WatchPrecision | null;
 }
 
 interface EpisodeRow extends Record<string, unknown> {
@@ -101,6 +160,55 @@ interface EpisodeRow extends Record<string, unknown> {
 export async function titleDetail(db: Database, titleId: string): Promise<TitleDetail | null> {
   const [title] = await listTitles(db, { titleId, includeExcluded: true });
   if (!title) return null;
+
+  // Its own statement rather than columns on the wall query: the ids and the
+  // figure row are what this page adds to the summary, and putting them in
+  // `listTitles` would carry them across every card that never reads them.
+  const [identity] = [
+    ...(await db.execute<IdentityRow>(sql`
+      select
+        t.tmdb_id, t.tvdb_id, t.imdb_id,
+        coalesce(f.plays, 0)::int as plays,
+        coalesce(f.rewatched, 0)::int as rewatched,
+        -- to_json for the same reason listTitles uses it: Postgres prints a
+        -- timestamptz with a space and no milliseconds, and a raw execute
+        -- leaves no mapping layer to fix it afterwards.
+        to_json(f.first_watched_at) as first_watched_at,
+        f.first_watched_precision,
+        to_json(f.last_watched_at) as last_watched_at,
+        f.last_watched_precision
+      from title t
+        left join (
+          select
+            ws.title_id,
+            sum(ws.play_count) as plays,
+            count(*) filter (where ws.play_count > 1) as rewatched,
+            min(ws.first_watched_at) as first_watched_at,
+            -- The precision belonging to that same boundary. Taking max() of
+            -- the precision column instead would pair the earliest instant
+            -- with some other event's confidence in it.
+            (array_agg(ws.first_watched_precision order by ws.first_watched_at asc nulls last))[1]
+              as first_watched_precision,
+            max(ws.last_watched_at) as last_watched_at,
+            (array_agg(ws.last_watched_precision order by ws.last_watched_at desc nulls last))[1]
+              as last_watched_precision
+          from watch_state ws
+            left join episode ep on ep.id = ws.episode_id
+            join title tt on tt.id = ws.title_id
+          -- Narrowed here as well as outside, or this aggregates the whole
+          -- library before the join throws all but one row away.
+          where tt.id = ${titleId}
+            -- Season 0 is dropped so this agrees with the seen fraction. A row
+            -- with no episode counts only for a film: a show's title-level
+            -- rows are Plex history that arrived without an episode number,
+            -- and summing those beside the per-episode rows counts the same
+            -- watching twice and invents a rewatch the grid cannot show.
+            and (ep.season <> 0 or (ep.season is null and tt.kind = 'movie'))
+          group by ws.title_id
+        ) f on f.title_id = t.id
+      where t.id = ${titleId}
+    `)),
+  ];
 
   const rows = await db.execute<EpisodeRow>(sql`
     select
@@ -154,6 +262,19 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
 
   return {
     title,
+    ids: {
+      tmdb: identity?.tmdb_id ?? null,
+      tvdb: identity?.tvdb_id ?? null,
+      imdb: identity?.imdb_id ?? null,
+    },
+    figures: {
+      plays: identity?.plays ?? 0,
+      rewatched: identity?.rewatched ?? 0,
+      firstWatchedAt: identity?.first_watched_at ?? null,
+      firstWatchedPrecision: identity?.first_watched_precision ?? null,
+      lastWatchedAt: identity?.last_watched_at ?? null,
+      lastWatchedPrecision: identity?.last_watched_precision ?? null,
+    },
     seasons: [...seasons.entries()].map(([season, episodes]) => ({ season, episodes })),
   };
 }

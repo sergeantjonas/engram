@@ -32,15 +32,9 @@ type split landed 2026-09-19, so the shell, the wall, the grid and the add
 screen are on espresso and Archivo / Martian Mono now. What the screens still
 owe the design, all checked against the running app rather than guessed:
 
-- The title page's identity line is missing its ids. The design prints `tvdb
-  392276 · tmdb 111110 · imdb tt11737520` under the name, and `GET /titles/:id`
-  answers a `TitleSummary` that carries none of the three. An API change, not a
-  styling one.
-- **The figure row is show-only.** It is counted off the episode grid, and a
-  film has no episode rows — its plays sit in `watch_event` under a null
-  episode. A film's header therefore shows its last watch and nothing else.
-  Fixing it means a play count and first-watch on `TitleSummary`, so it belongs
-  with the other API work rather than with styling.
+- **The identity line and the film figures are answered but not drawn.** `GET
+  /titles/:id` now returns `ids` and a `figures` block covering both kinds; the
+  header still prints neither the ids nor the API's figures. Web work only.
 - Missing entirely: the next-up strip, the left rail, the list view behind it,
   and the title page's twelve-month strip, activity feed and
   mark-season-watched control.
@@ -124,22 +118,24 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
-- **2026-09-20** — The title page's figure row and presence pill, **for shows**;
-  see Now for why a film gets only its last watch. ONE PIECE now reads `19
-  plays · 15 of 17 episodes seen · 4 rewatched · Mar 15 2026 first watched ·
-  176d since last`, which is the mockup's row against the real record. Counted
-  off the grid the page already holds rather than asked for:
-  every episode cell carries its own `playCount` and boundaries, so a request
-  for the sum would be a round trip to learn what is already on screen.
-  Specials are excluded the way the wall's fraction excludes them, or the two
-  figures would disagree in public. The first watch keeps the precision of the
-  event it came from rather than the finest precision in the grid — a
-  remembered 2019 is genuinely the first watch even when a play last week knows
-  the minute. "Since last" comes off the grid too rather than off
-  `TitleSummary.lastWatchedAt`, which is the maximum over every row including
-  season 0 — a special watched yesterday would otherwise drive a figure sitting
-  beside a play count that pretends specials do not exist. Its label follows
-  the precision: a coarse entry prints the period rather than a duration, and
+- **2026-09-20** — `GET /titles/:id` answers the identity line and the figure
+  row: `ids` for the three external ids, and a `figures` block of plays,
+  rewatched, first watched and last watched with each boundary's own precision.
+  It replaces a first cut that summed the grid in the browser, which could only
+  ever answer for a show — a film has no episode rows, its `watch_state` row
+  carries a null episode. Two rules the SQL has to keep and the client version
+  could not: season 0 is excluded so the figures agree with the seen fraction,
+  and a null episode counts only for a film, because a show's title-level rows
+  are Plex history that arrived without an episode number and summing those
+  beside the per-episode rows counts the same watching twice.
+- **2026-09-20** — The title page's figure row and presence pill. ONE PIECE now
+  reads `19 plays · 15 of 17 episodes seen · 4 rewatched · Mar 15 2026 first
+  watched · 176d since last`, which is the mockup's row against the real
+  record. The first watch keeps the precision of the event it came from rather
+  than the finest precision on the title — a remembered 2019 is genuinely the
+  first watch even when a play last week knows the minute. The label on the
+  last figure follows the precision: a coarse entry prints the period rather
+  than a duration, and
   "since last" beside "2019" would read as nineteen years having passed. The
   presence pill is absent rather than "unknown" when nothing has reported,
   since no Sonarr webhook exists yet and every title would wear one.

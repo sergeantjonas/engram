@@ -39,9 +39,26 @@ const episodeRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const detail = (episodes: unknown[], titles: unknown[] = [titleRow]) => {
+const identityRow = {
+  tmdb_id: '111110',
+  tvdb_id: '392276',
+  imdb_id: 'tt11737520',
+  plays: 19,
+  rewatched: 4,
+  first_watched_at: '2026-03-14T20:00:00+00:00',
+  first_watched_precision: 'day',
+  last_watched_at: '2026-03-28T20:00:00+00:00',
+  last_watched_precision: 'exact',
+};
+
+/** The three statements the route runs, in the order it runs them. */
+const detail = (
+  episodes: unknown[],
+  titles: unknown[] = [titleRow],
+  identities: unknown[] = [identityRow],
+) => {
   const stub = sessionDb();
-  stub.executions = [titles, episodes];
+  stub.executions = [titles, identities, episodes];
   return titleDetail(stub.db, 't1');
 };
 
@@ -125,6 +142,73 @@ describe('titleDetail', () => {
     const result = await detail([], [{ ...titleRow, excluded_at: '2026-09-17T00:00:00+00:00' }]);
 
     expect(result?.title.excluded).toBe(true);
+  });
+
+  it('carries the ids the title is keyed by, and the figures beside them', async () => {
+    const result = await detail([episodeRow()]);
+
+    expect(result?.ids).toEqual({ tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' });
+    expect(result?.figures).toMatchObject({
+      plays: 19,
+      rewatched: 4,
+      firstWatchedPrecision: 'day',
+      lastWatchedPrecision: 'exact',
+    });
+  });
+
+  // A show keyed on tvdb can be missing the other two, and a title resolved
+  // before TMDB answered can be missing all three.
+  it('answers null per id rather than leaving the field out', async () => {
+    const result = await detail(
+      [episodeRow()],
+      [titleRow],
+      [{ ...identityRow, tmdb_id: null, imdb_id: null }],
+    );
+
+    expect(result?.ids).toEqual({ tmdb: null, tvdb: '392276', imdb: null });
+  });
+
+  // A film has no episode rows, so the grid cannot be the source of its
+  // figures — the whole reason they are counted in SQL.
+  it('has figures for a film, which has no grid at all', async () => {
+    const result = await detail(
+      [],
+      [{ ...titleRow, kind: 'movie', episode_total: 0, seen_count: 0, movie_seen: true }],
+      [{ ...identityRow, plays: 1, rewatched: 0 }],
+    );
+
+    expect(result?.seasons).toEqual([]);
+    expect(result?.figures.plays).toBe(1);
+  });
+
+  // Nothing watched at all is zero and null, not a row of undefineds that
+  // reads as a figure to anything checking for one. The row itself still
+  // arrives: the query selects from `title` and left-joins the aggregates.
+  it('answers zero for a title nothing has been played from', async () => {
+    const result = await detail(
+      [episodeRow()],
+      [titleRow],
+      [
+        {
+          ...identityRow,
+          plays: 0,
+          rewatched: 0,
+          first_watched_at: null,
+          first_watched_precision: null,
+          last_watched_at: null,
+          last_watched_precision: null,
+        },
+      ],
+    );
+
+    expect(result?.figures).toEqual({
+      plays: 0,
+      rewatched: 0,
+      firstWatchedAt: null,
+      firstWatchedPrecision: null,
+      lastWatchedAt: null,
+      lastWatchedPrecision: null,
+    });
   });
 
   it('carries what the viewer said about a hole', async () => {

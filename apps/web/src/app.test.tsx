@@ -344,8 +344,9 @@ describe('the title page', () => {
     expect(header).toContain('2020');
     expect(header).toContain('Series');
     expect(header).toContain('In progress');
-    expect(header).toContain('2 of 3');
-    expect(header).toContain('episodes seen');
+    // A stat cell holds one figure; the total is in the Episodes heading.
+    expect(header).toMatch(/2\s*episodes seen/);
+    expect(screen.getByRole('heading', { name: /Episodes\s*2 of 3/ })).toBeDefined();
     // The pill says it in words as well as in colour, and it only appears at
     // all once something has reported on the files.
     expect(header).toContain('Not on disk');

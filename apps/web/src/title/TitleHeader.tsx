@@ -1,15 +1,27 @@
 import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { posterUrl } from '../api/titles.ts';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
-import { formatSince, formatWatched } from './format.ts';
+import { formatSince, formatWatchedShort } from './format.ts';
 
-/** A fact about the title as a whole: mono figure, Archivo label, in that order. */
+/**
+ * One cell of the stat box: the figure large in mono, its name small and
+ * uppercase beneath.
+ *
+ * Boxed and ruled rather than run together as a sentence, because these are
+ * readings off the record and the design treats them as an instrument panel.
+ * The cells grow from a 104px basis, so a narrow window wraps them into rows
+ * instead of shrinking the numbers.
+ */
 function Figure({ value, label }: { value: string; label: string }) {
   return (
-    <span className="flex items-baseline gap-1.5">
-      <span className="font-mono text-xs text-tx">{value}</span>
-      <span className="text-xs text-dim">{label}</span>
-    </span>
+    <div className="flex-[1_1_104px] border-r border-line px-3.5 py-2.5 last:border-r-0">
+      <b className="block font-mono text-[17px] font-medium tracking-[-.02em] whitespace-nowrap tabular-nums">
+        {value}
+      </b>
+      <span className="block whitespace-nowrap text-[9px] tracking-[.11em] text-faint uppercase">
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -69,6 +81,20 @@ export function TitleHeader({
       ? 'since last'
       : 'last watched';
 
+  const figureCells = [
+    plays > 0 ? { value: String(plays), label: plays === 1 ? 'play' : 'plays' } : null,
+    // The total belongs to the Episodes heading below, which is where the run
+    // itself is. A cell holds one figure.
+    isShow && title.episodes.seen > 0
+      ? { value: String(title.episodes.seen), label: 'episodes seen' }
+      : null,
+    rewatched > 0 ? { value: String(rewatched), label: 'rewatched' } : null,
+    firstWatchedAt !== null
+      ? { value: formatWatchedShort(firstWatchedAt, firstWatchedPrecision), label: 'first watched' }
+      : null,
+    since !== null ? { value: since, label: sinceLabel } : null,
+  ].filter((cell) => cell !== null);
+
   return (
     <header className="flex gap-6">
       <div className="w-32 shrink-0 overflow-hidden rounded bg-surf sm:w-40">
@@ -78,7 +104,7 @@ export function TitleHeader({
           <div className="aspect-2/3" />
         )}
       </div>
-      <div className="min-w-0 space-y-3">
+      <div className="min-w-0 flex-1 space-y-3">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">{title.name}</h1>
           <div className="flex flex-wrap items-center gap-2">
@@ -92,25 +118,16 @@ export function TitleHeader({
           <Identity ids={ids} kind={title.kind} />
         </div>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1">
-          {plays > 0 ? (
-            <Figure value={String(plays)} label={plays === 1 ? 'play' : 'plays'} />
-          ) : null}
-          {isShow ? (
-            <Figure
-              value={`${title.episodes.seen} of ${title.episodes.total}`}
-              label="episodes seen"
-            />
-          ) : null}
-          {rewatched > 0 ? <Figure value={String(rewatched)} label="rewatched" /> : null}
-          {firstWatchedAt !== null ? (
-            <Figure
-              value={formatWatched(firstWatchedAt, firstWatchedPrecision)}
-              label="first watched"
-            />
-          ) : null}
-          {since !== null ? <Figure value={since} label={sinceLabel} /> : null}
-        </div>
+        {/* Only the readings that exist, and no box at all when none do: an
+            empty ruled strip under a title nobody has watched says less than
+            nothing. */}
+        {figureCells.length > 0 ? (
+          <div className="flex flex-wrap border border-line">
+            {figureCells.map((cell) => (
+              <Figure key={cell.label} value={cell.value} label={cell.label} />
+            ))}
+          </div>
+        ) : null}
 
         {title.excluded ? <p className="text-sm text-faint">Excluded from the wall.</p> : null}
       </div>

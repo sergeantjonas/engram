@@ -32,11 +32,14 @@ type split landed 2026-09-19, so the shell, the wall, the grid and the add
 screen are on espresso and Archivo / Martian Mono now. What the screens still
 owe the design, all checked against the running app rather than guessed:
 
-- **The title page is still a third of the design's.** Its `02 · Title` opens
-  with a 158px backdrop hero that the poster overlaps by 46px, sets the figures
-  in a bordered stat box rather than an inline row, and puts a 216px list of
-  every title down the left as a second pane. Then the twelve-month strip, then
-  the grid, then the activity feed, then the CTA row. Header and grid exist.
+- **The title page is still missing its hero and its lower half.** The design
+  opens `02 · Title` with a 158px backdrop that the poster overlaps by 46px —
+  no `backdrop_path` column exists, so that is a migration, a TMDB field and a
+  re-fetch of the eleven rows already marked fetched, not a styling change. It
+  also puts a 216px list of every title down the left as a second pane, and
+  below the grid a twelve-month strip, an activity feed and a CTA row. The last
+  two need the events behind a title, which no route returns: `watch_event`
+  rows are summarised into `watch_state` and never listed.
 - Missing entirely: the next-up strip, the list view behind the rail's LIST,
   and the title page's twelve-month strip, activity feed and
   mark-season-watched control. The rail carries only HOME and ADD until the
@@ -132,6 +135,17 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-20** — The title page's figures became the design's stat box: a
+  ruled row of cells, each a 17px mono figure over a 9px uppercase name, rather
+  than a sentence. They are readings off the record and the design treats them
+  as an instrument panel. A cell holds one figure, so the fraction's total
+  moved to the Episodes heading beside `4 rewatched`, and the first-watch date
+  shortened to what its precision allows, since a wrapped date in a 104px cell
+  is not a reading. A day inside the current year drops its year and older ones
+  keep it: the box can hold a day-precision first watch beside a
+  year-precision last one, and a bare `15 Mar` sitting next to `2019` invites
+  pairing two dates years apart. Which parts show is the precision's business;
+  the order they appear in is the viewer's locale's.
 - **2026-09-20** — The app shell, which is most of why the built app still did
   not look like the design. Everything before this was paint on the scaffold's
   skeleton: a centred `max-w-6xl` column under a plain header, where the design

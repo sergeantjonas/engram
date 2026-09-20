@@ -38,9 +38,10 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
 
   return (
     <section aria-label={heading} className="space-y-1.5">
-      <h2 className="font-mono text-[9.5px] tracking-[.08em] text-dim">
+      {/* Under the page's Episodes heading, not beside it. */}
+      <h3 className="font-mono text-[9.5px] tracking-[.08em] text-dim">
         {heading} · {seen} of {season.episodes.length}
-      </h2>
+      </h3>
       {grid}
     </section>
   );

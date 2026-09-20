@@ -14,19 +14,31 @@ export const Route = createFileRoute('/titles/$id')({
 function TitlePage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(titleQuery(id));
-  const { seasons } = data;
+  const { title, seasons, figures } = data;
 
   return (
     <div className="space-y-5">
       <TitleHeader {...data} />
 
-      {/* Seasons sit close together: the run is one object, and a page-worth of
-          air between each season reads as a list of unrelated grids. */}
-      <div className="space-y-2.5">
-        {seasons.map((season) => (
-          <SeasonGrid key={season.season} season={season} titleId={id} />
-        ))}
-      </div>
+      {seasons.length > 0 ? (
+        <section aria-labelledby="episodes-heading" className="space-y-2.5">
+          <h2
+            id="episodes-heading"
+            className="flex justify-between gap-2.5 font-mono text-[10px] tracking-[.14em] text-faint uppercase"
+          >
+            Episodes
+            <span>
+              {title.episodes.seen} of {title.episodes.total}
+              {figures.rewatched > 0 ? ` · ${figures.rewatched} rewatched` : ''}
+            </span>
+          </h2>
+          {/* Seasons sit close together: the run is one object, and a
+              page-worth of air between each reads as unrelated grids. */}
+          {seasons.map((season) => (
+            <SeasonGrid key={season.season} season={season} titleId={id} />
+          ))}
+        </section>
+      ) : null}
     </div>
   );
 }

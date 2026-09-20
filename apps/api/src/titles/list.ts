@@ -25,6 +25,18 @@ export interface TitleSummary {
   onDisk: boolean | null;
   lastWatchedAt: string | null;
   lastWatchedPrecision: WatchPrecision | null;
+  /**
+   * An unwatched episode with watched ones either side of it, in the same
+   * season — a hole in a run rather than a back catalogue you started in the
+   * middle of. Specials are excluded, so an unplayed OVA is not a hole.
+   */
+  hasGap: boolean;
+  /**
+   * Nothing from Plex has ever been recorded against it, so it is on the wall
+   * because it was entered by hand. A title just added and never watched
+   * counts: that is exactly how it got here.
+   */
+  manualOnly: boolean;
 }
 
 export interface TitleListFilter {
@@ -59,6 +71,8 @@ interface Row extends Record<string, unknown> {
   movie_seen: boolean | null;
   last_watched_at: string | null;
   last_watched_precision: WatchPrecision | null;
+  has_gap: boolean | null;
+  manual_only: boolean | null;
 }
 
 /**
@@ -85,7 +99,8 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
       coalesce(e.total, 0)::int as episode_total,
       coalesce(s.seen_count, 0)::int as seen_count,
       m.movie_seen,
-      w.last_watched_at, w.last_watched_precision
+      w.last_watched_at, w.last_watched_precision,
+      gp.has_gap, mo.manual_only
     from title t
       left join intent i on i.title_id = t.id
       left join library_presence lp on lp.title_id = t.id
@@ -119,6 +134,41 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
                  as last_watched_precision
         from watch_state group by title_id
       ) w on w.title_id = t.id
+      -- A hole in a run: an unwatched episode with watched ones on both sides
+      -- of it, in the same season.
+      --
+      -- Bounded on both sides, and per season, because anything looser calls
+      -- the back catalogue a gap. Bleach is 8 of 424 seen and those eight are
+      -- in season 17 — "unwatched with something watched after it" makes every
+      -- episode of the first sixteen seasons a hole, which is not what someone
+      -- reading the grid means by one. ONE PIECE S2E5, between a watched E4
+      -- and a watched E6, is.
+      left join (
+        select title_id, bool_or(not seen and before and after) as has_gap
+        from (
+          select
+            e.title_id,
+            coalesce(ws.seen, false) as seen,
+            coalesce(bool_or(coalesce(ws.seen, false)) over (
+              partition by e.title_id, e.season order by e.number
+              rows between unbounded preceding and 1 preceding
+            ), false) as before,
+            coalesce(bool_or(coalesce(ws.seen, false)) over (
+              partition by e.title_id, e.season order by e.number
+              rows between 1 following and unbounded following
+            ), false) as after
+          from episode e
+            left join watch_state ws on ws.episode_id = e.id
+          where e.season <> 0
+        ) surrounded
+        group by title_id
+      ) gp on gp.title_id = t.id
+      -- Never touched by an ingest. A title with no events at all is included
+      -- on purpose: it is on the wall because someone added it.
+      left join (
+        select title_id, bool_and(source = 'manual') as manual_only
+        from watch_event group by title_id
+      ) mo on mo.title_id = t.id
     ${filter.titleId !== undefined ? sql`where t.id = ${filter.titleId}` : sql``}
     -- Most recently watched first. NULLS LAST or everything undated sorts to
     -- the top of the wall, which is the opposite of what recency means.
@@ -146,6 +196,10 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
       onDisk: row.present,
       lastWatchedAt: row.last_watched_at,
       lastWatchedPrecision: row.last_watched_precision,
+      hasGap: row.has_gap ?? false,
+      // No events at all leaves the aggregate null, and a title nothing has
+      // ever been ingested against is exactly the hand-added case.
+      manualOnly: row.manual_only ?? true,
     }),
   );
 

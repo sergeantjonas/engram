@@ -105,11 +105,13 @@ const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
   onDisk: null,
   lastWatchedAt: null,
   lastWatchedPrecision: null,
+  hasGap: false,
+  manualOnly: false,
   ...overrides,
 });
 
 describe('the wall', () => {
-  it('draws a card per title, asking the API for the state the URL names', async () => {
+  it('draws a card per title and narrows to the facet the URL names', async () => {
     const calls = stubApi((url) =>
       url.includes('/titles')
         ? json({
@@ -135,23 +137,31 @@ describe('the wall', () => {
           })
         : json({ isOwner: true }),
     );
-    await renderAt('/?state=in_progress');
+    await renderAt('/?facet=going');
 
     await screen.findByRole('heading', { name: 'Bleach' });
+    // The whole library in one request: a count of what survived the filter is
+    // not a count, and every chip carries one.
     expect(calls.find((call) => call.url.includes('/titles'))?.url).toBe(
-      'http://localhost:2012/titles?state=in_progress',
+      'http://localhost:2012/titles',
     );
+    // Narrowed in the browser, so the seen film is off the wall while its
+    // chip still knows about it.
+    expect(screen.queryByRole('heading', { name: 'Heat' })).toBeNull();
+    expect(screen.getByRole('link', { name: /Still going 1/ })).toBeDefined();
+    expect(screen.getByRole('link', { name: /Finished 1/ })).toBeDefined();
+    expect(screen.getByRole('link', { name: /All 2/ })).toBeDefined();
+
     // The tile carries a name and one figure, not a sentence: the fraction and
     // the year live on the title page, where there is room for them.
     expect(screen.getByText('2019')).toBeDefined();
     expect(screen.getByText('want')).toBeDefined();
-    expect(screen.getByRole('heading', { name: 'Heat' })).toBeDefined();
-    expect(screen.getByRole('link', { name: 'In progress' }).getAttribute('aria-current')).toBe(
+    expect(screen.getByRole('link', { name: /Still going/ }).getAttribute('aria-current')).toBe(
       'page',
     );
-    expect(screen.getByRole('link', { name: 'All' }).getAttribute('aria-current')).toBeNull();
+    expect(screen.getByRole('link', { name: /All/ }).getAttribute('aria-current')).toBeNull();
     expect(screen.getByRole('link', { name: 'Show excluded' }).getAttribute('href')).toBe(
-      '/?state=in_progress&excluded=true',
+      '/?facet=going&excluded=true',
     );
     expect(screen.getByRole('link', { name: 'Bleach, In progress' }).getAttribute('href')).toMatch(
       /^\/titles\/[0-9a-f-]{36}$/,
@@ -188,7 +198,8 @@ describe('the wall', () => {
     await renderAt('/');
 
     await screen.findByRole('heading', { name: 'Bleach' });
-    expect(screen.getByRole('link', { name: 'In progress' })).toBeDefined();
+    // The chips read the record, so a stranger gets all of them.
+    expect(screen.getByRole('link', { name: /Still going 1/ })).toBeDefined();
     expect(screen.queryByRole('link', { name: 'Show excluded' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Add a title' })).toBeNull();
   });

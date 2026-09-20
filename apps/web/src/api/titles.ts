@@ -3,12 +3,7 @@ import { apiFetch, postJson } from './client.ts';
 
 export type WatchPrecision = 'exact' | 'day' | 'month' | 'year' | 'unknown';
 
-export const TITLE_STATES = ['unwatched', 'in_progress', 'seen'] as const;
-export type TitleState = (typeof TITLE_STATES)[number];
-
-export function isTitleState(value: unknown): value is TitleState {
-  return typeof value === 'string' && (TITLE_STATES as readonly string[]).includes(value);
-}
+export type TitleState = 'unwatched' | 'in_progress' | 'seen';
 
 /**
  * One card on the wall, as `GET /titles` answers it. The API's `TitleSummary`
@@ -32,6 +27,10 @@ export interface TitleSummary {
   onDisk: boolean | null;
   lastWatchedAt: string | null;
   lastWatchedPrecision: WatchPrecision | null;
+  /** An unwatched episode with watched ones either side of it, within one season. */
+  hasGap: boolean;
+  /** Nothing from Plex has ever been recorded against it, so it is here by hand. */
+  manualOnly: boolean;
 }
 
 export type GapReason = 'skipped' | 'missing';
@@ -97,24 +96,22 @@ export interface TitleDetail {
   seasons: SeasonGrid[];
 }
 
+/**
+ * The API also filters by state; the wall does not use it. Every chip carries a
+ * count of the whole library, so the wall fetches all of it and narrows in the
+ * browser — asking the server would leave the counts describing what survived.
+ */
 export interface TitleListFilter {
-  state?: TitleState | undefined;
   /** Excluded titles are hidden unless asked for; there is no view of only the rejects. */
   includeExcluded?: boolean | undefined;
 }
 
 export function titlesQuery(filter: TitleListFilter = {}) {
-  const params = new URLSearchParams();
-  if (filter.state) params.set('state', filter.state);
-  if (filter.includeExcluded) params.set('includeExcluded', 'true');
-  const query = params.size > 0 ? `?${params.toString()}` : '';
+  const query = filter.includeExcluded ? '?includeExcluded=true' : '';
 
   return queryOptions({
-    // Normalised so that `{}` and `{ state: undefined }` are one cache entry.
-    queryKey: [
-      'titles',
-      { state: filter.state ?? null, excluded: filter.includeExcluded ?? false },
-    ],
+    // Normalised so that `{}` and `{ includeExcluded: undefined }` are one entry.
+    queryKey: ['titles', { excluded: filter.includeExcluded ?? false }],
     queryFn: () => apiFetch<{ titles: TitleSummary[] }>(`/titles${query}`),
   });
 }

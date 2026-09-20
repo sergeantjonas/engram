@@ -5,8 +5,8 @@
 ## Now
 
 **`apps/web`** — Vite + React SPA on port 2011, shaped by the settled design: a
-poster wall filtered by state, a title page built around the episode grid, and
-adding a title by hand as a screen of its own. The design was settled
+poster wall filtered by a row of counted facets, a title page built around the
+episode grid, and adding a title by hand as a screen of its own. The design was settled
 2026-09-16 and is written down in [web-design.md](web-design.md), with the
 mockup it was approved from in `docs/design/`. TanStack Router and Query,
 Tailwind v4 with Radix primitives and no shadcn, settled 2026-09-18.
@@ -36,12 +36,9 @@ owe the design, all checked against the running app rather than guessed:
   and the title page's twelve-month strip, activity feed and
   mark-season-watched control.
 
-**The wall's filter vocabulary is an API gap, not a styling one.** The design
-filters on six states with counts — still going, drifting, gaps, finished, not
-on disk, added by hand — and `GET /titles` answers three plus three booleans.
-Drifting is time-derived, gaps needs the hole count, not-on-disk needs
-`library_presence` and added-by-hand needs `source = 'manual'`. It lands with
-the `intent` route above, since both are the same endpoint growing.
+The chip row landed 2026-09-20 with the facets the design names. What is left
+of item 4 above is the `intent` write route and the want / dropped / excluded
+controls: nothing writes `intent`, so those three are read-only on every card.
 
 Two things had to land on the API side first, and the second was a surprise:
 
@@ -102,6 +99,12 @@ screen that needs it rather than ahead of it.
 
 ## Decisions still open
 
+- **How long a show sits before it is drifting.** `DRIFTING_AFTER_DAYS` in
+  `apps/web/src/wall/facets.ts` is 180. It is a judgement made against a
+  library of eleven: at 180 it separates the four genuinely abandoned from the
+  five still in rotation, where 90 would have called almost everything
+  drifting. Worth revisiting once the library is bigger, or once `dropped` can
+  be set and says the same thing explicitly.
 - **Whether `want`, `dropped` and `onDisk` are public.** They ride along on
   every card and a stranger sees all three. The first two read as annotations
   rather than facts about a title, and `onDisk` discloses what the library
@@ -115,6 +118,24 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-20** — The wall filters on the vocabulary the design names: still
+  going, drifting, gaps, finished, unwatched, not on disk, added by hand, each
+  chip carrying its count of the whole library. Facets rather than a partition
+  — a show can be still going, drifting and full of holes at once.
+
+  Two of them needed the API. `hasGap` is an unwatched episode with watched
+  ones **either side of it, in the same season**; the first cut said "with a
+  watched one after it" and flagged nine of eleven, because Bleach is 8 of 424
+  with those eight in season 17 and every episode before them then counts as a
+  hole. Bounded on both sides it flags exactly ONE PIECE, which is what the
+  mockup's "Gaps 1" said against this same library. `manualOnly` is the absence
+  of any ingested event, so a title added and never watched counts — that is
+  how it got onto the wall.
+
+  The wall now fetches the library once and narrows in the browser. A count of
+  what survived the filter is not a count, and every chip carries one; filters
+  are also instant rather than a round trip. `GET /titles` keeps its `state`
+  parameter for callers that want it.
 - **2026-09-20** — The title page draws its identity line and reads its figures
   off the API. `tvdb 392276 · tmdb 111110 · imdb tt11737520` under the name,
   each id named because a bare number says nothing about which catalogue it

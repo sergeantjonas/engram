@@ -155,6 +155,8 @@ const listRow = (over: Record<string, unknown> = {}) => ({
   movie_seen: null,
   last_watched_at: '2025-12-02T21:00:00+00:00',
   last_watched_precision: 'exact',
+  has_gap: false,
+  manual_only: false,
   ...over,
 });
 
@@ -168,6 +170,20 @@ describe('GET /titles', () => {
     app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
     return app.inject({ method: 'GET', url: `/titles${query}`, headers });
   };
+
+  // Both are facets the wall filters on, and both come off aggregates that are
+  // null for a title nothing has been recorded against. A title with no events
+  // is hand-added by definition — that is how it got onto the wall.
+  it('answers the gap and hand-added facets, defaulting a title with no history', async () => {
+    const rows = [
+      listRow({ has_gap: true, manual_only: true }),
+      listRow({ id: 'b7a1c0e9-7701-4c5f-8a0e-0f7c2c3a9f6b', has_gap: null, manual_only: null }),
+    ];
+    const titles = (await list('', rows)).json().titles;
+
+    expect(titles[0]).toMatchObject({ hasGap: true, manualOnly: true });
+    expect(titles[1]).toMatchObject({ hasGap: false, manualOnly: true });
+  });
 
   it('rejects a state nothing can be in', async () => {
     const response = await list('?state=abandoned');

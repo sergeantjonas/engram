@@ -1,6 +1,7 @@
 # Web design
 
-**Status:** Settled 2026-09-16, unchanged since. The mockup is the reference,
+**Status:** Settled 2026-09-16; amended 2026-09-20 where the build departs from
+the mockup, each departure marked as such in place. The mockup is the reference,
 not this note: [../design/engram-app.html](../design/engram-app.html), or
 <https://claude.ai/artifact/8Tu2NYg7EXNS8kDw3LanJ5> for the hosted copy. Read
 before building or changing any screen in `apps/web`.
@@ -82,6 +83,24 @@ tile.
 drifting, gaps, finished, not on disk, added by hand. A tile carries its state
 as a 3px bar under the poster, and a title no longer on disk is greyscaled to
 45% brightness rather than badged.
+
+They are facets, not a partition — a show can be still going, drifting and full
+of holes at once, and each chip counts the whole library rather than what is on
+screen. *Unwatched* is the seventh, added to the mockup's six: that library had
+nothing in the state, this one can. As built:
+
+| Chip | What it means |
+| --- | --- |
+| Still going | some episodes seen, not all |
+| Drifting | still going, and nothing watched for `DRIFTING_AFTER_DAYS` |
+| Gaps | an unwatched episode with watched ones either side, in one season |
+| Finished | every regular episode seen, or the film watched |
+| Unwatched | nothing seen |
+| Not on disk | something reported the files gone — null is "nobody looked" |
+| Added by hand | no ingested event has ever named it |
+
+The chips are set at 10px rather than the mockup's 8.5px, which is below what
+mono uppercase reads at on a real screen.
 
 ## 01 · Home
 

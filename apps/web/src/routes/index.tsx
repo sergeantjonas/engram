@@ -1,19 +1,27 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps } from '@tanstack/react-router';
-import { isTitleState, type TitleListFilter, titlesQuery } from '../api/titles.ts';
+import { type TitleListFilter, titlesQuery } from '../api/titles.ts';
+import { isFacet } from '../wall/facets.ts';
 import { Wall, type WallSearch } from '../wall/Wall.tsx';
 
+/**
+ * Only `excluded` reaches the API.
+ *
+ * The facets are counted as well as applied, and a count of what survived the
+ * filter is not a count — so the wall asks for the whole library once and
+ * narrows it here. That also makes changing chips instant instead of a round
+ * trip. The API keeps its own `state` filter for callers that want one.
+ */
 const toFilter = (search: WallSearch): TitleListFilter => ({
-  state: search.state,
   includeExcluded: search.excluded,
 });
 
 export const Route = createFileRoute('/')({
   validateSearch: (search: Record<string, unknown>): WallSearch => ({
-    ...(isTitleState(search.state) ? { state: search.state } : {}),
+    ...(isFacet(search.facet) ? { facet: search.facet } : {}),
     ...(search.excluded === true ? { excluded: true } : {}),
   }),
-  loaderDeps: ({ search }) => search,
+  loaderDeps: ({ search }): WallSearch => (search.excluded ? { excluded: true } : {}),
   loader: ({ context, deps }) => context.queryClient.ensureQueryData(titlesQuery(toFilter(deps))),
   errorComponent: WallError,
   component: Home,

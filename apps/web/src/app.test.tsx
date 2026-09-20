@@ -267,6 +267,7 @@ const episode = (overrides: Partial<EpisodeCell>): EpisodeCell => ({
 });
 
 describe('the title page', () => {
+  const daysBeforeNow = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
   const hole = episode({ number: 5, name: 'WAX ON, WAX OFF', airDate: '2026-03-10' });
   const detail = (): TitleDetail => ({
     title: title({
@@ -276,6 +277,30 @@ describe('the title page', () => {
       onDisk: false,
     }),
     ids: { tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' },
+    // Relative to today, or the twelve-month strip these are drawn on would
+    // stop finding them once the wall clock moves past the window.
+    recentActivity: [
+      {
+        id: 'w2',
+        season: 2,
+        number: 8,
+        name: 'DEER AND LOATHING',
+        watchedAt: daysBeforeNow(30),
+        precision: 'exact',
+        source: 'plex-history',
+        rewatch: false,
+      },
+      {
+        id: 'w1',
+        season: 2,
+        number: 7,
+        name: 'REINDEER SHAMES',
+        watchedAt: daysBeforeNow(31),
+        precision: 'exact',
+        source: 'manual',
+        rewatch: true,
+      },
+    ],
     figures: {
       plays: 19,
       rewatched: 4,
@@ -347,6 +372,14 @@ describe('the title page', () => {
     // A stat cell holds one figure; the total is in the Episodes heading.
     expect(header).toMatch(/2\s*episodes seen/);
     expect(screen.getByRole('heading', { name: /Episodes\s*2 of 3/ })).toBeDefined();
+
+    // The feed says what the record is made of, where the grid can only say
+    // whether a cell is seen.
+    expect(screen.getByRole('heading', { name: /Activity\s*last 2 of 19/ })).toBeDefined();
+    expect(screen.getByText('DEER AND LOATHING')).toBeDefined();
+    expect(screen.getByRole('heading', { name: /When you watched it/i })).toBeDefined();
+    expect(screen.getByText('rewatch')).toBeDefined();
+    expect(screen.getByText('by hand')).toBeDefined();
     // The pill says it in words as well as in colour, and it only appears at
     // all once something has reported on the files.
     expect(header).toContain('Not on disk');
@@ -516,6 +549,9 @@ describe('adding a title', () => {
           // A film found on TMDB and nothing else yet. Its header has to render
           // from the API's figures, because it has no grid to count.
           ids: { tmdb: '949', tvdb: null, imdb: null },
+          // Two plays the API did not send with this response: nothing on the
+          // page may assume the feed accounts for the figures beside it.
+          recentActivity: [],
           figures: {
             plays: 2,
             rewatched: 0,

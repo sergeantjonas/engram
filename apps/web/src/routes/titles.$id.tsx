@@ -2,8 +2,11 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, Link } from '@tanstack/react-router';
 import { ApiError } from '../api/client.ts';
 import { titleQuery } from '../api/titles.ts';
+import { Activity } from '../title/Activity.tsx';
 import { SeasonGrid } from '../title/SeasonGrid.tsx';
+import { Section } from '../title/Section.tsx';
 import { TitleHeader } from '../title/TitleHeader.tsx';
+import { YearBar } from '../title/YearBar.tsx';
 
 export const Route = createFileRoute('/titles/$id')({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(titleQuery(params.id)),
@@ -20,25 +23,27 @@ function TitlePage() {
     <div className="space-y-5">
       <TitleHeader {...data} />
 
+      <YearBar
+        moments={data.recentActivity}
+        truncated={figures.plays > data.recentActivity.length}
+      />
+
       {seasons.length > 0 ? (
-        <section aria-labelledby="episodes-heading" className="space-y-2.5">
-          <h2
-            id="episodes-heading"
-            className="flex justify-between gap-2.5 font-mono text-[10px] tracking-[.14em] text-faint uppercase"
-          >
-            Episodes
-            <span>
-              {title.episodes.seen} of {title.episodes.total}
-              {figures.rewatched > 0 ? ` · ${figures.rewatched} rewatched` : ''}
-            </span>
-          </h2>
+        <Section
+          heading="Episodes"
+          aside={`${title.episodes.seen} of ${title.episodes.total}${
+            figures.rewatched > 0 ? ` · ${figures.rewatched} rewatched` : ''
+          }`}
+        >
           {/* Seasons sit close together: the run is one object, and a
               page-worth of air between each reads as unrelated grids. */}
           {seasons.map((season) => (
             <SeasonGrid key={season.season} season={season} titleId={id} />
           ))}
-        </section>
+        </Section>
       ) : null}
+
+      <Activity moments={data.recentActivity} plays={figures.plays} titleName={title.name} />
     </div>
   );
 }

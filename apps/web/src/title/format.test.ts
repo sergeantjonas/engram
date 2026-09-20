@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatSince, formatWatchedShort } from './format.ts';
+import { formatMoment, formatSince, formatWatchedShort } from './format.ts';
 
 const now = new Date('2026-09-19T12:00:00.000Z');
 
@@ -53,6 +53,32 @@ describe('formatWatchedShort', () => {
   it('has a word for a date the record does not hold', () => {
     expect(formatWatchedShort(null, null)).toBe('unknown');
     expect(formatWatchedShort('2019-01-01T00:00:00.000Z', 'unknown')).toBe('unknown');
+  });
+});
+
+describe('formatMoment', () => {
+  it('gives an exact play a 24-hour clock beside its date', () => {
+    const at = '2026-03-28T09:19:00.000Z';
+    const shown = formatMoment(at, 'exact', now);
+
+    expect(shown).toMatch(/·/);
+    expect(shown).toMatch(/\d{2}:\d{2}/);
+    // The date half follows the same year rule as the stat box beside it.
+    expect(shown.startsWith(formatWatchedShort(at, 'exact', now))).toBe(true);
+  });
+
+  it('keeps the year on an exact play from another year', () => {
+    expect(formatMoment('2019-03-28T09:19:00.000Z', 'exact', now)).toContain('2019');
+  });
+
+  it('stops at the period for anything coarser, with no invented clock', () => {
+    expect(formatMoment('2019-01-01T00:00:00.000Z', 'year', now)).toBe('2019');
+    expect(formatMoment('2026-03-28T00:00:00.000Z', 'day', now)).not.toMatch(/\d{2}:\d{2}/);
+  });
+
+  it('says so when the record holds no date', () => {
+    expect(formatMoment(null, null, now)).toBe('date unknown');
+    expect(formatMoment('2019-01-01T00:00:00.000Z', 'unknown', now)).toBe('date unknown');
   });
 });
 

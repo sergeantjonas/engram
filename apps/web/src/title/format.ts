@@ -97,6 +97,38 @@ export function formatWatchedShort(
   }).format(date);
 }
 
+/**
+ * One line of the activity feed's left column: when this play happened, in as
+ * much detail as the record holds.
+ *
+ * An exact play is the only kind with a time on it, and the only kind read in
+ * the viewer's own zone. Everything coarser stops where its precision does,
+ * the same as `formatWatched`.
+ *
+ * The clock is forced to 24 hours against the locale, which the rest of this
+ * file never does: the feed is a column of times in a 96px gutter, and an
+ * am/pm suffix is a fifth of that width spent saying what the digits already
+ * do. The date half still defers, including its rule about dropping the year.
+ */
+export function formatMoment(
+  at: string | null,
+  precision: WatchPrecision | null,
+  now: Date = new Date(),
+): string {
+  if (at === null || precision === null || precision === 'unknown') return 'date unknown';
+
+  if (precision === 'exact') {
+    const time = new Intl.DateTimeFormat(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(at));
+    return `${formatWatchedShort(at, precision, now)} · ${time}`;
+  }
+
+  return formatWatched(at, precision);
+}
+
 /** An air date is a plain `YYYY-MM-DD`, with no instant to shift. */
 export function formatAirDate(airDate: string | null): string {
   if (airDate === null) return 'unaired';

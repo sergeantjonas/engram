@@ -36,14 +36,12 @@ owe the design, all checked against the running app rather than guessed:
   opens `02 · Title` with a 158px backdrop that the poster overlaps by 46px —
   no `backdrop_path` column exists, so that is a migration, a TMDB field and a
   re-fetch of the eleven rows already marked fetched, not a styling change. It
-  also puts a 216px list of every title down the left as a second pane, and
-  below the grid a twelve-month strip, an activity feed and a CTA row. The
-  events those two are drawn from now arrive as `recentActivity`; nothing
-  renders them yet.
+  also puts a 216px list of every title down the left as a second pane, and a
+  CTA row under everything. The twelve-month strip and the activity feed
+  landed 2026-09-20.
 - Missing entirely: the next-up strip, the list view behind the rail's LIST,
-  and the title page's twelve-month strip, activity feed and
-  mark-season-watched control. The rail carries only HOME and ADD until the
-  screens behind LIST and YEAR exist.
+  and the title page's mark-season-watched control. The rail carries only HOME
+  and ADD until the screens behind LIST and YEAR exist.
 
 The chip row landed 2026-09-20 with the facets the design names. What is left
 of item 4 above is the `intent` write route and the want / dropped / excluded
@@ -135,6 +133,20 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-20** — The title page draws what the plays were, not only what they
+  come to. A twelve-month strip under *When you watched it* — ONE PIECE's binge
+  shows as a tight cluster in March against nine empty months — and an activity
+  feed under it, last five of nineteen, each line its date, its episode, and a
+  gold `rewatch` or a jade `by hand` where either applies. A rewatch is worth
+  calling out because it is the one thing the grid cannot say: a cell is seen
+  or it is not, however many times.
+
+  The strip plots only dates precise enough to be a day. A coarse entry holds
+  the first instant of the period it names, so a 2019 watch would put a mark on
+  the 1st of January that nobody watched anything on. One mark per day however
+  many plays it holds, and the heading says "recent plays only" when
+  `figures.plays` exceeds what the API sent, since the cap can cut the older
+  months off a long enough binge.
 - **2026-09-20** — `GET /titles/:id` answers the plays themselves, not only
   what they add up to. `recentActivity` is every event the figures count,
   newest first, each carrying its episode, its date with the precision that

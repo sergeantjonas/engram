@@ -88,10 +88,30 @@ export interface TitleFigures {
   lastWatchedPrecision: WatchPrecision | null;
 }
 
+/** One play, as the feed and the twelve-month strip read it. */
+export interface WatchMoment {
+  id: string;
+  /** Null for a film, whose events name no episode. */
+  season: number | null;
+  number: number | null;
+  name: string | null;
+  watchedAt: string | null;
+  precision: WatchPrecision;
+  source: string;
+  /** Not the first play of this episode. */
+  rewatch: boolean;
+}
+
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
   figures: TitleFigures;
+  /**
+   * Newest first, and capped by the API. `figures.plays` counts the same set
+   * uncapped, so `plays > recentActivity.length` means this is truncated and
+   * anything drawn from it covers only the recent end.
+   */
+  recentActivity: WatchMoment[];
   /** Ascending, season 0 first when it exists; collapsing it is the page's job. */
   seasons: SeasonGrid[];
 }

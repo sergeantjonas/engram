@@ -148,6 +148,12 @@ Around it:
   last.
 - The twelve-month strip from the first round, so a season's shape is visible
   without reading the feed.
+
+  Built as one 2px mark per day watched rather than the mockup's wide bands: a
+  band implies a continuous stretch, and what the record holds is a set of
+  days. Its heading says "recent plays only" when the API's cap means older
+  plays are missing, where the mockup's carries the span of dates — a span read
+  off a truncated list would be a claim the data cannot support.
 - The grid itself, grouped by season, each season headed `SEASON 2 · ONE
   MISSING` with a **Mark season watched** control. That control is the same one
   the add screen uses.

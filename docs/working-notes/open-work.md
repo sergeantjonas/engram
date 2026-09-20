@@ -32,9 +32,15 @@ type split landed 2026-09-19, so the shell, the wall, the grid and the add
 screen are on espresso and Archivo / Martian Mono now. What the screens still
 owe the design, all checked against the running app rather than guessed:
 
-- Missing entirely: the next-up strip, the left rail, the list view behind it,
+- **The title page is still a third of the design's.** Its `02 · Title` opens
+  with a 158px backdrop hero that the poster overlaps by 46px, sets the figures
+  in a bordered stat box rather than an inline row, and puts a 216px list of
+  every title down the left as a second pane. Then the twelve-month strip, then
+  the grid, then the activity feed, then the CTA row. Header and grid exist.
+- Missing entirely: the next-up strip, the list view behind the rail's LIST,
   and the title page's twelve-month strip, activity feed and
-  mark-season-watched control.
+  mark-season-watched control. The rail carries only HOME and ADD until the
+  screens behind LIST and YEAR exist.
 
 The chip row landed 2026-09-20 with the facets the design names. What is left
 of item 4 above is the `intent` write route and the want / dropped / excluded
@@ -99,6 +105,14 @@ screen that needs it rather than ahead of it.
 
 ## Decisions still open
 
+- **What to do with a season 0 that is mostly featurettes.** House of the
+  Dragon's title page opens with `Specials · 0 of 89`: TMDB's season 0 for it
+  is 89 behind-the-scenes clips, and `backfill:episodes` pulled every one. The
+  count is honest and season 0 is already excluded from the fraction, the
+  facets and the figures, so nothing is wrong — but a line saying you have not
+  watched 89 featurettes is the first thing the page says about the show.
+  Options: collapse a season 0 above some size, drop `episode_group`-less
+  specials at backfill time, or leave it. Nothing is broken either way.
 - **How long a show sits before it is drifting.** `DRIFTING_AFTER_DAYS` in
   `apps/web/src/wall/facets.ts` is 180. It is a judgement made against a
   library of eleven: at 180 it separates the four genuinely abandoned from the
@@ -118,6 +132,28 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-20** — The app shell, which is most of why the built app still did
+  not look like the design. Everything before this was paint on the scaffold's
+  skeleton: a centred `max-w-6xl` column under a plain header, where the design
+  is a full-bleed application that pads 18px and fills the window. Now a 58px
+  rail — jade mark, then text labels at 9px mono rather than icons, since four
+  short words need no legend — and a top bar carrying the record search and the
+  jade **+ Add watched**. The rail offers HOME and ADD only: LIST and YEAR have
+  no screens behind them, and an item that goes nowhere is worse than a short
+  rail.
+
+  Searching the record is not searching TMDB. The box in the chrome narrows
+  what is already on the wall by name, through `?q=`; `/add` asks TMDB for what
+  is not on it yet. The query narrows before the chips are counted, so with
+  something in the box a chip describes the results rather than a library that
+  is no longer on screen.
+
+  Density went with it, because that was the other half of the difference. The
+  episode cells were `minmax(2.75rem,1fr)` and stretched to the container; they
+  are now fixed 34×28 and wrap, the way the design draws them. A season is a
+  shape to read at a glance, and cells that grow with the window are a row of
+  buttons whose meaning changes as you resize. Season headings went to 9.5px
+  mono, and the space between seasons from 32px to 10px.
 - **2026-09-20** — The wall filters on the vocabulary the design names: still
   going, drifting, gaps, finished, unwatched, not on disk, added by hand, each
   chip carrying its count of the whole library. Facets rather than a partition

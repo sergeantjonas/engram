@@ -201,7 +201,40 @@ describe('the wall', () => {
     // The chips read the record, so a stranger gets all of them.
     expect(screen.getByRole('link', { name: /Still going 1/ })).toBeDefined();
     expect(screen.queryByRole('link', { name: 'Show excluded' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Add a title' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '+ Add watched' })).toBeNull();
+    // The rail offers only what a visitor can reach, so ADD is not on it.
+    expect(screen.queryByRole('link', { name: 'ADD' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'HOME' })).toBeDefined();
+  });
+
+  it('narrows the wall by name from the chrome, and counts what it narrowed to', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({
+            titles: [
+              title({ name: 'The Boys', state: 'in_progress' }),
+              title({ key: 'show:tvdb:2', name: 'Gen V', state: 'seen' }),
+            ],
+          })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/');
+
+    await screen.findByRole('heading', { name: 'The Boys' });
+    const box = screen.getByRole('searchbox', { name: 'Search your record' });
+    fireEvent.change(box, { target: { value: 'gen' } });
+    fireEvent.submit(box.closest('form') as HTMLFormElement);
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'The Boys' })).toBeNull());
+    expect(screen.getByRole('heading', { name: 'Gen V' })).toBeDefined();
+    // Counted over the results, not the library: with a query in the box the
+    // library is not what is on screen.
+    expect(screen.getByRole('link', { name: /All 1/ })).toBeDefined();
+    const going = screen.getByRole('link', { name: /Still going 0/ });
+    expect(going).toBeDefined();
+    // The chips keep the query, so narrowing by state does not throw the
+    // search away and land you back on the whole library.
+    expect(going.getAttribute('href')).toContain('q=gen');
   });
 
   it('reports a wall that will not load rather than offering sign-in', async () => {

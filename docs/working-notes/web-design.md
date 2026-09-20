@@ -85,8 +85,10 @@ as a 3px bar under the poster, and a title no longer on disk is greyscaled to
 45% brightness rather than badged.
 
 They are facets, not a partition — a show can be still going, drifting and full
-of holes at once, and each chip counts the whole library rather than what is on
-screen. *Unwatched* is the seventh, added to the mockup's six: that library had
+of holes at once, and each chip counts everything the chrome's search box has
+left rather than only what the active chip has. With an empty box that is the
+whole library; with something in it, a count of the library would describe
+nothing the viewer can see. *Unwatched* is the seventh, added to the mockup's six: that library had
 nothing in the state, this one can. As built:
 
 | Chip | What it means |
@@ -108,6 +110,13 @@ The wall, because it is the only layout that still works at 300 titles:
 `repeat(auto-fill, minmax(118px, 1fr))`, 13px gap, 2/3 posters. Filters replace
 Plex's genre shelves — the chip row is the navigation, and each chip carries
 its count.
+
+The chrome's search box narrows the wall by name, through `?q=` — searching the
+record, which is not the `/add` screen searching TMDB. The chips carry the
+query forward and the box carries the chips, so narrowing either way is a
+narrowing of where you already are rather than a way back to the top. The
+mockup's third chrome control, an `Import` ghost button, is not built: importing
+is a CLI script, and a button that opens nothing is worse than no button.
 
 Next up is a single band above the chips, not a 330px hero: backdrop at 50%
 opacity behind a left-to-right scrim, 52px poster, the sentence "You stopped

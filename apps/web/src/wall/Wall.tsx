@@ -7,6 +7,8 @@ import { TitleCard } from './TitleCard.tsx';
 /** The wall's URL state. `excluded` is `true` or absent: `false` is the default and never written. */
 export interface WallSearch {
   facet?: Facet;
+  /** A name to narrow by, from the chrome's search box. Trimmed and never empty. */
+  q?: string;
   excluded?: true;
 }
 
@@ -40,11 +42,23 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
   // One clock for the whole render, so two chips counted a millisecond apart
   // cannot disagree about what is drifting.
   const now = new Date();
-  const counts = countFacets(titles, now);
+
+  // The name search narrows before the chips are counted, so a chip reports
+  // how many of these results are drifting rather than how much of the whole
+  // library is — with a query in the box, that library is not what is on
+  // screen and a count of it would describe nothing the viewer can see.
+  const needle = search.q?.toLocaleLowerCase();
+  const matching = needle
+    ? titles.filter((title) => title.name.toLocaleLowerCase().includes(needle))
+    : titles;
+
+  const counts = countFacets(matching, now);
   const facet = search.facet;
-  const shown = facet ? titles.filter((title) => matchesFacet(title, facet, now)) : titles;
+  const shown = facet ? matching.filter((title) => matchesFacet(title, facet, now)) : matching;
 
   const withExcluded = search.excluded ? { excluded: true as const } : {};
+  const withQuery = search.q ? { q: search.q } : {};
+  const keep = { ...withQuery, ...withExcluded };
   const withFacet = search.facet ? { facet: search.facet } : {};
 
   return (
@@ -53,18 +67,18 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
         {/* Links, not buttons: a filter is a place, and the back button should return to it. */}
         <Link
           to="/"
-          search={withExcluded}
+          search={keep}
           activeOptions={{ exact: true, includeSearch: true }}
           className={CHIP}
           activeProps={{ className: ACTIVE_CHIP }}
         >
-          All <b className="font-semibold">{titles.length}</b>
+          All <b className="font-semibold">{matching.length}</b>
         </Link>
         {FACETS.map((facet) => (
           <Link
             key={facet}
             to="/"
-            search={{ facet, ...withExcluded }}
+            search={{ facet, ...keep }}
             activeOptions={{ exact: true, includeSearch: true }}
             className={CHIP}
             activeProps={{ className: ACTIVE_CHIP }}
@@ -77,7 +91,11 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
         {isOwner ? (
           <Link
             to="/"
-            search={search.excluded ? withFacet : { ...withFacet, excluded: true }}
+            search={
+              search.excluded
+                ? { ...withFacet, ...withQuery }
+                : { ...withFacet, ...withQuery, excluded: true }
+            }
             className="ml-auto text-sm text-dim underline-offset-4 hover:underline"
           >
             {search.excluded ? 'Hide excluded' : 'Show excluded'}
@@ -86,7 +104,13 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
       </nav>
 
       {shown.length === 0 ? (
-        <p className="text-dim">{search.facet ? EMPTY[search.facet] : 'Nothing on record yet.'}</p>
+        <p className="text-dim">
+          {search.q !== undefined && matching.length === 0
+            ? `Nothing on record matches “${search.q}”.`
+            : search.facet
+              ? EMPTY[search.facet]
+              : 'Nothing on record yet.'}
+        </p>
       ) : (
         <ul className={GRID}>
           {shown.map((title) => (

@@ -17,12 +17,16 @@ function TitlePage() {
   const { seasons } = data;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <TitleHeader {...data} />
 
-      {seasons.map((season) => (
-        <SeasonGrid key={season.season} season={season} titleId={id} />
-      ))}
+      {/* Seasons sit close together: the run is one object, and a page-worth of
+          air between each season reads as a list of unrelated grids. */}
+      <div className="space-y-2.5">
+        {seasons.map((season) => (
+          <SeasonGrid key={season.season} season={season} titleId={id} />
+        ))}
+      </div>
     </div>
   );
 }

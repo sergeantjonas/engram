@@ -19,6 +19,7 @@ const toFilter = (search: WallSearch): TitleListFilter => ({
 export const Route = createFileRoute('/')({
   validateSearch: (search: Record<string, unknown>): WallSearch => ({
     ...(isFacet(search.facet) ? { facet: search.facet } : {}),
+    ...(typeof search.q === 'string' && search.q.trim() !== '' ? { q: search.q.trim() } : {}),
     ...(search.excluded === true ? { excluded: true } : {}),
   }),
   loaderDeps: ({ search }): WallSearch => (search.excluded ? { excluded: true } : {}),

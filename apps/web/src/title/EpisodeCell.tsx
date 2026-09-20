@@ -60,7 +60,7 @@ export function EpisodeCell({
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         aria-label={label}
-        className={`aspect-square rounded font-mono text-xs font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
+        className={`grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
       >
         {episode.number}
       </Popover.Trigger>

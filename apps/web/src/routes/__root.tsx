@@ -1,8 +1,8 @@
-import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router';
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import { meQuery } from '../api/auth.ts';
-import { AuthStatus } from '../auth/AuthStatus.tsx';
-import { useIsOwner } from '../auth/useIsOwner.ts';
 import type { RouterContext } from '../router.tsx';
+import { Rail } from '../shell/Rail.tsx';
+import { TopBar } from '../shell/TopBar.tsx';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   /**
@@ -23,30 +23,24 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   component: Shell,
 });
 
+/**
+ * Rail, then a column of chrome over content — full width, not a centred
+ * measure.
+ *
+ * The design is an application rather than a document: it pads 18px and fills
+ * the window, and a wall of posters in a 1152px strip with dead space either
+ * side reads as an article about a library instead of the library.
+ */
 function Shell() {
-  const isOwner = useIsOwner();
-
   return (
-    <div className="min-h-dvh">
-      <header className="flex items-center justify-between border-b border-line px-6 py-3">
-        <Link to="/" className="font-semibold tracking-tight">
-          Engram
-        </Link>
-        <div className="flex items-center gap-4">
-          {/* Not disabled or left to 401 on arrival: a visitor who cannot add a
-              title is better served by a header that does not mention adding
-              one than by a door that opens onto a refusal. */}
-          {isOwner ? (
-            <Link to="/add" className="text-sm text-dim underline-offset-4 hover:underline">
-              Add a title
-            </Link>
-          ) : null}
-          <AuthStatus />
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        <Outlet />
-      </main>
+    <div className="flex min-h-dvh">
+      <Rail />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar />
+        <main className="flex-1 p-[18px]">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

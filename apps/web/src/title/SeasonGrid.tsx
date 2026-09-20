@@ -9,10 +9,14 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
   const isOwner = useIsOwner();
   const seen = season.episodes.filter((episode) => episode.seen).length;
   const heading = season.season === 0 ? 'Specials' : `Season ${season.season}`;
+  // Fixed 34×28 cells that wrap, not a grid that stretches to the container.
+  // A season is a shape to be read at a glance — where the run breaks, how far
+  // it got — and cells that grow to fill the width turn that shape into a row
+  // of buttons whose meaning changes with the window.
   const grid = (
-    <ul className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-1.5">
+    <ul className="flex flex-wrap gap-1">
       {season.episodes.map((episode) => (
-        <li key={episode.id} className="contents">
+        <li key={episode.id}>
           <EpisodeCell episode={episode} titleId={titleId} isOwner={isOwner} />
         </li>
       ))}
@@ -23,8 +27,8 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
   // too: an OVA that was never played should not read as a hole in the run.
   if (season.season === 0) {
     return (
-      <details className="space-y-3">
-        <summary className="cursor-pointer text-sm text-dim">
+      <details className="space-y-1.5">
+        <summary className="cursor-pointer font-mono text-[9.5px] tracking-[.08em] text-dim">
           {heading} · {seen} of {season.episodes.length}
         </summary>
         {grid}
@@ -33,12 +37,9 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
   }
 
   return (
-    <section aria-label={heading} className="space-y-3">
-      <h2 className="text-sm font-medium">
-        {heading}{' '}
-        <span className="font-mono text-xs font-normal text-dim">
-          · {seen} of {season.episodes.length}
-        </span>
+    <section aria-label={heading} className="space-y-1.5">
+      <h2 className="font-mono text-[9.5px] tracking-[.08em] text-dim">
+        {heading} · {seen} of {season.episodes.length}
       </h2>
       {grid}
     </section>

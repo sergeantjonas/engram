@@ -225,7 +225,12 @@ const episode = (overrides: Partial<EpisodeCell>): EpisodeCell => ({
 describe('the title page', () => {
   const hole = episode({ number: 5, name: 'WAX ON, WAX OFF', airDate: '2026-03-10' });
   const detail = (): TitleDetail => ({
-    title: title({ name: 'ONE PIECE', state: 'in_progress', episodes: { total: 3, seen: 2 } }),
+    title: title({
+      name: 'ONE PIECE',
+      state: 'in_progress',
+      episodes: { total: 3, seen: 2 },
+      onDisk: false,
+    }),
     seasons: [
       { season: 0, episodes: [episode({ number: 1, name: 'Recap' })] },
       {
@@ -279,13 +284,18 @@ describe('the title page', () => {
     stubTitle();
     await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
 
-    await screen.findByRole('heading', { name: 'ONE PIECE' });
-    // Read off the element rather than matched as one string: the figures sit
-    // in their own mono spans, so the row is several nodes deep now.
+    // Read off the header rather than matched as one string: every figure sits
+    // in its own mono span beside its own Archivo label.
     const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
-    expect(heading.parentElement?.textContent).toContain(
-      '2020 · Series · In progress · 2 of 3 episodes',
-    );
+    const header = heading.closest('header')?.textContent ?? '';
+    expect(header).toContain('2020');
+    expect(header).toContain('Series');
+    expect(header).toContain('In progress');
+    expect(header).toContain('2 of 3');
+    expect(header).toContain('episodes seen');
+    // The pill says it in words as well as in colour, and it only appears at
+    // all once something has reported on the files.
+    expect(header).toContain('Not on disk');
     expect(screen.getByRole('button', { name: 'Episode 4, seen' })).toBeDefined();
     expect(
       screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' }),

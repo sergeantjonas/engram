@@ -36,9 +36,14 @@ owe the design, all checked against the running app rather than guessed:
   392276 · tmdb 111110 · imdb tt11737520` under the name, and `GET /titles/:id`
   answers a `TitleSummary` that carries none of the three. An API change, not a
   styling one.
+- **The figure row is show-only.** It is counted off the episode grid, and a
+  film has no episode rows — its plays sit in `watch_event` under a null
+  episode. A film's header therefore shows its last watch and nothing else.
+  Fixing it means a play count and first-watch on `TitleSummary`, so it belongs
+  with the other API work rather than with styling.
 - Missing entirely: the next-up strip, the left rail, the list view behind it,
-  and the title page's figure row, twelve-month strip, presence pill, activity
-  feed and mark-season-watched control.
+  and the title page's twelve-month strip, activity feed and
+  mark-season-watched control.
 
 **The wall's filter vocabulary is an API gap, not a styling one.** The design
 filters on six states with counts — still going, drifting, gaps, finished, not
@@ -119,6 +124,25 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-20** — The title page's figure row and presence pill, **for shows**;
+  see Now for why a film gets only its last watch. ONE PIECE now reads `19
+  plays · 15 of 17 episodes seen · 4 rewatched · Mar 15 2026 first watched ·
+  176d since last`, which is the mockup's row against the real record. Counted
+  off the grid the page already holds rather than asked for:
+  every episode cell carries its own `playCount` and boundaries, so a request
+  for the sum would be a round trip to learn what is already on screen.
+  Specials are excluded the way the wall's fraction excludes them, or the two
+  figures would disagree in public. The first watch keeps the precision of the
+  event it came from rather than the finest precision in the grid — a
+  remembered 2019 is genuinely the first watch even when a play last week knows
+  the minute. "Since last" comes off the grid too rather than off
+  `TitleSummary.lastWatchedAt`, which is the maximum over every row including
+  season 0 — a special watched yesterday would otherwise drive a figure sitting
+  beside a play count that pretends specials do not exist. Its label follows
+  the precision: a coarse entry prints the period rather than a duration, and
+  "since last" beside "2019" would read as nineteen years having passed. The
+  presence pill is absent rather than "unknown" when nothing has reported,
+  since no Sonarr webhook exists yet and every title would wear one.
 - **2026-09-19** — The wall rebuilt to the designed tile. 118px columns on a
   13px grid, the state as a 3px bar under the poster rather than a badge over
   the artwork, names clamped to two lines with the subtitle past a colon

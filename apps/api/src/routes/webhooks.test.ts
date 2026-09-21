@@ -45,6 +45,38 @@ describe('POST /webhooks/tautulli', () => {
     expect(response.statusCode).toBe(401);
   });
 
+  // A rejection that logs nothing cannot be told apart from a body that
+  // never parsed, which is exactly the hole the first live attempt fell in.
+  it('says enough about a rejection to diagnose it, and no more', async () => {
+    const logged: unknown[] = [];
+    const stub = sessionDb();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.warn = ((obj: unknown) => {
+        logged.push(obj);
+      }) as typeof request.log.warn;
+      done();
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/webhooks/tautulli',
+      headers: { 'content-type': 'application/json' },
+      payload: { token: 'short', media_type: 'movie' },
+    });
+
+    expect(logged).toEqual([
+      expect.objectContaining({
+        tokenSource: 'body',
+        offeredLength: 5,
+        expectedLength: testConfig.WEBHOOK_SECRET.length,
+      }),
+    ]);
+    // Lengths, never the value — of either side.
+    expect(JSON.stringify(logged)).not.toContain(testConfig.WEBHOOK_SECRET);
+    expect(JSON.stringify(logged)).not.toContain('short');
+  });
+
   // The whole reason it is in the body rather than the query string is to
   // keep it out of logs, which this handler would undo by logging the body.
   it('keeps the token out of what it logs', async () => {

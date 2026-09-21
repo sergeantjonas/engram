@@ -55,8 +55,31 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config): voi
           : undefined;
 
     if (!secretMatches(offered, config.WEBHOOK_SECRET)) {
-      // No detail. A sender that got the secret wrong and one that guessed at
-      // the route should learn the same amount, which is nothing.
+      // The reply says nothing — a sender that got the secret wrong and one
+      // that guessed at the route should learn the same amount. The log is a
+      // different audience: without this a rejection is indistinguishable
+      // from a body that never parsed, and the first one of these took a
+      // round trip through a deploy to work out.
+      //
+      // Lengths, never values. Comparing the length of what arrived against
+      // the length of what was expected separates "wrong secret" from
+      // "no token in the body" from "the body is not what I think it is",
+      // which is every case worth telling apart.
+      request.log.warn(
+        {
+          keys: Object.keys(fields),
+          contentType: request.headers['content-type'],
+          tokenSource:
+            typeof header === 'string'
+              ? 'header'
+              : typeof fields.token === 'string'
+                ? 'body'
+                : 'absent',
+          offeredLength: offered?.length ?? 0,
+          expectedLength: config.WEBHOOK_SECRET.length,
+        },
+        'tautulli webhook rejected',
+      );
       return reply.code(401).send({ error: 'unauthorized' });
     }
 

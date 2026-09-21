@@ -211,6 +211,15 @@ for every viewer on the server.
 
 ## Tautulli specifics
 
+**The agent sends a URL, a method and a JSON body, and nothing else.** There
+is no field for a custom header, checked against the running install
+2026-09-21 — so the shared secret travels as a `token` key in the payload.
+The query string was the alternative and is worse: nginx writes it to its
+access log in full and Fastify repeats it in its own request log, so the
+secret would be at rest in two places. A body is logged by neither, and the
+receiver strips `token` before it logs the payload it was sent. The header is
+still accepted, for Sonarr and Radarr, which can send one.
+
 The webhook body is authored by hand in the notification agent, using Tautulli's
 parameter substitution. Fields worth requesting: `{media_type}`, `{show_name}`,
 `{episode_name}`, `{season_num}`, `{episode_num}`, `{year}`, `{themoviedb_id}`,

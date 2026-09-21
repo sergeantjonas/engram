@@ -33,28 +33,46 @@ function secretMatches(offered: string | undefined, want: string): boolean {
  */
 export function registerWebhookRoutes(app: FastifyInstance, config: Config): void {
   app.post('/webhooks/tautulli', async (request, reply) => {
-    // A header rather than a query parameter: a query string is written to
-    // nginx's access log in full, and this secret is the only thing standing
-    // between a public endpoint and the watch history.
-    const offered = request.headers['x-engram-token'];
-    if (!secretMatches(typeof offered === 'string' ? offered : undefined, config.WEBHOOK_SECRET)) {
+    const body = request.body;
+    const fields =
+      body !== null && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+
+    // In the body, because Tautulli's webhook agent sends a URL, a method and
+    // a JSON payload — it has no field for a custom header. The alternative
+    // was the query string, which nginx writes to its access log in full and
+    // Fastify repeats in its own request log, so the secret would be at rest
+    // in two places. A body is logged by neither, and is stripped below
+    // before this handler logs anything itself.
+    //
+    // The header is still accepted: Sonarr and Radarr can send one, and they
+    // are the next two through here.
+    const header = request.headers['x-engram-token'];
+    const offered =
+      typeof header === 'string'
+        ? header
+        : typeof fields.token === 'string'
+          ? fields.token
+          : undefined;
+
+    if (!secretMatches(offered, config.WEBHOOK_SECRET)) {
       // No detail. A sender that got the secret wrong and one that guessed at
       // the route should learn the same amount, which is nothing.
       return reply.code(401).send({ error: 'unauthorized' });
     }
 
+    // Never the token, whichever way it arrived. The point of keeping it out
+    // of the query string is lost if the handler writes it to the log itself.
+    const { token: _secret, ...rest } = fields;
+
     // Logged rather than stored: this phase answers "which fields arrive
     // filled", and a table would outlive the question. `empty` is the half
     // that matters — a parameter Tautulli could not resolve comes through as
     // an empty string, not as an absent key.
-    const body = request.body;
-    const fields =
-      body !== null && typeof body === 'object' ? (body as Record<string, unknown>) : {};
-    const filled = Object.keys(fields).filter((k) => fields[k] !== '' && fields[k] != null);
-    const empty = Object.keys(fields).filter((k) => fields[k] === '' || fields[k] == null);
+    const filled = Object.keys(rest).filter((k) => rest[k] !== '' && rest[k] != null);
+    const empty = Object.keys(rest).filter((k) => rest[k] === '' || rest[k] == null);
 
     request.log.info(
-      { tautulli: body, filled, empty, contentType: request.headers['content-type'] },
+      { tautulli: rest, filled, empty, contentType: request.headers['content-type'] },
       'tautulli webhook received',
     );
 

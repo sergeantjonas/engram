@@ -1,7 +1,46 @@
 import * as Popover from '@radix-ui/react-popover';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { type MarkedWatched, markWatched, titleQuery, type WatchScope } from '../api/titles.ts';
+import {
+  type MarkedWatched,
+  markUnwatched,
+  markWatched,
+  titleQuery,
+  type WatchScope,
+} from '../api/titles.ts';
+import { useToast } from '../shell/Toasts.tsx';
+
+/** What the API counts in a given scope: episodes for a show, plays for a film. */
+type Unit = 'episode' | 'play';
+
+const count = (n: number, unit: Unit) => `${n} ${n === 1 ? unit : `${unit}s`}`;
+
+/**
+ * Retractions are counted in plays, never in episodes.
+ *
+ * A mark writes one event per episode, so counting what it wrote in episodes
+ * is honest; what is on record accumulates across marks, and an episode marked
+ * as "2019" and again as "2020" carries two of them. "Take back 2 episodes"
+ * inside one episode's own popover is simply false.
+ */
+const plays = (n: number) => count(n, 'play');
+
+const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/**
+ * Refetches what a write to this title changed.
+ *
+ * The wall as well as the page: a mark moves a card's fraction, and can move it
+ * from still going to finished.
+ */
+function useSettle(titleId: string) {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: titleQuery(titleId).queryKey }),
+      queryClient.invalidateQueries({ queryKey: ['titles'] }),
+    ]);
+}
 
 /**
  * Recording something watched long before this record existed, which is the
@@ -16,35 +55,57 @@ import { type MarkedWatched, markWatched, titleQuery, type WatchScope } from '..
 export function MarkWatched({
   titleId,
   scope,
-  heading,
+  what,
   hint,
   unit = 'episode',
   onDone,
 }: {
   titleId: string;
   scope: WatchScope;
-  /** What this will mark, where the panel is not already under a name. */
-  heading?: string;
+  /** What the scope is, in words: "season 2", "S2E5", "the whole run". */
+  what: string;
   /** A caveat about the scope, where there is one the heading cannot carry. */
   hint?: string;
-  /** What the API counts here: episodes for a show, plays for a film. */
-  unit?: 'episode' | 'play';
+  unit?: Unit;
   onDone?: () => void;
 }) {
-  const queryClient = useQueryClient();
+  const settle = useSettle(titleId);
+  const toast = useToast();
   const fieldId = useId();
   const [when, setWhen] = useState('');
 
   const mark = useMutation({
     mutationFn: () => markWatched({ titleId, scope, watchedAt: when }),
-    onSuccess: async () => {
-      // The wall as well as this page: a mark moves a card's fraction, and can
-      // move it from still going to finished.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: titleQuery(titleId).queryKey }),
-        queryClient.invalidateQueries({ queryKey: ['titles'] }),
-      ]);
+    onSuccess: async (result) => {
+      await settle();
+      // Closed, then said elsewhere. The answer is about the record rather
+      // than about this panel, and a panel kept open to report its own result
+      // is one the viewer then has to dismiss by hand.
       onDone?.();
+      toast({
+        message: describe(result, unit, what, oneEpisode(scope)),
+        // Only where something was actually written. Nothing to take back is
+        // not an undo, it is a second way to remove the marks already there.
+        ...(result.written === 0
+          ? {}
+          : {
+              action: {
+                label: 'Undo',
+                run: async () => {
+                  // Caught here rather than left to float: the notice that
+                  // offered this is already gone, so a rejection nobody
+                  // reports reads on screen as a retraction that worked.
+                  try {
+                    const { removed } = await markUnwatched({ titleId, scope });
+                    await settle();
+                    toast({ message: `Took back ${plays(removed)}.` });
+                  } catch (error) {
+                    toast({ message: `Could not undo that: ${reason(error)}` });
+                  }
+                },
+              },
+            }),
+      });
     },
   });
 
@@ -56,7 +117,6 @@ export function MarkWatched({
         mark.mutate();
       }}
     >
-      {heading ? <p className="font-medium">{heading}</p> : null}
       {hint ? <p className="text-xs text-faint">{hint}</p> : null}
       <label htmlFor={fieldId} className="block text-xs text-dim">
         When? Leave it blank if you don’t remember.
@@ -71,11 +131,6 @@ export function MarkWatched({
       {mark.error ? (
         <p role="alert" className="text-xs text-gap-tx">
           {mark.error.message}
-        </p>
-      ) : null}
-      {mark.data ? (
-        <p role="status" className="text-xs text-dim">
-          {describe(mark.data, unit)}
         </p>
       ) : null}
       <button
@@ -94,49 +149,97 @@ export function MarkWatched({
  * pressing this twice is safe, and saying so is the difference between "that
  * did nothing" and "that was already true".
  */
-function describe({ written, skipped }: MarkedWatched, unit: 'episode' | 'play'): string {
-  if (written === 0) {
-    return skipped === 1 ? 'Already on record.' : 'All of it was already on record.';
-  }
-  const marked = `Marked ${written} ${written === 1 ? unit : `${unit}s`}`;
+function describe(
+  { written, skipped }: MarkedWatched,
+  unit: Unit,
+  what: string,
+  single: boolean,
+): string {
+  // One episode is a thing, not a scope things are inside: "marked 1 episode
+  // in S2E5" is the sentence a scope-shaped message produces there.
+  if (single) return written === 0 ? `${what} was already on record.` : `Marked ${what} watched.`;
+  if (written === 0) return `All of ${what} was already on record.`;
+
+  const marked = `Marked ${count(written, unit)} in ${what}`;
   return skipped === 0 ? `${marked}.` : `${marked}; ${skipped} already on record.`;
 }
 
+const oneEpisode = (scope: WatchScope) => scope !== 'all' && scope.episode !== undefined;
+
 /**
- * The same form behind a button, for the places that have no popover of their
- * own — a season heading, and the page itself.
+ * Taking a mark back, for the misclick that is found later rather than while
+ * the notice is still up.
  *
- * It deliberately does not close on success: a bulk mark's answer is how much
- * of it was new, and closing the panel would take that away at the moment it
- * is worth reading.
+ * Offered only where this record was told something by hand. A play Plex
+ * reported is not this record's to delete, and a button implying otherwise
+ * would be lying about what it does.
+ */
+export function TakeBack({
+  titleId,
+  scope,
+  entered,
+  onDone,
+}: {
+  titleId: string;
+  scope: WatchScope;
+  /** How many hand-entered plays are in scope. Rendered only when above zero. */
+  entered: number;
+  onDone?: () => void;
+}) {
+  const settle = useSettle(titleId);
+  const toast = useToast();
+
+  const retract = useMutation({
+    mutationFn: () => markUnwatched({ titleId, scope }),
+    onSuccess: async ({ removed }) => {
+      await settle();
+      onDone?.();
+      toast({ message: `Took back ${plays(removed)}.` });
+    },
+  });
+
+  if (entered === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        disabled={retract.isPending}
+        onClick={() => retract.mutate()}
+        className="rounded border border-line px-3 py-1 text-sm text-dim hover:border-gap hover:text-gap-tx disabled:opacity-50"
+      >
+        Take back {plays(entered)} entered by hand
+      </button>
+      {retract.error ? (
+        <p role="alert" className="text-xs text-gap-tx">
+          {retract.error.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The form behind a button, for the places that have no popover of their own —
+ * a season heading, and the page itself.
  */
 export function MarkWatchedButton({
   label,
-  name,
   className,
   complete = false,
   ...form
-}: Omit<Parameters<typeof MarkWatched>[0], 'heading'> & {
+}: Omit<Parameters<typeof MarkWatched>[0], 'onDone'> & {
   label: string;
-  /**
-   * The accessible name, where the visible one needs the capital a heading
-   * wants. It heads the panel too, so an open one still says what it covers.
-   */
-  name?: string;
   className: string;
-  /**
-   * Everything in scope is already watched, so the button has no write to
-   * offer and goes away.
-   */
+  /** Everything in scope is watched, so there is no write left to offer. */
   complete?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const sentence = name ?? label;
+  const sentence = `Mark ${form.what} watched`;
 
-  // Not while its own panel is open, though: the mark that completes the scope
-  // is exactly the one whose answer — how much of it was new — is worth
-  // reading, and unmounting on success would take that away as it arrived.
-  if (complete && !open) return null;
+  // Nothing to offer once everything in scope is watched; the way back from
+  // there is the undo, not this.
+  if (complete) return null;
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -151,7 +254,8 @@ export function MarkWatchedButton({
           collisionPadding={16}
           className="w-72 rounded border border-line bg-surf p-4 text-sm text-tx shadow-lg"
         >
-          <MarkWatched {...form} heading={sentence} />
+          <p className="mb-2 font-medium">{sentence}</p>
+          <MarkWatched {...form} onDone={() => setOpen(false)} />
           <Popover.Arrow className="fill-line" />
         </Popover.Content>
       </Popover.Portal>

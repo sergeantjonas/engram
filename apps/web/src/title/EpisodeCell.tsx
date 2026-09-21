@@ -9,7 +9,7 @@ import {
   titleQuery,
 } from '../api/titles.ts';
 import { formatAirDate, formatWatched } from './format.ts';
-import { MarkWatched } from './MarkWatched.tsx';
+import { MarkWatched, TakeBack } from './MarkWatched.tsx';
 
 type CellStatus = 'seen' | 'skipped' | 'missing' | 'unmatched' | 'hole';
 
@@ -96,6 +96,21 @@ export function EpisodeCell({
               <MarkWatched
                 titleId={titleId}
                 scope={{ season, episode: episode.number }}
+                what={`S${season}E${episode.number}`}
+                onDone={() => setOpen(false)}
+              />
+            </div>
+          ) : null}
+          {/* The way out of a misclick found later than the notice that
+              offered it. Only what was typed here: a play Plex reported is not
+              this record's to delete, so a watched cell with no hand-entered
+              play shows nothing. */}
+          {isOwner && episode.manualPlays > 0 ? (
+            <div className="mt-3 border-t border-line pt-3">
+              <TakeBack
+                titleId={titleId}
+                scope={{ season, episode: episode.number }}
+                entered={episode.manualPlays}
                 onDone={() => setOpen(false)}
               />
             </div>

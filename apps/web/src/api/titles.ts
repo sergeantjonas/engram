@@ -50,6 +50,11 @@ export interface EpisodeCell {
   runtimeMin: number | null;
   seen: boolean;
   playCount: number;
+  /**
+   * How many of those plays were entered by hand, which is how many can be
+   * taken back. A play Plex reported is not one of them.
+   */
+  manualPlays: number;
   firstWatchedAt: string | null;
   firstWatchedPrecision: WatchPrecision | null;
   lastWatchedAt: string | null;
@@ -82,6 +87,8 @@ export interface ExternalIds {
 export interface TitleFigures {
   plays: number;
   rewatched: number;
+  /** Of those plays, the ones entered by hand: what a whole-title undo covers. */
+  manualPlays: number;
   firstWatchedAt: string | null;
   firstWatchedPrecision: WatchPrecision | null;
   lastWatchedAt: string | null;
@@ -206,6 +213,35 @@ export function markWatched(mark: {
     scope: mark.scope,
     ...(watchedAt === '' ? {} : { watchedAt }),
   });
+}
+
+/** What `DELETE /watch-events` answers. */
+export interface RetractedMarks {
+  removed: number;
+}
+
+/**
+ * Takes back what was entered by hand in a scope.
+ *
+ * Only hand-entered plays go: what Plex reported is not this record's to
+ * delete, so a retraction can never cost imported history however wide the
+ * scope it names.
+ */
+export function markUnwatched(mark: {
+  titleId: string;
+  scope: WatchScope;
+}): Promise<RetractedMarks> {
+  const scoped =
+    mark.scope === 'all'
+      ? ''
+      : `&season=${mark.scope.season}${
+          mark.scope.episode === undefined ? '' : `&episode=${mark.scope.episode}`
+        }`;
+
+  return apiFetch<RetractedMarks>(
+    `/watch-events?titleId=${encodeURIComponent(mark.titleId)}${scoped}`,
+    { method: 'DELETE' },
+  );
 }
 
 /** A TMDB search hit, as `GET /search` answers it. Not stored until it is added. */

@@ -257,6 +257,7 @@ const episode = (overrides: Partial<EpisodeCell>): EpisodeCell => ({
   runtimeMin: null,
   seen: false,
   playCount: 0,
+  manualPlays: 0,
   firstWatchedAt: null,
   firstWatchedPrecision: null,
   lastWatchedAt: null,
@@ -307,6 +308,7 @@ describe('the title page', () => {
     figures: {
       plays: 19,
       rewatched: 4,
+      manualPlays: 0,
       firstWatchedAt: '2019-01-01T00:00:00.000Z',
       firstWatchedPrecision: 'year',
       lastWatchedAt: '2026-03-28T20:00:00.000Z',
@@ -503,16 +505,40 @@ describe('the title page', () => {
     (await screen.findByRole('button', { name: 'Mark season 2 watched' })).click();
     (await screen.findByRole('button', { name: 'Mark watched' })).click();
 
-    // Asserted after the refetch has landed, not before: the answer appears
-    // either way, and the hazard is the completed season taking it away again
-    // a render later.
+    // In a notice rather than in the panel, and asserted after the refetch has
+    // landed: the panel is gone by then, which is the point of moving it out.
     await screen.findByRole('heading', { name: /Season 2\s*·\s*3 of 3/ });
-    expect(screen.getByText('Marked 2 episodes; 1 already on record.')).toBeDefined();
+    expect(screen.getByText('Marked 2 episodes in season 2; 1 already on record.')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Mark watched' })).toBeNull();
     const post = calls.find((call) => call.init?.method === 'POST');
     expect(JSON.parse(String(post?.init?.body))).toEqual({
       titleId: TITLE_ID,
       scope: { season: 2 },
     });
+  });
+
+  // The moment a misclick is noticed is the moment the notice is on screen, so
+  // the way back is on the notice rather than somewhere to go and find.
+  it('offers the way back on the notice, and takes the marks off again', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/watch-events') && init?.method === 'POST') {
+        return json({ written: 3, skipped: 0 }, 201);
+      }
+      if (url.includes('/watch-events') && init?.method === 'DELETE') {
+        return json({ title: { id: TITLE_ID }, removed: 3 });
+      }
+      if (url.includes('/titles/')) return json(detail());
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Mark season 2 watched' })).click();
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+    (await screen.findByRole('button', { name: 'Undo' })).click();
+
+    await screen.findByText('Took back 3 plays.');
+    const undone = calls.find((call) => call.init?.method === 'DELETE');
+    expect(undone?.url).toBe(`http://localhost:2012/watch-events?titleId=${TITLE_ID}&season=2`);
   });
 
   // Specials are outside a whole-run mark, so the button that covers the run
@@ -531,9 +557,128 @@ describe('the title page', () => {
     await screen.findByText('Specials are left out — mark those season by season.');
     (await screen.findByRole('button', { name: 'Mark watched' })).click();
 
-    await screen.findByText('Marked 3 episodes.');
+    await screen.findByText('Marked 3 episodes in the whole run.');
     const post = calls.find((call) => call.init?.method === 'POST');
     expect(JSON.parse(String(post?.init?.body))).toEqual({ titleId: TITLE_ID, scope: 'all' });
+  });
+
+  // The misclick found a day later, when the notice is long gone. Only what
+  // was typed: a watched cell Plex reported offers nothing here.
+  it('takes back a hand-entered play from the cell that carries it', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/watch-events') && init?.method === 'DELETE') {
+        return json({ title: { id: TITLE_ID }, removed: 1 });
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        const cell = body.seasons[1]?.episodes[0];
+        if (cell) cell.manualPlays = 1;
+        return json(body);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 4, seen' })).click();
+    (await screen.findByRole('button', { name: 'Take back 1 play entered by hand' })).click();
+
+    await screen.findByText('Took back 1 play.');
+    expect(calls.find((call) => call.init?.method === 'DELETE')?.url).toBe(
+      `http://localhost:2012/watch-events?titleId=${TITLE_ID}&season=2&episode=4`,
+    );
+  });
+
+  // A play Plex reported is not this record's to delete, so the cell that
+  // carries only those offers no way to try.
+  it('offers no way back from a play the record did not invent', async () => {
+    stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 4, seen' })).click();
+
+    await screen.findByText('4. Untitled');
+    expect(screen.queryByRole('button', { name: /Take back/ })).toBeNull();
+  });
+
+  // Fed by `figures.manualPlays`, which is scoped differently from the
+  // per-episode count: specials are outside it, as they are outside the mark.
+  it('takes the whole title back, and says nothing went wrong when it does', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/watch-events') && init?.method === 'DELETE') {
+        return json({ title: { id: TITLE_ID }, removed: 12 });
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.figures.manualPlays = 12;
+        return json(body);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Take back 12 plays entered by hand' })).click();
+
+    await screen.findByText('Took back 12 plays.');
+    expect(calls.find((call) => call.init?.method === 'DELETE')?.url).toBe(
+      `http://localhost:2012/watch-events?titleId=${TITLE_ID}`,
+    );
+  });
+
+  // Nothing to mark and nothing to take back: the row goes rather than sitting
+  // there as an empty band under the header.
+  it('drops the action row when neither half of it has anything to offer', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.state = 'seen';
+        return json(body);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    await screen.findByRole('heading', { name: 'ONE PIECE' });
+    expect(screen.queryByRole('button', { name: /Mark the whole run/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Take back/ })).toBeNull();
+  });
+
+  // The notice that offered the way back is gone by the time it fails, so the
+  // failure needs one of its own or it reads as a retraction that worked.
+  it('says so when an undo does not go through', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/watch-events') && init?.method === 'POST') {
+        return json({ written: 3, skipped: 0 }, 201);
+      }
+      if (url.includes('/watch-events') && init?.method === 'DELETE') {
+        return json({ error: 'not_found', message: 'no title is stored under that id' }, 404);
+      }
+      if (url.includes('/titles/')) return json(detail());
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Mark season 2 watched' })).click();
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+    (await screen.findByRole('button', { name: 'Undo' })).click();
+
+    await screen.findByText(/Could not undo that: no title is stored under that id/);
+  });
+
+  // One episode is a thing rather than a scope things sit inside.
+  it('names the episode itself when that is all the mark covered', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/watch-events') && init?.method === 'POST') {
+        return json({ written: 1, skipped: 0 }, 201);
+      }
+      if (url.includes('/titles/')) return json(detail());
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+
+    await screen.findByText('Marked S2E5 watched.');
   });
 
   it('clears a reason, which is saying nothing again', async () => {

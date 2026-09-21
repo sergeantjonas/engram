@@ -40,8 +40,8 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
     <MarkWatchedButton
       titleId={titleId}
       scope={{ season: season.season }}
+      what={heading.toLowerCase()}
       label={`mark ${heading.toLowerCase()} watched`}
-      name={`Mark ${heading.toLowerCase()} watched`}
       complete={seen === season.episodes.length}
       className="font-mono text-[9.5px] tracking-[.08em] text-faint underline-offset-4 hover:text-jade hover:underline"
     />

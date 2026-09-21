@@ -167,6 +167,30 @@ the viewer wants of a title. The SPA calls three of the four.
   the page can offer the control only where there is something to take back.
   Counted over the same set as `plays` — specials out, a null episode only for a
   film — or the figure would not match the one beside it.
+
+  Two ways to reach it in the SPA, because a misclick is noticed at two
+  different times. **Undo on the notice**, for the moment it happens: every
+  mark that wrote something posts one, and it lives for twelve seconds rather
+  than five so the way back is still there to be taken. **Take back N entered
+  by hand**, on the episode popover and under the title header, for the one
+  found a day later. Both say what went, and a play Plex reported is never
+  offered, so the button cannot claim to remove what it has no business
+  removing.
+
+  The scope-shaped undo is not exact. It retracts every hand-entered play in
+  the scope, not only the ones the last mark added, so marking a season "2019"
+  and then "2020" and pressing Undo takes both away. Exactness would need the
+  event ids, and a whole-run mark of ONE PIECE is eleven hundred of them — well
+  past what a URL will carry. The count in the notice is the safeguard, which is
+  why a retraction is counted in plays and never in episodes: a mark writes one
+  event per episode so counting it in episodes is honest, but what is on record
+  accumulates across marks, and "take back 2 episodes" inside one episode's own
+  popover would simply be false. "Marked 3 episodes in season 2" followed by
+  "Took back 5 plays" is the discrepancy showing itself rather than hiding.
+
+  The notices are Radix Toast, in `apps/web/src/shell/Toasts.tsx`, mounted above
+  the layout in the root route so one survives a navigation away from the screen
+  that caused it.
 - **2026-09-21** — Marking something watched from the title page, which is the
   half of the record Plex cannot supply. `POST /watch-events` had taken an
   episode, a season or a whole title since chunk 4; nothing in the SPA had ever
@@ -183,11 +207,10 @@ the viewer wants of a title. The SPA calls three of the four.
   empty string, so it stores as `unknown` precision instead of a claim.
 
   Each control disappears once its scope is complete, so no button offers a
-  write that would do nothing — but not while its own panel is open, because
-  the mark that finishes a season is exactly the one whose answer is worth
-  reading. The panel reports `written` against `skipped`: the write is
-  idempotent on `(source, source_event_id)`, so pressing it twice is safe and
-  "that was already true" is a different answer from "that did nothing".
+  write that would do nothing. What it wrote is said in a notice rather than in
+  the panel: `written` against `skipped`, because the write is idempotent on
+  `(source, source_event_id)` and "that was already true" is a different answer
+  from "that did nothing".
 
   A bulk mark still writes over an episode the viewer declared they never had;
   see the open decision below.

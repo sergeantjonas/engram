@@ -4,7 +4,7 @@ import { ApiError } from '../api/client.ts';
 import { titleQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { Activity } from '../title/Activity.tsx';
-import { MarkWatchedButton } from '../title/MarkWatched.tsx';
+import { MarkWatchedButton, TakeBack } from '../title/MarkWatched.tsx';
 import { SeasonGrid } from '../title/SeasonGrid.tsx';
 import { Section } from '../title/Section.tsx';
 import { TitleHeader } from '../title/TitleHeader.tsx';
@@ -22,24 +22,32 @@ function TitlePage() {
   const { title, seasons, figures } = data;
   const isOwner = useIsOwner();
   const film = title.kind === 'movie';
+  const unwatched = title.state !== 'seen';
+  const retractable = figures.manualPlays > 0;
 
   return (
     <div className="space-y-5">
       <TitleHeader {...data} />
 
       {/* The whole title in one press, which is what a decade-old memory of
-          having watched something actually amounts to. */}
-      {isOwner ? (
-        <MarkWatchedButton
-          titleId={id}
-          scope="all"
-          complete={title.state === 'seen'}
-          label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
-          className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
-          {...(film
-            ? { unit: 'play' }
-            : { hint: 'Specials are left out — mark those season by season.' })}
-        />
+          having watched something actually amounts to — and, beside it, the
+          way back out of one. The row is gone when neither has anything to
+          offer, rather than sitting there as an empty band. */}
+      {isOwner && (unwatched || retractable) ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <MarkWatchedButton
+            titleId={id}
+            scope="all"
+            complete={!unwatched}
+            what={film ? 'the film' : 'the whole run'}
+            label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
+            className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
+            {...(film
+              ? { unit: 'play' as const }
+              : { hint: 'Specials are left out — mark those season by season.' })}
+          />
+          <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
+        </div>
       ) : null}
 
       <YearBar

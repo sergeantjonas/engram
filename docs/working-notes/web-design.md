@@ -172,6 +172,9 @@ Around it:
   backfilling a decade has is "2019" and almost never a day, and the API reads
   the precision off the shape of what was typed. Each control is gone once its
   scope is complete, so none of them offers a write that would do nothing.
+
+  Beside each is the way back out: a mark can be taken back, and the controls
+  that offer it appear only where this record was told something by hand.
 - Activity, last 5 of 19, with rewatches marked.
 - Intent controls: still watching, dropped after S2.
 - A hole is declarable in place: "S2E5 — I skipped it", plus "add an episode by
@@ -197,6 +200,19 @@ This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 2019" has no timestamp, and the alternative — a nullable `watched_at` — would
 have pushed the null handling into `watch_state` and every sort. See
 [data-model.md](data-model.md).
+
+## Notices
+
+Not in the mockup, which has no state after a button is pressed. Writes here
+are bulk and idempotent, so what matters afterwards is how much of the request
+was new — and a panel kept open to report that is a panel the viewer then has
+to dismiss. Radix Toast, bottom right, espresso on `--raise` with the action in
+jade.
+
+A notice carrying an undo lives twelve seconds rather than five: a way back
+that expires before it can be read is decoration. It is mounted above the
+layout rather than inside the screen that posted it, because a notice is about
+the record and has to outlive a navigation.
 
 ## Still open
 

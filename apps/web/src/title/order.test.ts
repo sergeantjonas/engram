@@ -17,7 +17,6 @@ const title = (over: Partial<TitleSummary> & { name: string }): TitleSummary => 
   lastWatchedAt: null,
   lastWatchedPrecision: null,
   hasGap: false,
-  manualOnly: false,
   ...over,
 });
 

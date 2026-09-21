@@ -31,12 +31,6 @@ export interface TitleSummary {
    * middle of. Specials are excluded, so an unplayed OVA is not a hole.
    */
   hasGap: boolean;
-  /**
-   * Nothing from Plex has ever been recorded against it, so it is on the wall
-   * because it was entered by hand. A title just added and never watched
-   * counts: that is exactly how it got here.
-   */
-  manualOnly: boolean;
 }
 
 /**
@@ -90,7 +84,6 @@ interface Row extends Record<string, unknown> {
   last_watched_at: string | null;
   last_watched_precision: WatchPrecision | null;
   has_gap: boolean | null;
-  manual_only: boolean | null;
 }
 
 /**
@@ -118,7 +111,7 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
       coalesce(s.seen_count, 0)::int as seen_count,
       m.movie_seen,
       w.last_watched_at, w.last_watched_precision,
-      gp.has_gap, mo.manual_only
+      gp.has_gap
     from title t
       left join intent i on i.title_id = t.id
       left join library_presence lp on lp.title_id = t.id
@@ -181,12 +174,6 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
         ) surrounded
         group by title_id
       ) gp on gp.title_id = t.id
-      -- Never touched by an ingest. A title with no events at all is included
-      -- on purpose: it is on the wall because someone added it.
-      left join (
-        select title_id, bool_and(source = 'manual') as manual_only
-        from watch_event group by title_id
-      ) mo on mo.title_id = t.id
     ${filter.titleId !== undefined ? sql`where t.id = ${filter.titleId}` : sql``}
     -- Most recently watched first. NULLS LAST or everything undated sorts to
     -- the top of the wall, which is the opposite of what recency means.
@@ -215,9 +202,6 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
       lastWatchedAt: row.last_watched_at,
       lastWatchedPrecision: row.last_watched_precision,
       hasGap: row.has_gap ?? false,
-      // No events at all leaves the aggregate null, and a title nothing has
-      // ever been ingested against is exactly the hand-added case.
-      manualOnly: row.manual_only ?? true,
     }),
   );
 

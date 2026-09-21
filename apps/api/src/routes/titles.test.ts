@@ -182,8 +182,8 @@ describe('GET /titles', () => {
     ];
     const titles = (await list('', rows)).json().titles;
 
-    expect(titles[0]).toMatchObject({ hasGap: true, manualOnly: true });
-    expect(titles[1]).toMatchObject({ hasGap: false, manualOnly: true });
+    expect(titles[0]).toMatchObject({ hasGap: true });
+    expect(titles[1]).toMatchObject({ hasGap: false });
   });
 
   it('rejects a state nothing can be in', async () => {

@@ -18,15 +18,7 @@ export const DRIFTING_AFTER_DAYS = 180;
  * full of holes at once, and each chip carries its own count of the whole
  * library rather than of what is currently on screen.
  */
-export const FACETS = [
-  'going',
-  'drifting',
-  'gaps',
-  'finished',
-  'unwatched',
-  'offdisk',
-  'manual',
-] as const;
+export const FACETS = ['going', 'drifting', 'gaps', 'finished', 'unwatched', 'offdisk'] as const;
 
 export type Facet = (typeof FACETS)[number];
 
@@ -37,7 +29,6 @@ export const FACET_LABEL: Record<Facet, string> = {
   finished: 'Finished',
   unwatched: 'Unwatched',
   offdisk: 'Not on disk',
-  manual: 'Added by hand',
 };
 
 export const isFacet = (value: unknown): value is Facet =>
@@ -71,8 +62,6 @@ export function matchesFacet(title: TitleSummary, facet: Facet, now: Date): bool
       return title.state === 'unwatched';
     case 'offdisk':
       return title.onDisk === false;
-    case 'manual':
-      return title.manualOnly;
   }
 }
 

@@ -26,8 +26,6 @@ export interface TitleSummary extends Intent {
   lastWatchedPrecision: WatchPrecision | null;
   /** An unwatched episode with watched ones either side of it, within one season. */
   hasGap: boolean;
-  /** Nothing from Plex has ever been recorded against it, so it is here by hand. */
-  manualOnly: boolean;
 }
 
 /** What the viewer wants of a title, as against what they have watched. */

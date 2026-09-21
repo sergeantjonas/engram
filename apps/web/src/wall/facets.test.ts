@@ -21,7 +21,6 @@ const title = (over: Partial<TitleSummary> = {}): TitleSummary => ({
   lastWatchedAt: daysAgo(1),
   lastWatchedPrecision: 'exact',
   hasGap: false,
-  manualOnly: false,
   ...over,
 });
 
@@ -66,7 +65,6 @@ describe('matchesFacet', () => {
 
   it('reads the facts the API settled rather than re-deriving them', () => {
     expect(matchesFacet(title({ hasGap: true }), 'gaps', now)).toBe(true);
-    expect(matchesFacet(title({ manualOnly: true }), 'manual', now)).toBe(true);
     // Null is "nobody has looked", which is not "the files are gone".
     expect(matchesFacet(title({ onDisk: null }), 'offdisk', now)).toBe(false);
     expect(matchesFacet(title({ onDisk: false }), 'offdisk', now)).toBe(true);
@@ -87,7 +85,6 @@ describe('countFacets', () => {
       finished: 1,
       unwatched: 1,
       offdisk: 0,
-      manual: 0,
     });
   });
 });

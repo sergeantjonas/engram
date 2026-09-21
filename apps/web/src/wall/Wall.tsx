@@ -35,7 +35,6 @@ const EMPTY: Record<Facet, string> = {
   finished: 'Nothing finished yet.',
   unwatched: 'Nothing left unwatched.',
   offdisk: 'Nothing has been reported gone.',
-  manual: 'Nothing was added by hand.',
 };
 
 export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallSearch }) {

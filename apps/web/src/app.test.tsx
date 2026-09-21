@@ -146,7 +146,6 @@ const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
   lastWatchedAt: null,
   lastWatchedPrecision: null,
   hasGap: false,
-  manualOnly: false,
   ...overrides,
 });
 

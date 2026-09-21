@@ -112,10 +112,21 @@ nothing in the state, this one can. As built:
 | Finished | every regular episode seen, or the film watched |
 | Unwatched | nothing seen |
 | Not on disk | something reported the files gone — null is "nobody looked" |
-| Added by hand | no ingested event has ever named it |
 
 The chips are set at 10px rather than the mockup's 8.5px, which is below what
 mono uppercase reads at on a real screen.
+
+*Added by hand* was an eighth and is gone, removed 2026-09-21. It read 58 of
+82 the day the library walk landed, which is what exposed it: it was defined
+as "every event naming this is manual", and a title with no events at all fell
+to the default rather than to the rule. Before the walk every title had events
+and the flaw could not show; after it, 57 unwatched titles had none.
+
+Corrected it would have matched one title, and one row is not a filter. The
+question it answers — does this rest only on my word — is a fact about a
+title, not a way through a library, and the title page's activity feed already
+answers it by naming each event's source. It matters most to the export, which
+is where a claim nothing can re-derive actually needs finding.
 
 ## 01 · Home
 

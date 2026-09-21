@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadConfig, loadDatabaseUrl } from './config.js';
+import { loadConfig, loadDatabaseUrl, loadPlexAccountIds } from './config.js';
 
 const base = {
   DATABASE_URL: 'postgres://engram:engram@localhost:55432/engram',
@@ -140,5 +140,29 @@ describe('loadDatabaseUrl', () => {
 
   it('still refuses to run with no database at all', () => {
     expect(() => loadDatabaseUrl({})).toThrow(/DATABASE_URL/);
+  });
+});
+
+describe('PLEX_ACCOUNT_IDS', () => {
+  // The server is shared, so the one setting that decides whose viewing is
+  // kept must not fail open into "everyone".
+  it('defaults to the server owner rather than to everyone', () => {
+    expect(loadConfig({ ...base }).PLEX_ACCOUNT_IDS).toEqual(['1']);
+    expect(loadPlexAccountIds({ ...base })).toEqual(['1']);
+  });
+
+  it('reads a list, tolerating the spaces a person types', () => {
+    expect(loadConfig({ ...base, PLEX_ACCOUNT_IDS: '1, 7 ,12' }).PLEX_ACCOUNT_IDS).toEqual([
+      '1',
+      '7',
+      '12',
+    ]);
+  });
+
+  it('refuses anything that is not an account id', () => {
+    expect(() => loadConfig({ ...base, PLEX_ACCOUNT_IDS: 'jonas' })).toThrow(/PLEX_ACCOUNT_IDS/);
+    // Empty would be an allowlist that permits nobody, which is a typo rather
+    // than an intent — and silently ingesting nothing is hard to notice.
+    expect(() => loadConfig({ ...base, PLEX_ACCOUNT_IDS: ' , ' })).toThrow(/PLEX_ACCOUNT_IDS/);
   });
 });

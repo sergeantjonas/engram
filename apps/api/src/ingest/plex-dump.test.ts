@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { type PlexHistoryRow, planImport, type ResolvedTitle } from './plex-dump.js';
 
+/** The server owner, which is account 1 on every Plex install. */
+const OWNER = ['1'];
+
 const onePiece: ResolvedTitle = {
   key: '/library/metadata/100',
   name: 'ONE PIECE',
@@ -47,7 +50,7 @@ const episodeRow = (
 
 describe('planImport', () => {
   it('keys titles canonically and links events to them', () => {
-    const plan = planImport([episodeRow()], [onePiece]);
+    const plan = planImport([episodeRow()], [onePiece], OWNER);
 
     expect(plan.titles).toEqual([
       {
@@ -76,7 +79,7 @@ describe('planImport', () => {
       parentIndex: undefined,
       index: undefined,
     });
-    const plan = planImport([row], [movie]);
+    const plan = planImport([row], [movie], OWNER);
 
     expect(plan.titles[0]?.key).toBe('movie:tmdb:1311031');
     expect(plan.episodes).toEqual([]);
@@ -91,6 +94,7 @@ describe('planImport', () => {
         episodeRow({ historyKey: '/h/2', viewedAt: 1761449088 }),
       ],
       [onePiece],
+      OWNER,
     );
 
     expect(plan.titles).toHaveLength(1);
@@ -108,6 +112,7 @@ describe('planImport', () => {
         episodeRow({ historyKey: '/h/3', grandparentKey: '/library/metadata/999' }),
       ],
       [onePiece],
+      OWNER,
     );
 
     expect(plan.events).toHaveLength(0);
@@ -122,6 +127,7 @@ describe('planImport', () => {
     const plan = planImport(
       [episodeRow()],
       [{ ...onePiece, ids: { tmdb: '111110', imdb: 'tt11737520' } }],
+      OWNER,
     );
 
     expect(plan.titles).toHaveLength(0);
@@ -131,7 +137,11 @@ describe('planImport', () => {
   // Keeping the play is worth more than the episode precision lost, but it has
   // to be counted so the caller knows the import was not exact.
   it('keeps an episode play with no season or episode number, and counts it', () => {
-    const plan = planImport([episodeRow({ parentIndex: undefined, index: undefined })], [onePiece]);
+    const plan = planImport(
+      [episodeRow({ parentIndex: undefined, index: undefined })],
+      [onePiece],
+      OWNER,
+    );
 
     expect(plan.events).toHaveLength(1);
     expect(plan.events[0]?.season).toBeNull();
@@ -140,17 +150,59 @@ describe('planImport', () => {
   });
 });
 
-describe('planImport identity edges', () => {
-  // accountID 0 is a real Plex account id, so the guard has to distinguish it
-  // from absent rather than treating both as falsy.
-  it('keeps account id zero', () => {
-    const plan = planImport([episodeRow({ accountID: 0 })], [onePiece]);
-    expect(plan.events[0]?.accountId).toBe('0');
+describe('planImport whose history this is', () => {
+  // The server is shared. Storing a housemate's play and filtering it on read
+  // would leave the row on disk, which is the part that needed consent.
+  it('leaves a play by anyone outside the allowlist unwritten', () => {
+    const plan = planImport(
+      [episodeRow({ historyKey: '/h/1' }), episodeRow({ historyKey: '/h/2', accountID: 7 })],
+      [onePiece],
+      OWNER,
+    );
+
+    expect(plan.events).toHaveLength(1);
+    expect(plan.events[0]?.accountId).toBe('1');
+    expect(plan.foreign).toBe(1);
   });
 
-  it('records a missing account id as null', () => {
-    const plan = planImport([episodeRow({ accountID: undefined })], [onePiece]);
-    expect(plan.events[0]?.accountId).toBeNull();
+  // A housemate watching something is not a defect in the dump, so it is
+  // counted rather than reported as a row that could not be placed — which
+  // the importer treats as a failure.
+  it('counts a foreign play rather than dropping it', () => {
+    const plan = planImport([episodeRow({ accountID: 7 })], [onePiece], OWNER);
+
+    expect(plan.dropped).toEqual([]);
+    expect(plan.foreign).toBe(1);
+  });
+
+  it('honours an allowlist naming more than one account', () => {
+    const plan = planImport(
+      [episodeRow({ historyKey: '/h/1' }), episodeRow({ historyKey: '/h/2', accountID: 7 })],
+      [onePiece],
+      ['1', '7'],
+    );
+
+    expect(plan.events).toHaveLength(2);
+    expect(plan.foreign).toBe(0);
+  });
+});
+
+describe('planImport identity edges', () => {
+  // accountID 0 is a real Plex account id, so the allowlist has to distinguish
+  // it from absent rather than treating both as falsy.
+  it('keeps account id zero when the allowlist names it', () => {
+    const plan = planImport([episodeRow({ accountID: 0 })], [onePiece], ['0']);
+    expect(plan.events[0]?.accountId).toBe('0');
+    expect(plan.foreign).toBe(0);
+  });
+
+  it('will not write a play whose account it cannot name', () => {
+    // Not the owner's by default, and not anybody's to keep: a row that does
+    // not say whose it is cannot be shown to be the one person this record
+    // is about.
+    const plan = planImport([episodeRow({ accountID: undefined })], [onePiece], OWNER);
+    expect(plan.events).toEqual([]);
+    expect(plan.foreign).toBe(1);
   });
 
   // row.key on an episode points at the episode's own metadata, whose guids
@@ -160,6 +212,7 @@ describe('planImport identity edges', () => {
     const plan = planImport(
       [episodeRow({ grandparentKey: undefined, key: '/library/metadata/100' })],
       [onePiece],
+      OWNER,
     );
 
     expect(plan.titles).toHaveLength(0);
@@ -167,7 +220,7 @@ describe('planImport identity edges', () => {
   });
 
   it('keeps season and episode zero', () => {
-    const plan = planImport([episodeRow({ parentIndex: 0, index: 0 })], [onePiece]);
+    const plan = planImport([episodeRow({ parentIndex: 0, index: 0 })], [onePiece], OWNER);
     expect(plan.episodes[0]).toMatchObject({ season: 0, number: 0 });
     expect(plan.degraded).toBe(0);
   });

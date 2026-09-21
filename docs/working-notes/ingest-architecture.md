@@ -1,7 +1,8 @@
 # Ingest architecture
 
 **Status:** Design — agreed 2026-09-16, extended 2026-09-21 with the library
-walk and the claim-grain rule. Read before chunk 4.
+walk, the claim-grain rule and owner-only ingest, the last of which is built
+rather than planned. Read before chunk 4.
 
 ## Sources
 
@@ -133,6 +134,30 @@ defaulting to the owner's, and a play by anyone else is **dropped rather than
 stored**. Storing it and filtering on read would leave the record on disk, which
 is the part that needed consent. `watch_event.account_id` already exists to keep
 the owner's own Plex Home profiles separable later.
+
+Built 2026-09-21 as `PLEX_ACCOUNT_IDS`, enforced in `planImport` before a row
+is parsed rather than before it is written — the cheapest way not to keep a
+log of someone else's viewing is never to build the row. Three properties are
+worth stating because each was a decision:
+
+- **A row with no account is not the owner's.** It cannot be shown to belong
+  to the one person this record is about, so it is not kept. `accountID: 0` is
+  a real id and is distinguished from absent. The library walk is the one
+  exemption and needs no gate: it reads the calling token's own view of the
+  library, so every row it writes is the owner's by construction, and it
+  stores a null account because there is no per-item account to record rather
+  than because one was missing.
+- **A foreign play is counted, not dropped.** The importer treats a dropped
+  row as a failure and exits non-zero; a housemate watching something is not a
+  defect in the dump, and every import of a shared server's history would
+  otherwise report one.
+- **The default is the owner, never everyone.** Unset means `1`, which is the
+  server owner on every Plex install, and an allowlist that parses to nobody
+  is refused as the typo it is.
+
+It changes nothing about what is stored today: all 86 history rows are
+account 1, verified again on the day. It is there for Tautulli, which fires
+for every viewer on the server.
 
 ## Tautulli specifics
 

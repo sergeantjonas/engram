@@ -7,6 +7,7 @@ export const WEB_ORIGIN = 'http://localhost:2011';
 /** What `loadConfig` would have produced, for a test that drives `buildApp`. */
 export const testConfig: Config = {
   DATABASE_URL: 'postgres://unused',
+  PLEX_ACCOUNT_IDS: ['1'],
   WEBHOOK_SECRET: 'x'.repeat(16),
   PORT: 0,
   HOST: '127.0.0.1',

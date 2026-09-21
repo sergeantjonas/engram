@@ -68,6 +68,14 @@ export interface ImportPlan {
    * sum them alongside per-episode rows.
    */
   degraded: number;
+  /**
+   * Plays by an account the allowlist does not name, left unwritten.
+   *
+   * Counted rather than dropped: a housemate's viewing is not a defect in the
+   * dump, and reporting it as one would make every import of a shared
+   * server's history exit non-zero.
+   */
+  foreign: number;
 }
 
 const rowName = (row: PlexHistoryRow): string => row.grandparentTitle ?? row.title ?? '(untitled)';
@@ -79,18 +87,33 @@ const rowName = (row: PlexHistoryRow): string => row.grandparentTitle ?? row.tit
  * these canonical keys to ids, so the mapping can be tested on real dumps
  * without any infrastructure.
  */
-export function planImport(rows: PlexHistoryRow[], resolved: ResolvedTitle[]): ImportPlan {
+export function planImport(
+  rows: PlexHistoryRow[],
+  resolved: ResolvedTitle[],
+  accountIds: readonly string[],
+): ImportPlan {
   const byPlexKey = new Map(resolved.map((entry) => [entry.key, entry]));
+  const allowed = new Set(accountIds);
 
   const titles = new Map<string, PlannedTitle>();
   const episodes = new Map<string, PlannedEpisode>();
   const events: PlannedEvent[] = [];
   const dropped: DroppedRow[] = [];
   let degraded = 0;
+  let foreign = 0;
 
   for (const row of rows) {
     const name = rowName(row);
     const historyKey = row.historyKey ?? null;
+
+    // Before anything is parsed, because the cheapest way not to keep a log
+    // of someone else's viewing is never to build the row. A row with no
+    // account is nobody's claim to make, so it is not the owner's either.
+    const account = row.accountID === undefined ? null : String(row.accountID);
+    if (account === null || !allowed.has(account)) {
+      foreign++;
+      continue;
+    }
 
     // Without a stable source id the row cannot be deduplicated, so re-running
     // the import would duplicate it.
@@ -159,7 +182,7 @@ export function planImport(rows: PlexHistoryRow[], resolved: ResolvedTitle[]): I
       // A dump row is dropped above unless it carries viewedAt, so anything
       // reaching here has a real instant behind it rather than a remembered one.
       watchedPrecision: 'exact',
-      accountId: row.accountID === undefined ? null : String(row.accountID),
+      accountId: account,
       raw: row,
     });
   }
@@ -170,5 +193,6 @@ export function planImport(rows: PlexHistoryRow[], resolved: ResolvedTitle[]): I
     events,
     dropped,
     degraded,
+    foreign,
   };
 }

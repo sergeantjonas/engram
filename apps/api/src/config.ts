@@ -32,6 +32,35 @@ const schema = z.object({
     .regex(/^[1-9]\d*$/, 'OWNER_GITHUB_USER_ID must be the numeric id, not the login'),
 
   /**
+   * Whose plays may be stored, as Plex account ids.
+   *
+   * The server is shared. A housemate's viewing landing in this record would
+   * be wrong twice over: the figures stop describing anyone, and the app
+   * starts keeping a log of what somebody else watched without being asked.
+   * So the allowlist is enforced where events are planned and a play by
+   * anyone else is dropped rather than written — filtering on read would
+   * leave the row on disk, which is the part that needed consent.
+   *
+   * Defaults to `1`, which is the server owner on every Plex install and was
+   * verified as this owner's on 2026-09-17: all 86 history rows carry it, and
+   * every other account id on the server returns nothing. Set it explicitly
+   * for a Plex Home profile or a second person's ingest.
+   */
+  PLEX_ACCOUNT_IDS: z
+    .string()
+    .default('1')
+    .transform((raw) =>
+      raw
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => id !== ''),
+    )
+    .refine(
+      (ids) => ids.length > 0 && ids.every((id) => /^(0|[1-9]\d*)$/.test(id)),
+      'PLEX_ACCOUNT_IDS must be one or more numeric Plex account ids, comma separated',
+    ),
+
+  /**
    * Signs the OAuth `state` and nothing else. The floor is what
    * `openssl rand -hex 32` produces, so a passphrase short enough to guess
    * cannot be substituted for it.
@@ -87,4 +116,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
  */
 export function loadDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
   return orThrow(schema.pick({ DATABASE_URL: true }).safeParse(env)).DATABASE_URL;
+}
+
+/** The same, for the allowlist the one-shot importers have to honour too. */
+export function loadPlexAccountIds(env: NodeJS.ProcessEnv = process.env): string[] {
+  return orThrow(schema.pick({ PLEX_ACCOUNT_IDS: true }).safeParse(env)).PLEX_ACCOUNT_IDS;
 }

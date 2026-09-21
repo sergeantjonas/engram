@@ -10,7 +10,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { and, eq, sql } from 'drizzle-orm';
-import { loadDatabaseUrl } from '../config.js';
+import { loadDatabaseUrl, loadPlexAccountIds } from '../config.js';
 import { createDatabase } from '../db/client.js';
 import { episodes, titles, watchEvents } from '../db/schema.js';
 import { type PlexHistoryRow, planImport, type ResolvedTitle } from './plex-dump.js';
@@ -50,7 +50,8 @@ if (report.dump && report.dump !== dumpPath) {
 console.log(`dump:   ${dumpPath} (${dump.rows.length} rows)`);
 console.log(`report: ${reportPath} (${report.resolved.length} titles)\n`);
 
-const plan = planImport(dump.rows, report.resolved);
+const accountIds = loadPlexAccountIds();
+const plan = planImport(dump.rows, report.resolved, accountIds);
 
 const { db, sql: connection } = createDatabase(loadDatabaseUrl());
 
@@ -158,6 +159,12 @@ console.log(`episodes: ${inserted.episodes} known`);
 console.log(
   `events:   ${inserted.events} new of ${plan.events.length} planned, ${counts?.events ?? 0} in database`,
 );
+
+if (plan.foreign > 0) {
+  console.log(
+    `\n${plan.foreign} play(s) by an account outside the allowlist (${accountIds.join(', ')}), not written.`,
+  );
+}
 
 if (plan.degraded > 0) {
   console.log(`\n${plan.degraded} play(s) recorded against the show, with no episode number.`);

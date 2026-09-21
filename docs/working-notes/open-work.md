@@ -208,11 +208,15 @@ the viewer wants of a title. The SPA calls all four.
    82 because a title with no events fell to a default rather than to the
    rule, and corrected it matched one. See [web-design.md](web-design.md).
 
-3. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
-   at the ingest boundary, dropping a play by anyone else rather than storing
-   it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land
-   before webhooks do: the backfill is owner-only by property of the Plex
-   endpoint, and Tautulli fires for every user on the server.
+3. ~~**Owner-only ingest**~~ — landed 2026-09-21 as `PLEX_ACCOUNT_IDS`,
+   enforced in `planImport` before a row is parsed. Defaults to the server
+   owner rather than to everyone, refuses an allowlist that names nobody, and
+   will not keep a play whose account the source did not state. A foreign play
+   is counted rather than reported as a failure, because a housemate watching
+   something is not a defect in the dump. Nothing about the stored record
+   changed — all 86 history rows are account 1 — which is the point: it is
+   there for the webhooks below, which fire for every viewer on the server.
+   Reasoning in [ingest-architecture.md](ingest-architecture.md).
 4. **Webhook receivers** — Tautulli and Sonarr, per
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs

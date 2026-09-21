@@ -3,6 +3,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { titlesQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { topOfList } from '../title/order.ts';
+import { preferredKind } from '../wall/kindMemory.ts';
 
 /**
  * Text, not icons, at 9px mono — the way the design draws it.
@@ -28,6 +29,8 @@ export function Rail() {
     select: (state) => state.location.pathname.startsWith('/titles/'),
   });
 
+  const remembered = preferredKind();
+
   return (
     <nav
       aria-label="Sections"
@@ -46,6 +49,10 @@ export function Rail() {
       </Link>
       <Link
         to="/"
+        // The one way back to the wall that carries no filter of its own, so
+        // it carries the last one chosen. Everything else — a card, a row —
+        // passes along the kind it was already showing.
+        search={remembered ? { kind: remembered } : {}}
         // Exact on the path, indifferent to the search: filtering the wall does
         // not leave it, and the rail would otherwise go dark the moment anyone
         // clicked a chip — losing the one piece of state it exists to show.

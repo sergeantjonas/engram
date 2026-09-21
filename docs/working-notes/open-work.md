@@ -182,8 +182,11 @@ the viewer wants of a title. The SPA calls all four.
    - ~~**A kind filter on the wall.**~~ Landed 2026-09-21. *All · Series ·
      Movies* as one control ahead of the chips, which then count within it.
      Under Movies the three run chips are not drawn — they cannot ever match —
-     and the next-up band goes with them. Reasoning in
-     [web-design.md](web-design.md).
+     and the next-up band goes with them. The title page's list pane got the
+     same control the same day, because it sorts by state alone and was
+     putting the run being worked through between two movies. The choice
+     travels on the links rather than being redirected to, so Back still
+     goes back. Reasoning in [web-design.md](web-design.md).
    - ~~**Somewhere for the backlog.**~~ Settled 2026-09-21 by not building
      it. Movies plus *Unwatched* is the backlog, 27 of them, and a chip saying
      that in one word would be a synonym for two controls already there. What

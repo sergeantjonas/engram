@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { posterUrl, type TitleState, type TitleSummary } from '../api/titles.ts';
 import { Tip } from '../shell/Tooltip.tsx';
 import { formatSince } from '../title/format.ts';
+import type { KindFilter } from './facets.ts';
 
 export const STATE_LABEL: Record<TitleState, string> = {
   unwatched: 'Unwatched',
@@ -27,7 +28,7 @@ const STATE_BAR: Record<TitleState, string> = {
  */
 const shortTitle = (name: string) => name.split(':')[0]?.trim() ?? name;
 
-export function TitleCard({ title }: { title: TitleSummary }) {
+export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilter | undefined }) {
   const poster = posterUrl(title.posterPath);
   const since = formatSince(title.lastWatchedAt, title.lastWatchedPrecision);
   const flags = [
@@ -41,6 +42,9 @@ export function TitleCard({ title }: { title: TitleSummary }) {
       <Link
         to="/titles/$id"
         params={{ id: title.id }}
+        // The pane on the other side opens on what the wall was showing,
+        // rather than widening back out the moment a title is opened.
+        search={kind ? { kind } : {}}
         aria-label={`${title.name}, ${STATE_LABEL[title.state]}`}
         className="block rounded-t hover:ring-2 hover:ring-dim"
       >

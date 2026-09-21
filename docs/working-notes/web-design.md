@@ -133,17 +133,22 @@ and three figures, and the headings under it already say how many of what
 there are — and it keeps the title you are on, so narrowing the list is not
 also a navigation.
 
-**The choice is remembered, the URL still decides.** An address that names a
-kind is obeyed, because a filter is a place and the back button has to return
-to it. An address that names none opens on the last kind chosen, which is
-what arriving from the rail does, and what every link written before the
-control existed does. Without that, picking Movies and opening a title
-dropped you back into the whole library.
+**The choice travels on the links, and the URL still decides.** Picking Movies
+and opening a title used to drop you back into the whole library. Every link
+that already knows a kind now carries it: a card to the title it opens, a row
+to the next title, a chip to the next filter.
 
-`all` is stored rather than cleared, and that distinction is the mechanism:
-"not chosen" has to differ from "chosen everything", or choosing All would be
-undone by the default it just overrode and the two would redirect at each
-other.
+The rail's HOME is the one way back to the wall with no filter of its own to
+pass along, so it is the only place that reads the remembered choice. That
+matters more than it sounds. The first attempt redirected any un-kinded
+address to the remembered kind, which works until you press Back — the pop
+lands on the address with no kind and is redirected straight forward again,
+so Back does nothing. An address is obeyed as written; only a link that has
+nothing to say about kind consults what was chosen last.
+
+The pane keeps the title being read whatever the filter says. A bookmark can
+name a kind that excludes it, and a list that does not contain the page it
+belongs to has nothing to mark as where you are.
 
 | Chip | What it means |
 | --- | --- |

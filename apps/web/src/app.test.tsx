@@ -157,40 +157,66 @@ describe('remembering the kind', () => {
     title({ id: 'show-1', name: 'Bleach' }),
     title({ id: 'film-1', kind: 'movie', key: 'movie:tmdb:2', name: 'Heat' }),
   ];
-
-  it('opens an address that names no kind on the last one chosen', async () => {
+  const stub = () =>
     stubApi((url) =>
       url.endsWith('/titles') ? json({ titles: library }) : json({ isOwner: true }),
     );
-    const first = await renderAt('/');
+
+  it('carries the kind from the wall onto the title it opens', async () => {
+    stub();
+    await renderAt('/?kind=movie');
+    await screen.findByRole('heading', { name: 'Heat' });
+
+    // The pane on the other side opens on what the wall was showing, rather
+    // than widening out the moment a title is opened.
+    expect(screen.getByRole('link', { name: /Heat/ }).getAttribute('href')).toBe(
+      '/titles/film-1?kind=movie',
+    );
+  });
+
+  it('sends the rail back to the wall on the last kind chosen', async () => {
+    stub();
+    const router = await renderAt('/');
     await screen.findByRole('heading', { name: 'Bleach' });
 
     screen.getByRole('link', { name: /Movies/ }).click();
-    await waitFor(() => expect(first.state.location.search).toMatchObject({ kind: 'movie' }));
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ kind: 'movie' }));
 
-    // A second arrival with nothing in the address — the rail, a bookmark, a
-    // link written before the choice existed.
+    // The rail is the one way back with no filter of its own to pass along.
     cleanup();
-    const second = await renderAt('/');
-    await waitFor(() => expect(second.state.location.search).toMatchObject({ kind: 'movie' }));
+    await renderAt('/titles/show-1');
+    const rail = await screen.findByRole('navigation', { name: 'Sections' });
+    expect(within(rail).getByRole('link', { name: 'HOME' }).getAttribute('href')).toBe(
+      '/?kind=movie',
+    );
   });
 
-  it('treats choosing All as a choice rather than as no choice', async () => {
-    // Stored rather than cleared, or All would be undone by the default it
-    // just overrode and the two would redirect at each other.
-    stubApi((url) =>
-      url.endsWith('/titles') ? json({ titles: library }) : json({ isOwner: true }),
-    );
-    const first = await renderAt('/?kind=movie');
+  it('forgets the kind once All is chosen', async () => {
+    stub();
+    const router = await renderAt('/?kind=movie');
     await screen.findByRole('heading', { name: 'Heat' });
 
     screen.getByRole('link', { name: /All/ }).click();
-    await waitFor(() => expect(first.state.location.search).toEqual({}));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
 
     cleanup();
-    const second = await renderAt('/');
+    await renderAt('/titles/show-1');
+    const rail = await screen.findByRole('navigation', { name: 'Sections' });
+    expect(within(rail).getByRole('link', { name: 'HOME' }).getAttribute('href')).toBe('/');
+  });
+
+  it('leaves an address that names no kind alone, so Back still goes back', async () => {
+    stub();
+    const router = await renderAt('/');
     await screen.findByRole('heading', { name: 'Bleach' });
-    expect(second.state.location.search).toEqual({});
+
+    screen.getByRole('link', { name: /Movies/ }).click();
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ kind: 'movie' }));
+
+    // Redirecting an un-kinded address to the remembered kind would make this
+    // a no-op, which is the whole reason the memory rides on links instead.
+    router.history.back();
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
   });
 });
 
@@ -233,6 +259,41 @@ describe('the title pane', () => {
     expect(within(pane).getByRole('link', { name: 'Series' }).getAttribute('aria-current')).toBe(
       'page',
     );
+  });
+
+  it('keeps the title being read in the list whatever the filter says', async () => {
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({ titles: library })
+        : url.includes('/titles/')
+          ? json({
+              title: { ...library[1], onDisk: null },
+              ids: {},
+              backdropPath: null,
+              figures: {
+                plays: 0,
+                rewatched: 0,
+                manualPlays: 0,
+                firstWatchedAt: null,
+                firstWatchedPrecision: null,
+                lastWatchedAt: null,
+                lastWatchedPrecision: null,
+              },
+              recentActivity: [],
+              seasons: [],
+            })
+          : json({ isOwner: true }),
+    );
+    // A bookmark can name a kind that excludes the title it points at, and a
+    // pane that does not contain the page it belongs to marks nothing as
+    // where you are.
+    await renderAt('/titles/film-1?kind=show');
+
+    const pane = await screen.findByRole('navigation', { name: 'Every title' });
+    expect(within(pane).getByRole('link', { name: /Heat/ }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    expect(within(pane).getByRole('link', { name: /Bleach/ })).toBeDefined();
   });
 });
 

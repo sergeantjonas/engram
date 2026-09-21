@@ -196,7 +196,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
         <ul className={GRID}>
           {shown.map((title) => (
             <li key={title.id}>
-              <TitleCard title={title} />
+              <TitleCard title={title} kind={kind} />
             </li>
           ))}
         </ul>

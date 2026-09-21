@@ -45,7 +45,12 @@ export function TitleList({
   // One clock for the whole render, so two rows cannot disagree about what is
   // drifting — the same rule the wall's chip counts follow.
   const now = new Date();
-  const shown = kind ? titles.filter((title) => title.kind === kind) : titles;
+  // The title being read stays in the list whatever the filter says. A
+  // bookmark can name a kind that excludes it, and a pane that does not
+  // contain the page it belongs to has nothing marked as where you are.
+  const shown = kind
+    ? titles.filter((title) => title.kind === kind || title.id === currentId)
+    : titles;
 
   return (
     <nav
@@ -97,7 +102,7 @@ export function TitleList({
             <ul>
               {group.titles.map((title) => (
                 <li key={title.id}>
-                  <Row title={title} current={title.id === currentId} now={now} />
+                  <Row title={title} current={title.id === currentId} now={now} kind={kind} />
                 </li>
               ))}
             </ul>
@@ -108,7 +113,17 @@ export function TitleList({
   );
 }
 
-function Row({ title, current, now }: { title: TitleSummary; current: boolean; now: Date }) {
+function Row({
+  title,
+  current,
+  now,
+  kind,
+}: {
+  title: TitleSummary;
+  current: boolean;
+  now: Date;
+  kind: KindFilter | undefined;
+}) {
   const poster = posterUrl(title.posterPath);
   const since = formatSince(title.lastWatchedAt, title.lastWatchedPrecision, now);
   // Drift is the one thing the bar says beyond how far in you are, and it is
@@ -119,6 +134,7 @@ function Row({ title, current, now }: { title: TitleSummary; current: boolean; n
     <Link
       to="/titles/$id"
       params={{ id: title.id }}
+      search={kind ? { kind } : {}}
       aria-current={current ? 'page' : undefined}
       className={`flex items-center gap-[9px] px-3 py-1.5 ${
         current ? 'bg-raise shadow-[inset_2px_0_0_var(--color-jade)]' : 'hover:bg-surf'

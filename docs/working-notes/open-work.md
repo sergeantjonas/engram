@@ -194,15 +194,26 @@ the viewer wants of a title. The SPA calls all four.
   the reason as part of the mark, or leave it and treat the bulk mark as the
   later and better-informed claim.
 - **How long a show sits before it is drifting.** `DRIFTING_AFTER_DAYS` in
-  `apps/web/src/wall/facets.ts` is 180. It is a judgement made against a
-  library of eleven: at 180 it separates the four genuinely abandoned from the
-  five still in rotation, where 90 would have called almost everything
-  drifting. Worth revisiting once the library is bigger, or once `dropped` can
-  be set and says the same thing explicitly.
+  `apps/web/src/wall/facets.ts` is 180. It was judged against a library of
+  eleven where it separated four abandoned shows from five in rotation — and
+  that library no longer exists to judge against. As of 2026-09-21 the record
+  holds twelve titles of which ten are finished, so exactly two are in progress
+  and the threshold decides one of them. There is nothing left to tune it on.
+  Revisit when enough is in progress for the answer to be observable; `dropped`
+  is settable now and says the same thing explicitly, which may make the facet
+  redundant rather than mistuned.
 - **Whether legacy-agent libraries exist here.** If they do, the season and
   episode in a legacy GUID are the only carrier of that information and
   `parseGuid` currently discards it. See
   [ingest-architecture.md](ingest-architecture.md).
+
+  Not answerable from anything captured, checked 2026-09-21. History rows carry
+  no ids at all, and `tools/out/resolved-ids.json` stores the *parsed* ids
+  rather than the raw `Guid` array, so a grep of it for `com.plexapp.agents`
+  finds nothing whether or not a legacy library exists. It needs one live call
+  to `/library/sections/{key}/all?includeGuids=1` and a look at the raw array —
+  the same call the library walk makes, so building the walk answers it for
+  free.
 
 ## Done
 

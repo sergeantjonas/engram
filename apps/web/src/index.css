@@ -33,4 +33,15 @@
     background-color: var(--color-bg);
     color: var(--color-tx);
   }
+
+  /* Tailwind's Preflight gives buttons the browser's default arrow. On a page
+     where the chips are links but almost everything else that does something
+     is a button — every episode cell, every mark control, sign out — that
+     reads as a page where nothing is clickable. Disabled ones keep the arrow,
+     because they are not. */
+  button:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }

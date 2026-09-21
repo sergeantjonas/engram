@@ -52,7 +52,7 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
   if (season.season === 0) {
     return (
       <details className="space-y-1.5">
-        <summary className={`cursor-pointer ${HEADING}`}>
+        <summary className={HEADING}>
           {heading} · {seen} of {season.episodes.length}
         </summary>
         {/* Under the summary rather than beside it: a button inside a

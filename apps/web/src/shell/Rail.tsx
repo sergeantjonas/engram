@@ -31,7 +31,11 @@ export function Rail() {
   return (
     <nav
       aria-label="Sections"
-      className="flex w-[58px] flex-none flex-col items-center gap-1.5 border-r border-line bg-surf py-3.5"
+      // Sticky rather than stretched: as a flex child it would otherwise be as
+      // tall as the page and have nothing to stick to, so it takes a viewport
+      // of its own height and stays put. The library is long enough now that
+      // navigation scrolling away is navigation you cannot reach.
+      className="sticky top-0 z-20 flex h-dvh w-[58px] flex-none flex-col items-center gap-1.5 self-start border-r border-line bg-surf py-3.5"
     >
       <Link
         to="/"

@@ -48,7 +48,9 @@ export function TopBar() {
   }
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-3.5 gap-y-2.5 border-b border-line px-[18px] py-3">
+    // Opaque, because sticky means the page now scrolls underneath it and the
+    // header is transparent to the body otherwise.
+    <header className="sticky top-0 z-10 flex min-h-topbar flex-wrap items-center justify-between gap-x-3.5 gap-y-2.5 border-b border-line bg-bg px-[18px] py-3">
       <search className="flex min-w-0 flex-1 basis-55 items-center">
         <form
           className="flex min-w-0 flex-1 items-center"

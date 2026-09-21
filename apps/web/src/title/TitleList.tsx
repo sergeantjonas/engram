@@ -38,7 +38,7 @@ export function TitleList({ titles, currentId }: { titles: TitleSummary[]; curre
       {/* Pinned and scrolling on its own above the fold: this is a navigator,
           and a library of three hundred would otherwise make the page as tall
           as the list and drag the title off the top of it. */}
-      <div className="py-2.5 md:sticky md:top-0 md:max-h-dvh md:overflow-y-auto">
+      <div className="py-2.5 md:sticky md:top-topbar md:max-h-[calc(100dvh-var(--spacing-topbar))] md:overflow-y-auto">
         {groupedTitles(titles).map((group) => (
           <div key={group.state}>
             <h2 className="px-3.5 pt-2.5 pb-1.5 font-mono text-[8px] tracking-[.14em] text-faint uppercase">

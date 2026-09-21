@@ -44,6 +44,19 @@ the distinction between a label and a figure.
 
 ## The system
 
+**The chrome stays on screen.** The rail and the top bar are both sticky, added
+2026-09-21 once the library went from 12 titles to 82 and the wall grew past a
+screen — navigation that scrolls away is navigation you have to scroll back for.
+The page keeps the scroll, rather than the main column taking it, because the
+router's `scrollRestoration` is on the window and moving it would mean
+restoring scroll by hand.
+
+Their height is a token, `--spacing-topbar`, not a number written twice. The
+title page's list pane sticks to the same scrollport, so it offsets by exactly
+that much or it slides under the bar; the bar is held to it as a floor, so the
+offset can only ever be right or generous. Measured at 57px, which is what the
+token says.
+
 **Palette.** Espresso, not slate, so artwork is the only saturated thing on
 screen.
 

@@ -49,6 +49,7 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
 
   // Specials are outside the fraction on the wall, so they are folded here
   // too: an OVA that was never played should not read as a hole in the run.
+  // The page also puts them last — see the order the seasons are drawn in.
   if (season.season === 0) {
     return (
       <details className="space-y-1.5">

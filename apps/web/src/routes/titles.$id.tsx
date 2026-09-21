@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, Link } from '@tanstack/react-router';
 import { ApiError } from '../api/client.ts';
-import { titleQuery, titlesQuery } from '../api/titles.ts';
+import { type TitleDetail, titleQuery, titlesQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { Activity } from '../title/Activity.tsx';
 import { IntentControls } from '../title/Intent.tsx';
@@ -93,7 +93,7 @@ function TitlePage() {
           >
             {/* Seasons sit close together: the run is one object, and a
               page-worth of air between each reads as unrelated grids. */}
-            {seasons.map((season) => (
+            {runFirst(seasons).map((season) => (
               <SeasonGrid key={season.season} season={season} titleId={id} />
             ))}
           </Section>
@@ -103,6 +103,20 @@ function TitlePage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Season 0 last, whatever order the API sent.
+ *
+ * It arrives first because that is where it sorts, and the design leaves the
+ * page to decide. Four titles here open on a specials count in the dozens —
+ * House of the Dragon has 89 behind-the-scenes clips, The Boys 76 — so
+ * "Specials · 0 of 89" was the first thing the page said about a show whose
+ * run is complete. The count is honest and stays; it just goes at the bottom,
+ * where a bonus disc belongs.
+ */
+function runFirst(seasons: TitleDetail['seasons']): TitleDetail['seasons'] {
+  return [...seasons].sort((a, b) => Number(a.season === 0) - Number(b.season === 0));
 }
 
 function TitleError({ error }: ErrorComponentProps) {

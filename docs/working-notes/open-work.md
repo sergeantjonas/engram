@@ -193,14 +193,6 @@ the viewer wants of a title. The SPA calls all four.
   explicitly denied. Options: exclude declared holes from a bulk mark, clear
   the reason as part of the mark, or leave it and treat the bulk mark as the
   later and better-informed claim.
-- **What to do with a season 0 that is mostly featurettes.** House of the
-  Dragon's title page opens with `Specials · 0 of 89`: TMDB's season 0 for it
-  is 89 behind-the-scenes clips, and `backfill:episodes` pulled every one. The
-  count is honest and season 0 is already excluded from the fraction, the
-  facets and the figures, so nothing is wrong — but a line saying you have not
-  watched 89 featurettes is the first thing the page says about the show.
-  Options: collapse a season 0 above some size, drop `episode_group`-less
-  specials at backfill time, or leave it. Nothing is broken either way.
 - **How long a show sits before it is drifting.** `DRIFTING_AFTER_DAYS` in
   `apps/web/src/wall/facets.ts` is 180. It is a judgement made against a
   library of eleven: at 180 it separates the four genuinely abandoned from the
@@ -214,6 +206,14 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-21** — Settled: a large season 0 goes to the bottom of the page.
+  Nothing is dropped and nothing stops being imported — the count is honest and
+  TMDB's data is not ours to throw away — but the page draws the run first and
+  the specials last, where a bonus disc belongs. House of the Dragon opened on
+  `Specials · 0 of 89` about a show whose run is complete; The Boys has 76,
+  Dexter 42, Fallout 24, so it was systemic rather than one show's quirk. The
+  API still sends season 0 first, which is where it sorts; ordering it is the
+  page's job, as the design says.
 - **2026-09-21** — Settled: keep Plex's `viewCount`. `watch_event.plays` holds
   how many plays one row stands for, where the source counts instead of
   enumerating, and `watch_state.play_count` became

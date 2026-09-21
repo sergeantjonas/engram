@@ -532,8 +532,13 @@ describe('the title page', () => {
       screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' }),
     ).toBeDefined();
     expect(screen.getByRole('region', { name: 'Season 2' })).toBeDefined();
-    // Folded, not hidden: the specials are there for whoever opens them.
+    // Folded, not hidden: the specials are there for whoever opens them — and
+    // last, so a show with 89 featurettes does not open on a count of them.
     expect(screen.getByText('Specials · 0 of 1')).toBeDefined();
+    const headings = screen
+      .getAllByText(/^(Specials|Season \d+) · /)
+      .map((node) => node.textContent?.split(' · ')[0]);
+    expect(headings).toEqual(['Season 2', 'Specials']);
 
     // Seen wins over a stale reason, but the reason is still there to clear;
     // and a year-precision watch prints the year alone.

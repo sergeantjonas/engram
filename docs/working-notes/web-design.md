@@ -173,8 +173,11 @@ Around it:
   days. Its heading says "recent plays only" when the API's cap means older
   plays are missing, where the mockup's carries the span of dates — a span read
   off a truncated list would be a claim the data cannot support.
-- The grid itself, grouped by season, each season headed `SEASON 2 · ONE
-  MISSING` with a **Mark season watched** control. That control is the same one
+- The grid itself, grouped by season and the run before the specials, each
+  season headed `SEASON 2 · ONE MISSING` with a **Mark season watched**
+  control. Season 0 arrives first from the API and is drawn last: four titles
+  here carry dozens of featurettes, and `Specials · 0 of 89` was the first
+  thing House of the Dragon's page said about a completed run. That control is the same one
   the add screen uses.
 
   Built as a popover holding one free-text date field, and in three places

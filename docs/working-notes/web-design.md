@@ -135,9 +135,16 @@ verb in this app rather than something behind a settings page.
 The episode grid is the best thing in any of the mockups and survives intact.
 Around it:
 
-- Header: name in Archivo display, then `2023 · tvdb 392276 · tmdb 111110 ·
-  imdb tt11737520` in mono, and a presence pill saying whether the files are
-  still there.
+- Header: a 158px backdrop the 92px poster overlaps by 46px, then the name in
+  Archivo display, `2023 · tvdb 392276 · tmdb 111110 · imdb tt11737520` in
+  mono, and a presence pill saying whether the files are still there.
+
+  The backdrop's height is `clamp(158px, 15vw, 300px)` rather than the mockup's
+  fixed 158px. A backdrop is 16:9 and the band is full-bleed, so its height
+  decides what fraction of the picture survives: 158px is a third of the image
+  in the mockup's 800px frame and a sixth in a 1700px window, which is a strip
+  of the middle rather than a composition. Fifteen percent of the width holds
+  roughly the fraction the design was drawn at.
 
   Built differently on purpose: the year sits with the kind, the state and the
   pill on one line, and the ids are a quieter mono line under it. Kind and

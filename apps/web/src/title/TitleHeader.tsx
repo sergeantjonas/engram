@@ -102,11 +102,20 @@ export function TitleHeader({
       {/* The still is the page's ground, so it bleeds past the 18px the rest
           of the content is padded by and fades into the page rather than
           ending at an edge. Nothing but atmosphere sits on it — the name and
-          everything else stay on the solid part below. */}
+          everything else stay on the solid part below.
+
+          The height grows with the width instead of holding the mockup's
+          158px. A backdrop is 16:9, so a full-bleed band crops it to whatever
+          fraction its height is of the scaled image: 158px was a third of it
+          in an 800px frame and is a sixth in a 1700px window, which is a strip
+          of the middle rather than a picture. Fifteen percent of the width
+          keeps roughly the fraction the design was drawn at, floored so a
+          narrow window still gets a band and capped so a wide one does not get
+          a poster. */}
       {backdrop === null ? null : (
         <div
           aria-hidden="true"
-          className="relative -mx-[18px] -mt-[18px] -mb-[46px] h-[158px] bg-cover bg-[center_28%] after:absolute after:inset-0 after:bg-gradient-to-t after:from-bg after:from-3% after:via-bg/55 after:via-60% after:to-bg/10"
+          className="relative -mx-[18px] -mt-[18px] -mb-[46px] h-[clamp(158px,15vw,300px)] bg-cover bg-[center_28%] after:absolute after:inset-0 after:bg-gradient-to-t after:from-bg after:from-3% after:via-bg/55 after:via-60% after:to-bg/10"
           style={{ backgroundImage: `url(${backdrop})` }}
         />
       )}

@@ -1,0 +1,168 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to main while the first is still publishing would race two
+# builds onto the same moving tag. Cancelling the older one is safe: every
+# deploy pins a sha, so only `main` is contested and only the newest is wanted.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/${{ github.repository_owner }}/engram-api
+  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/engram-web
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The same command the owner runs before committing: typecheck both
+      # passes, lint, the Vitest suite and the node:test tools suite.
+      # No database service: every test drives routes through `app.inject()`
+      # with a stubbed db, which is the whole reason `buildApp` takes one.
+      - run: pnpm run verify:cc
+
+      # Generated and committed, so a stale copy is a real divergence rather
+      # than noise: the router would resolve routes the source no longer has.
+      # The Vite plugin regenerates it as a side effect of building, which is
+      # why this builds rather than calling a generator — there is no CLI.
+      - name: routeTree.gen.ts is current
+        run: |
+          pnpm --filter @engram/web run build
+          git diff --exit-code -- apps/web/src/routeTree.gen.ts
+
+      # Drizzle writes SQL and a meta snapshot from schema.ts. Hand-editing
+      # either desynchronises them, and the failure surfaces as a migration
+      # that does not match the types long after the commit that caused it.
+      - name: migrations match the schema
+        run: |
+          pnpm --filter @engram/api run db:generate
+          git diff --exit-code -- apps/api/drizzle
+
+  images:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # A repository variable, not a secret: it is in the bundle the moment
+      # anyone views source. Asserted here so an unset one fails the run
+      # rather than shipping an image that calls localhost in production.
+      - name: the API origin is set
+        run: |
+          : "${VITE_API_ORIGIN:?set the VITE_API_ORIGIN repository variable}"
+          echo "building web against $VITE_API_ORIGIN"
+        env:
+          VITE_API_ORIGIN: ${{ vars.VITE_API_ORIGIN }}
+
+      - id: api-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.API_IMAGE }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=main
+      - id: web-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.WEB_IMAGE }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=main
+
+      # Built and smoked before either is pushed, so a commit's sha- tag can
+      # never name an API with no web image beside it. The second build of
+      # each is a cache hit and costs almost nothing.
+      - name: build api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: engram-api:smoke
+          cache-from: type=gha,scope=engram-api
+          cache-to: type=gha,scope=engram-api,mode=max
+
+      - name: build web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: engram-web:smoke
+          build-args: VITE_API_ORIGIN=${{ vars.VITE_API_ORIGIN }}
+          cache-from: type=gha,scope=engram-web
+          cache-to: type=gha,scope=engram-web,mode=max
+
+      # The entrypoint has to be overridden: the real one runs migrations
+      # first, against a database this job does not have, and would fail for
+      # a reason that has nothing to do with the image being sound.
+      - name: smoke api
+        run: |
+          docker run --rm --entrypoint node engram-api:smoke \
+            -e "import('./dist/app.js').then(m => { if (typeof m.buildApp !== 'function') throw new Error('buildApp missing'); })"
+
+      - name: smoke web
+        run: |
+          docker run -d --name web-smoke -p 2011:2011 engram-web:smoke
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:2011/healthz >/dev/null; then ok=1; break; fi
+            sleep 1
+          done
+          # A reload on /titles/<id> must reach the SPA rather than a 404 from
+          # a server that has never heard of the route.
+          curl -fsS http://127.0.0.1:2011/titles/deep-link >/dev/null
+          docker logs web-smoke
+          docker rm -f web-smoke
+          test -n "$ok"
+
+      - name: push api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.api-meta.outputs.tags }}
+          labels: ${{ steps.api-meta.outputs.labels }}
+          cache-from: type=gha,scope=engram-api
+
+      - name: push web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          build-args: VITE_API_ORIGIN=${{ vars.VITE_API_ORIGIN }}
+          tags: ${{ steps.web-meta.outputs.tags }}
+          labels: ${{ steps.web-meta.outputs.labels }}
+          cache-from: type=gha,scope=engram-web

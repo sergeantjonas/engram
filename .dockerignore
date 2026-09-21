@@ -1,0 +1,29 @@
+# The build context is the repo root, because pnpm resolves a workspace from
+# there. Everything the images do not need is excluded here rather than in the
+# Dockerfiles, so both get the same context and the daemon never uploads it.
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.github
+
+# Viewing data and account ids. These are already git-ignored; excluding them
+# again matters because a build context is not a git checkout — it is whatever
+# is on disk, including the dumps the tools write.
+tools/out
+backups
+
+.env
+.env.*
+!.env.example
+
+# Nothing an image runs needs the planning surface or the local tooling.
+docs
+*.md
+!README.md
+.claude
+.cursor
+.vscode
+coverage
+*.log

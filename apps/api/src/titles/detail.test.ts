@@ -44,6 +44,7 @@ const identityRow = {
   tmdb_id: '111110',
   tvdb_id: '392276',
   imdb_id: 'tt11737520',
+  overview: 'Gold Roger was known as the Pirate King.',
   plays: 19,
   rewatched: 4,
   first_watched_at: '2026-03-14T20:00:00+00:00',
@@ -170,6 +171,7 @@ describe('titleDetail', () => {
     const result = await detail([episodeRow()]);
 
     expect(result?.ids).toEqual({ tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' });
+    expect(result?.overview).toBe('Gold Roger was known as the Pirate King.');
     expect(result?.figures).toMatchObject({
       plays: 19,
       rewatched: 4,

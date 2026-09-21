@@ -1,9 +1,9 @@
 # Web depth
 
-**Status:** Plan — scoped 2026-09-21 from a review of the three built screens
-against [web-design.md](web-design.md). Nothing here has landed. Arcs are
-ordered; chunks inside an arc are one commit each, and each one deploys to a
-live record — see Shipping against production.
+**Status:** In progress — scoped 2026-09-21 from a review of the three built
+screens against [web-design.md](web-design.md); arc 1 chunk 1 landed the same
+day. Arcs are ordered; chunks inside an arc are one commit each, and each one
+deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
 type split, state vocabulary and the "a control that does nothing is worse
@@ -107,13 +107,19 @@ is a `compose down -v` from a retry. What that changes:
 
 The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
 
-1. **Send the overview.** `GET /titles/:id` adds `overview`; `TitleDetail`
-   in [apps/web/src/api/titles.ts](../../apps/web/src/api/titles.ts) mirrors
-   it. The header draws it under the identity row, clamped to two lines with a
-   "more" toggle that expands in place. A film page today is a header and an
-   activity list and reads as empty; this is what fills it. Also draw the
-   candidate's poster and first line of overview on the add screen's rows,
-   which already receive both from `GET /search`.
+1. ~~**Send the overview.**~~ Landed 2026-09-21. `GET /titles/:id` carries
+   `overview` beside `backdropPath`, `asStranger` passes it through, and
+   `TitleDetail` in [apps/web/src/api/titles.ts](../../apps/web/src/api/titles.ts)
+   mirrors it. The header draws it clamped to two lines with a "more" toggle
+   that opens in place; the toggle appears only when the clamp is hiding
+   something, measured off the box rather than guessed from the length. Two
+   departures from the plan: it sits under the poster row rather than beside
+   the ids, because that row's height is what keeps the name off the hero and
+   a synopsis opening in place there would push it up; and the add screen's
+   rows were left alone — `CandidateRow` has drawn the poster and a two-line
+   clamp of the overview since the espresso palette landed, so the review's
+   "candidates without artwork" was stale. Null draws nothing, which is what
+   production shows for a title `backfill:metadata` has not reached.
 2. **Episode synopsis and still.** Two nullable columns on `episode`,
    `overview` and `still_path`, filled by `backfill:episodes` from the season
    payload it already parses. `EpisodeCell` in `GET /titles/:id` carries both.

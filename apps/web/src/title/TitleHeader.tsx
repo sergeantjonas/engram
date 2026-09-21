@@ -1,3 +1,4 @@
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { backdropUrl, posterUrl } from '../api/titles.ts';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
@@ -64,12 +65,62 @@ function Identity({ ids, kind }: { ids: ExternalIds; kind: TitleSummary['kind'] 
   return <p className="font-mono text-[10px] text-faint">{named.join(' · ')}</p>;
 }
 
+/**
+ * What the title is, in TMDB's words, under what the record says about it.
+ *
+ * Clamped to two lines with a toggle that opens it in place, and the toggle
+ * only where the clamp is actually hiding something: a "more" that reveals
+ * nothing is a control that does nothing. Whether it hides anything is read
+ * off the box rather than guessed from the length, so it follows the width.
+ */
+function Overview({ text }: { text: string | null }) {
+  const id = useId();
+  const [expanded, setExpanded] = useState(false);
+  const [clipped, setClipped] = useState(false);
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  // Measured only while clamped, and before paint: open, the box fits its
+  // text by definition, and a reading taken then would drop the "less" the
+  // viewer is about to click. Re-running on collapse restores the clamp's
+  // reading in the same frame, so the toggle never blinks out under focus.
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || expanded || typeof ResizeObserver === 'undefined') return;
+    const measure = () => setClipped(node.scrollHeight > node.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [expanded]);
+
+  if (text === null) return null;
+  return (
+    <div className="mt-3 max-w-prose">
+      <p ref={ref} id={id} className={`text-sm text-dim ${expanded ? '' : 'line-clamp-2'}`}>
+        {text}
+      </p>
+      {clipped || expanded ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={id}
+          onClick={() => setExpanded((value) => !value)}
+          className="text-xs text-faint underline decoration-line underline-offset-2 hover:text-tx"
+        >
+          {expanded ? 'less' : 'more'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function TitleHeader({
   title,
   ids,
   backdropPath,
+  overview,
   figures,
-}: Pick<TitleDetail, 'title' | 'ids' | 'backdropPath' | 'figures'>) {
+}: Pick<TitleDetail, 'title' | 'ids' | 'backdropPath' | 'overview' | 'figures'>) {
   const poster = posterUrl(title.posterPath, 'w500');
   const backdrop = backdropUrl(backdropPath);
   const isShow = title.kind === 'show';
@@ -147,6 +198,13 @@ export function TitleHeader({
           </div>
         </div>
       </div>
+
+      {/* Below the poster row rather than beside the ids: the row's height is
+          what keeps the name off the hero, and a synopsis that opens in place
+          would push it up there. Keyed on the title because the route swaps
+          `data` in place when the pane navigates, and one title's "more" must
+          not arrive open on the next. */}
+      <Overview key={title.id} text={overview} />
 
       {/* Only the readings that exist, and no box at all when none do: an empty
           ruled strip under a title nobody has watched says less than nothing. */}

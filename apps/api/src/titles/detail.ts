@@ -126,6 +126,8 @@ export interface TitleDetail {
    * for rather less.
    */
   backdropPath: string | null;
+  /** TMDB's synopsis, as stored. Null for a title added before it was fetched. */
+  overview: string | null;
   figures: TitleFigures;
   /**
    * What has happened to this title, as against what it adds up to — newest
@@ -167,6 +169,7 @@ export function asStranger(detail: TitleDetail): TitleDetail {
     title: withoutIntent(detail.title),
     ids: detail.ids,
     backdropPath: detail.backdropPath,
+    overview: detail.overview,
     // Whole, `manualPlays` included. How much of the record was typed rather
     // than observed is already public: `recentActivity` carries each event's
     // source, and the wall's "added by hand" facet counts titles by it.
@@ -188,6 +191,7 @@ interface IdentityRow extends Record<string, unknown> {
   tvdb_id: string | null;
   imdb_id: string | null;
   backdrop_path: string | null;
+  overview: string | null;
   plays: number;
   rewatched: number;
   manual_plays: number;
@@ -244,7 +248,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
   const [identity] = [
     ...(await db.execute<IdentityRow>(sql`
       select
-        t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path,
+        t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path, t.overview,
         coalesce(f.plays, 0)::int as plays,
         coalesce(f.rewatched, 0)::int as rewatched,
         coalesce(m.manual_plays, 0)::int as manual_plays,
@@ -407,6 +411,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       imdb: identity?.imdb_id ?? null,
     },
     backdropPath: identity?.backdrop_path ?? null,
+    overview: identity?.overview ?? null,
     figures: {
       plays: identity?.plays ?? 0,
       rewatched: identity?.rewatched ?? 0,

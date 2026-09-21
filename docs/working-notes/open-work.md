@@ -241,9 +241,9 @@ the viewer wants of a title. The SPA calls all four.
    copy of the dumps leaves the box.
 6. **Web depth** — scoped 2026-09-21 in [web-depth.md](web-depth.md). The
    three screens are built and the system holds, but the app shows the record
-   and almost nothing about the thing recorded: the stored `overview` never
-   reaches the browser, an episode is a number with a name, the add screen
-   lists candidates without artwork. Five arcs, in order — say what the thing
+   and almost nothing about the thing recorded: an episode is a number with a
+   name, and until arc 1 chunk 1 landed on 2026-09-21 the stored `overview`
+   never reached the browser. Five arcs, in order — say what the thing
    is (overview, episode synopsis and still, linked ids), the facts the state
    vocabulary is missing (show status, which also settles the drifting
    decision below), manual entry as a first-class verb (range marks, a date

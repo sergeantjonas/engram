@@ -640,6 +640,7 @@ describe('the title page', () => {
   const TITLE_ID = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
   const daysBeforeNow = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
   const hole = episode({ number: 5, name: 'WAX ON, WAX OFF', airDate: '2026-03-10' });
+  const OVERVIEW = 'Gold Roger was known as the Pirate King, the strongest and most infamous.';
   const detail = (): TitleDetail => ({
     title: title({
       // The id the route was opened at: the API answers with the title that
@@ -653,6 +654,7 @@ describe('the title page', () => {
     }),
     ids: { tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' },
     backdropPath: '/backdrop.jpg',
+    overview: OVERVIEW,
     // Relative to today, or the twelve-month strip these are drawn on would
     // stop finding them once the wall clock moves past the window.
     recentActivity: [
@@ -798,6 +800,65 @@ describe('the title page', () => {
     screen.getByRole('button', { name: 'Episode 6, seen' }).click();
     await screen.findByRole('button', { name: 'Clear' });
     expect(screen.getByText('Watched 2019')).toBeDefined();
+  });
+
+  // The page is a record of what was watched; this is the one line about
+  // what it was. Absent rather than a placeholder when the metadata has not
+  // been fetched, which is what production reads between a deploy and the
+  // backfill that fills the column.
+  it('says what the title is under its identity, and nothing when it cannot', async () => {
+    // happy-dom lays nothing out, so a clamped paragraph reports no overflow
+    // and the toggle would never appear. Two lines' worth of height under
+    // three lines of text is what the clamp sees in a browser.
+    const clipped = (node: HTMLElement) =>
+      node.tagName === 'P' && node.classList.contains('line-clamp-2');
+    const sizes = Object.getOwnPropertyDescriptors(HTMLElement.prototype);
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get() {
+        return clipped(this as HTMLElement) ? 60 : 40;
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      get: () => 40,
+    });
+    try {
+      stubTitle();
+      await renderAt(`/titles/${TITLE_ID}`);
+
+      const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+      const header = within(heading.closest('header') as HTMLElement);
+      expect(header.getByText(OVERVIEW).classList.contains('line-clamp-2')).toBe(true);
+
+      const more = await header.findByRole('button', { name: 'more' });
+      expect(more.getAttribute('aria-expanded')).toBe('false');
+      more.click();
+
+      const less = await header.findByRole('button', { name: 'less' });
+      expect(less.getAttribute('aria-expanded')).toBe('true');
+      expect(header.getByText(OVERVIEW).classList.contains('line-clamp-2')).toBe(false);
+      less.click();
+
+      await header.findByRole('button', { name: 'more' });
+    } finally {
+      for (const name of ['scrollHeight', 'clientHeight'] as const) {
+        const own = sizes[name];
+        if (own) Object.defineProperty(HTMLElement.prototype, name, own);
+        else delete (HTMLElement.prototype as unknown as Record<string, unknown>)[name];
+      }
+    }
+    cleanup();
+
+    stubApi((url) => {
+      if (url.includes('/titles/')) return json({ ...detail(), overview: null });
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    await screen.findByRole('heading', { name: 'ONE PIECE' });
+    expect(screen.queryByText(OVERVIEW)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'more' })).toBeNull();
   });
 
   // Indistinguishable from an unwatched episode until now, which is how two

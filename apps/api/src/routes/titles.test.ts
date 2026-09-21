@@ -258,7 +258,13 @@ describe('GET /titles', () => {
 });
 
 describe('GET /titles/:id', () => {
-  const identityRow = { tmdb_id: '71912', tvdb_id: '362696', imdb_id: 'tt5180504', plays: 1 };
+  const identityRow = {
+    tmdb_id: '71912',
+    tvdb_id: '362696',
+    imdb_id: 'tt5180504',
+    overview: 'Geralt of Rivia.',
+    plays: 1,
+  };
 
   const activityRow = {
     id: 'w1',
@@ -329,6 +335,7 @@ describe('GET /titles/:id', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().title.name).toBe('The Witcher');
+    expect(response.json().overview).toBe('Geralt of Rivia.');
     expect(response.json().seasons).toEqual([
       { season: 1, episodes: [expect.objectContaining({ number: 1, seen: true })] },
     ]);

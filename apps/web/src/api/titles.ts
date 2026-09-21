@@ -116,6 +116,8 @@ export interface TitleDetail {
   ids: ExternalIds;
   /** Null often enough that the header has to read without one. */
   backdropPath: string | null;
+  /** TMDB's synopsis. Null until the metadata backfill has run for this title. */
+  overview: string | null;
   figures: TitleFigures;
   /**
    * Newest first, and capped by the API. `figures.plays` counts the same set

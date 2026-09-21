@@ -14,8 +14,12 @@ dist
 tools/out
 backups
 
+# Anchored patterns match only the context root, so the globs are explicit:
+# a nested apps/api/.env would otherwise reach a publicly pullable image.
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 
 # Nothing an image runs needs the planning surface or the local tooling.

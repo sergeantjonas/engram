@@ -127,6 +127,11 @@ jobs:
         run: |
           docker run --rm --entrypoint node engram-api:smoke \
             -e "import('./dist/app.js').then(m => { if (typeof m.buildApp !== 'function') throw new Error('buildApp missing'); })"
+          # The migration runner reads SQL from /app/drizzle, and nothing else
+          # here exercises it — the entrypoint is overridden above, so a
+          # missing directory would first be discovered on a production boot.
+          docker run --rm --entrypoint sh engram-api:smoke \
+            -c 'test -f /app/drizzle/meta/_journal.json'
 
       - name: smoke web
         run: |

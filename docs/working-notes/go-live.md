@@ -87,12 +87,23 @@ flag on.
 - **The `VITE_API_ORIGIN` repository variable** on GitHub, since the image is
   built in CI rather than on a laptop. CI fails the run if it is unset rather
   than shipping a bundle that calls localhost.
+- **Both GHCR packages made public.** A container package is private on its
+  first push even from a public repository, and GHCR answers an anonymous
+  request for a private one with 404 rather than 401 — so the failure reads
+  as "no such image" rather than "not allowed". Verified private on
+  2026-09-21, after the first green CI run. The box carries no registry
+  credential and should not need one: these images hold no secret, which was
+  checked rather than assumed.
 
 ## Backups, before anything is entrusted to it
 
 `ops/backup.sh` exists and is meant for cron; on this box it becomes
 `engram-backup.service` plus a `.timer` writing to `/var/backups/engram`, mode
-700. The history is the product, so this lands with the first deploy, not after
+700. Two details the unit has to get right, both found by reading rather than
+by running it: the deploy lands the script flat at `/srv/engram/backup.sh`,
+not under `ops/`, and the stack is `compose.prod.yaml`, which Compose does not
+look for on its own — the script now resolves it relative to itself, so the
+unit's `WorkingDirectory` is what makes that work. The history is the product, so this lands with the first deploy, not after
 it. Drill the restore against the real dump from step 3 above — a drill on an
 empty schema proves only that the script runs, and the dump being drilled is
 the irreplaceable one.

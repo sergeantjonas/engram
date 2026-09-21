@@ -6,6 +6,10 @@
 # Run from cron or a systemd timer, and send BACKUP_DIR somewhere off this box.
 #
 #   BACKUP_DIR=/var/backups/engram ops/backup.sh
+#
+# On the VPS the stack is `compose.prod.yaml`, which is not one of the four
+# filenames Compose looks for on its own — so COMPOSE_FILE is defaulted below
+# rather than left to be remembered in a unit file.
 
 set -euo pipefail
 
@@ -13,6 +17,18 @@ BACKUP_DIR="${BACKUP_DIR:-./backups}"
 KEEP_DAYS="${KEEP_DAYS:-30}"
 POSTGRES_USER="${POSTGRES_USER:-engram}"
 POSTGRES_DB="${POSTGRES_DB:-engram}"
+
+# Resolved relative to this script rather than to the caller's directory: a
+# timer runs with no meaningful cwd, and `docker compose` with no file and no
+# match exits "no configuration file provided" rather than doing nothing
+# visible.
+here="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "${COMPOSE_FILE:-}" ]; then
+  for candidate in "$here/compose.prod.yaml" "$here/../compose.prod.yaml" "$here/../docker-compose.yml"; do
+    [ -f "$candidate" ] && { COMPOSE_FILE="$candidate"; break; }
+  done
+fi
+[ -n "${COMPOSE_FILE:-}" ] || { echo "no compose file found next to $0" >&2; exit 1; }
 
 # A dump smaller than this is an empty or wrong database. Promoting one would
 # start the retention clock on a worthless file and eventually prune the last
@@ -28,7 +44,7 @@ trap 'rm -f "$target.partial"' EXIT
 
 # Run pg_dump inside the container so the client always matches the server;
 # a host pg_dump older than the server refuses to run at all.
-docker compose exec -T postgres \
+docker compose -f "$COMPOSE_FILE" exec -T postgres \
   pg_dump --clean --if-exists --no-owner -U "$POSTGRES_USER" "$POSTGRES_DB" \
   | gzip > "$target.partial"
 

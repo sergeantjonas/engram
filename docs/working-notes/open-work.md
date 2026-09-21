@@ -229,12 +229,14 @@ the viewer wants of a title. The SPA calls all four.
    is keyed on method and route pattern together, so the entry is `POST
    /webhooks/...` and nothing else about the path is opened with it.
 5. **Go live** — second tenant on the netcup box, planned in
-   [go-live.md](go-live.md). It is listed last but half-blocks item 4:
-   Tautulli and Sonarr cannot post to a laptop. The ordering constraint that
-   matters is on data rather than on deployment — the 655 hand-made marks
-   exist only in the development database, so the backfills run locally and
-   production starts from a restore of that database, never from an empty
-   schema.
+   [go-live.md](go-live.md), and half built as of 2026-09-21: images, CI, the
+   production compose file, the vhosts and the deploy script are in, and CI
+   has published its first pair. What is left is the box itself — the vhosts
+   installed, certbot, the GHCR packages made public, the first deploy, and
+   the restore. The ordering constraint that matters is on data rather than
+   on deployment: the hand-made marks exist only in the development
+   database, so production starts from a restore of that database, never
+   from an empty schema.
 
 ## Blocked
 

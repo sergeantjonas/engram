@@ -220,14 +220,17 @@ the viewer wants of a title. The SPA calls all four.
    changed — all 86 history rows are account 1 — which is the point: it is
    there for the webhooks below, which fire for every viewer on the server.
    Reasoning in [ingest-architecture.md](ingest-architecture.md).
-4. **Webhook receivers** — Tautulli and Sonarr, per
-   [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
-   Tautulli is not installed, and receiving live webhooks in development needs
-   either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`, and
-   must be added to the guard's open list when they land — they have no cookie
-   jar, so the secret is their authentication rather than a session. The list
-   is keyed on method and route pattern together, so the entry is `POST
-   /webhooks/...` and nothing else about the path is opened with it.
+4. **Webhook receivers** — Tautulli in progress, Sonarr after it, per
+   [ingest-architecture.md](ingest-architecture.md). The receiver is live and
+   has been recording real payloads since 2026-09-21: it authenticates on
+   `WEBHOOK_SECRET`, filters on `TAUTULLI_USER_IDS` before it writes anything
+   to a log, and sits on the guard's open list as `POST /webhooks/tautulli` —
+   the list is keyed on method and route pattern together, so nothing else
+   about the path is opened with it. The parser is written and tested against
+   the captured bodies. Two chunks left, in this order:
+   `watch_state.play_count` must count completed plays rather than rows before
+   a partial one is ever stored, and then the route writes what the parser
+   plans.
 5. ~~**Go live**~~ — live 2026-09-21 at <https://engram.vyoh.gg>, second
    tenant on the netcup box. The full record restored rather than started
    empty: 82 titles, 1109 events, 2467 episodes, reaching back to 2019, every

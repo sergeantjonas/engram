@@ -1,8 +1,9 @@
 # Ingest architecture
 
 **Status:** Design — agreed 2026-09-16, extended 2026-09-21 with the library
-walk, the claim-grain rule and owner-only ingest, the last of which is built
-rather than planned. Read before chunk 4.
+walk, the claim-grain rule, owner-only ingest and the measured Tautulli
+payload. Owner-only ingest and the Tautulli parser are built rather than
+planned. Read before chunk 4.
 
 ## Sources
 
@@ -281,6 +282,25 @@ what somebody watched just as much as a row is.
 
 Use the **Playback Stop** trigger, not **Watched**. Watched fires mid-playback at
 the threshold and loses the true final offset.
+
+**A stop is stored whether or not it finished.** Playback Stop fires on every
+stop, including the 18 second sample that happened to be the first real
+payload this received. Those are kept rather than dropped: a partial play is a
+fact like any other, `view_offset_sec` and `percent_complete` are columns the
+nightly walk can never fill, and `watch_state.seen` is `bool_or(completed)`, so
+nothing partial reads as watched. What it does cost is `play_count`, which
+counts rows for this source — one episode watched across three sittings would
+otherwise read as three plays — so that count takes only completed rows.
+
+`completed` is decided at **90%**, which is Plex's own default rather than a
+figure of our own. The walk reports Plex's binary watched flag, so any other
+threshold would have the two sources disagree about the same play by
+construction, and the disagreement would read as a bug in whichever was
+consulted second. The percentage is measured from `view_offset` over
+`duration_sec` rather than taken from `{progress_percent}`, which Tautulli
+rounds to whole percent: the 18 second stop reports `0`, and a stored
+percentage claiming a play never started is the one value that column must not
+hold.
 
 On backfill via `cmd=get_history`: rows do *not* reliably carry external ids, so
 the same resolve-via-metadata pass as the Plex dump applies. `reference_id`

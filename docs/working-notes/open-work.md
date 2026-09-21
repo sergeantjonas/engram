@@ -238,6 +238,17 @@ the viewer wants of a title. The SPA calls all four.
    installed and its restore drilled against that real data. Account in
    [go-live.md](go-live.md), which also holds the one thing still open — no
    copy of the dumps leaves the box.
+6. **Web depth** — scoped 2026-09-21 in [web-depth.md](web-depth.md). The
+   three screens are built and the system holds, but the app shows the record
+   and almost nothing about the thing recorded: the stored `overview` never
+   reaches the browser, an episode is a number with a name, the add screen
+   lists candidates without artwork. Five arcs, in order — say what the thing
+   is (overview, episode synopsis and still, linked ids), the facts the state
+   vocabulary is missing (show status, which also settles the drifting
+   decision below), manual entry as a first-class verb (range marks, a date
+   field that remembers, keyboard walk), the screens the rail owes (YEAR,
+   export, a home for `want`) and the visual pass (the state bar as a
+   progress bar). Arc 1 first; its first three chunks spend no TMDB calls.
 
 ## Blocked
 

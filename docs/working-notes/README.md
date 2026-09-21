@@ -11,6 +11,7 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
 - **What are we building on top of?** → [plex-api-findings.md](plex-api-findings.md)
 - **What should a screen look like?** → [web-design.md](web-design.md)
 - **How does this ship?** → [go-live.md](go-live.md)
+- **What does the web app still owe?** → [web-depth.md](web-depth.md)
 - **Browse before scoping** → [integration-ideas.md](integration-ideas.md)
 
 ## The notes
@@ -35,4 +36,9 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
   system, with the mockup they were approved from in `docs/design/`, plus the
   conventions the build has settled since — tooltips and notices among them.
   Read before building or changing anything in `apps/web`.
+- `web-depth.md` — plan. What the three built screens show about the record
+  and not about the thing recorded, and the five arcs that close it: synopsis
+  and stills, show status, range marks, the YEAR screen and export, the
+  progress bar. Read before scoping any `apps/web` work past the settled
+  screens.
 - `integration-ideas.md` — idea pool. Nothing here is committed to.

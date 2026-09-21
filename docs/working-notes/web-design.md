@@ -359,6 +359,11 @@ the record and has to outlive a navigation.
 
 ## Still open
 
+What the built screens still owe past the mockup — synopsis and stills, a
+progress bar in place of the state bar, the YEAR screen — is scoped in
+[web-depth.md](web-depth.md), which is where the fourth rail item below now
+has an answer.
+
 - **Light mode.** The mockup is dark only. No decision was made about whether a
   light theme exists at all.
 - **Responsive behaviour.** Everything was judged at desktop width. The wall's

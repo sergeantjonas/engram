@@ -100,10 +100,24 @@ the box, but Sonarr's indexer traffic and Plex's own plex.tv registration prove
 outbound HTTPS is open. Engram should still listen on 443 behind a TLS proxy
 rather than a custom port, so no egress filter can matter.
 
-**Open:** how Bytesized exposes Tautulli. Plex got a dedicated port, so Tautulli
-likely will too, but their installer may instead put it behind a reverse proxy
-with its own auth. That decides whether netcup can reach Tautulli's API for the
-nightly reconcile. Unanswerable until Bytesized is back up.
+**Answered 2026-09-21: Tautulli got a dedicated port.** It answers on
+`http://enyo.bysh.me:8181` and at the shared host IP, not behind a reverse
+proxy with its own auth, so netcup can reach its API for the nightly
+reconcile. The guess above was right.
+
+Two things came with that answer. It currently redirects to `/welcome`, so
+the install has not been through its setup wizard, and `/api/v2` replies
+`API not enabled` — both are settings, not obstacles, but neither the
+reconcile nor a payload check can happen until they are done.
+
+The third is a decision rather than a step: **port 8181 is plaintext, with no
+TLS listener on it.** The Plex token is already kept off the wire for this
+reason, and a Tautulli API key is the same kind of secret — it reads the
+entire watch history of everyone on the server. Sending it from netcup to
+Bytesized in the clear crosses the public internet. Either the reconcile
+reaches Tautulli over something encrypted, or it does not use an API key at
+all and lives on the webhook plus the Plex library walk, which is already
+built and already the deeper record.
 
 ## Webhooks are an optimization, not the source of truth
 

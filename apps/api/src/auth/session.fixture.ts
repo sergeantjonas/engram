@@ -41,6 +41,8 @@ export interface SessionDb {
    * silently swapped for `onConflictDoNothing` would otherwise look identical.
    */
   inserted: { values: unknown; onConflict: 'update' | 'nothing'; set?: unknown }[];
+  /** Rows an upsert's `.returning()` answers with, one result set per call. */
+  returns: unknown[][];
   /** Set when a row was reaped, and when the sliding window was rewritten. */
   deleted: number;
   extended: Date[];
@@ -74,6 +76,7 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
     executions: [],
     selects: [],
     inserted: [],
+    returns: [],
     db: {
       // `db.execute` is the raw-SQL path; the queries that use it are verified
       // against the real table, so here it only replays what a test sets up.
@@ -91,8 +94,13 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
       }),
       insert: () => ({
         values: (values: unknown) => ({
-          onConflictDoUpdate: async (config: { set?: unknown }) => {
+          // Awaitable on its own and chainable to `.returning()`, the way
+          // drizzle's builder is: a route that wants the row back must not
+          // need a different stub from one that does not.
+          onConflictDoUpdate: (config: { set?: unknown }) => {
             state.inserted.push({ values, onConflict: 'update', set: config?.set });
+            const answer = state.returns.shift() ?? [];
+            return Object.assign(Promise.resolve(answer), { returning: async () => answer });
           },
           onConflictDoNothing: async () => {
             state.inserted.push({ values, onConflict: 'nothing' });

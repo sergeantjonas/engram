@@ -2,7 +2,11 @@ import { eq, sql } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
-import { episodes as episodeTable, titles as titleTable } from '../db/schema.js';
+import {
+  episodes as episodeTable,
+  intent as intentTable,
+  titles as titleTable,
+} from '../db/schema.js';
 import { titleDetail, withoutGapNotes } from '../titles/detail.js';
 import { listTitles } from '../titles/list.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
@@ -27,6 +31,28 @@ const listQuery = z.object({
 });
 
 const detailParams = z.object({ id: z.uuid('id must be the id of a stored title') });
+
+/**
+ * What the viewer wants, which is the thing Plex cannot express at all.
+ *
+ * Every field optional and at least one required: this is a patch, so leaving
+ * `excluded` out means "unchanged" rather than "false". A body of nothing is a
+ * mistake worth a 400 rather than a write of nothing.
+ *
+ * Booleans on the wire against two timestamps and a flag in the table. When a
+ * title was dropped is a fact worth keeping, but a caller saying "I dropped
+ * this" has no business choosing the moment — the server does, from its own
+ * clock.
+ */
+const intentBody = z
+  .object({
+    want: z.boolean().optional(),
+    dropped: z.boolean().optional(),
+    excluded: z.boolean().optional(),
+  })
+  .refine((body) => Object.keys(body).length > 0, {
+    message: 'name at least one of want, dropped or excluded',
+  });
 
 const bodySchema = z.object({
   kind: z.enum(['show', 'movie']),
@@ -201,5 +227,72 @@ export function registerTitleRoutes(
     });
 
     return reply.code(created ? 201 : 200).send({ title, seasons });
+  });
+
+  /**
+   * What the viewer wants of a title, as against what they have watched.
+   *
+   * An upsert because most titles have no `intent` row at all — the row is
+   * created by the first opinion anyone has about the title, and a caller
+   * should not have to know whether they are the first.
+   *
+   * No `plan*()` split: as with a hole's reason, there is no decision between
+   * validating the body and writing it, and a pure function here would take
+   * three booleans and hand back three booleans.
+   */
+  app.put('/titles/:id/intent', async (request, reply) => {
+    const id = detailParams.safeParse(request.params);
+    if (!id.success) {
+      const message = id.error.issues.map((issue) => issue.message).join('; ');
+      return reply.code(400).send({ error: 'bad_request', message });
+    }
+
+    const body = intentBody.safeParse(request.body);
+    if (!body.success) {
+      const message = body.error.issues.map((issue) => issue.message).join('; ');
+      return reply.code(400).send({ error: 'bad_request', message });
+    }
+
+    // Checked rather than left to the foreign key: a violation would surface as
+    // a 500 quoting a constraint name, and "no such title" is a 404.
+    const [stored] = await db
+      .select({ id: titleTable.id })
+      .from(titleTable)
+      .where(eq(titleTable.id, id.data.id))
+      .limit(1);
+
+    if (!stored) {
+      return reply.code(404).send({ error: 'not_found', message: 'no title has that id' });
+    }
+
+    const { want, dropped, excluded } = body.data;
+    // Only the named fields, so a patch cannot silently reset the two it did
+    // not mention. `now()` rather than a Node `Date` for the same reason the
+    // gap route uses it: one column should not be written from two clocks.
+    const changes = {
+      ...(want === undefined ? {} : { want }),
+      ...(dropped === undefined ? {} : { droppedAt: dropped ? sql`now()` : null }),
+      ...(excluded === undefined ? {} : { excludedAt: excluded ? sql`now()` : null }),
+    };
+
+    const [row] = await db
+      .insert(intentTable)
+      .values({ titleId: id.data.id, ...changes })
+      .onConflictDoUpdate({ target: intentTable.titleId, set: changes })
+      .returning({
+        want: intentTable.want,
+        droppedAt: intentTable.droppedAt,
+        excludedAt: intentTable.excludedAt,
+      });
+
+    // Booleans back, matching what the wall reads off `GET /titles`. When a
+    // title was dropped is kept, but nothing asks for it yet.
+    return reply.send({
+      intent: {
+        want: row?.want ?? false,
+        dropped: row?.droppedAt != null,
+        excluded: row?.excludedAt != null,
+      },
+    });
   });
 }

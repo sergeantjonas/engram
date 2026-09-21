@@ -40,9 +40,10 @@ owe the design, all checked against the running app rather than guessed:
   and the title page's mark-season-watched control. The rail carries only HOME
   and ADD until the screens behind LIST and YEAR exist.
 
-The chip row landed 2026-09-20 with the facets the design names. What is left
-of item 4 above is the `intent` write route and the want / dropped / excluded
-controls: nothing writes `intent`, so those three are read-only on every card.
+The chip row landed 2026-09-20 with the facets the design names, and
+`PUT /titles/:id/intent` 2026-09-21. What is left of item 4 above is the
+controls themselves: nothing in the SPA calls that route yet, so want, dropped
+and excluded are still read-only on every card.
 
 Two things had to land on the API side first, and the second was a surprise:
 
@@ -130,6 +131,18 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-21** — `PUT /titles/:id/intent`, the write path that was missing.
+  Booleans on the wire — want, dropped, excluded — against a flag and two
+  timestamps in the table: when a title was dropped is worth keeping, but a
+  caller saying "I dropped this" has no business choosing the moment, so the
+  server takes it from Postgres' clock the way the gap route does.
+
+  A patch, not a replacement. Every field is optional and at least one is
+  required, so leaving `excluded` out means unchanged rather than false —
+  otherwise dropping a show would quietly un-exclude it. An upsert, because
+  most titles have no `intent` row at all: the row is created by the first
+  opinion anyone has about the title, and a caller should not have to know
+  whether they are the first.
 - **2026-09-21** — `typecheck:cc`'s second pass had never checked anything.
   `tsconfig.test.json` included `{apps,packages}/*/src/**/*.test.ts`, and
   TypeScript's include globs are not shell globs — it has no brace expansion,

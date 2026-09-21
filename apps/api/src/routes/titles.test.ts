@@ -389,3 +389,87 @@ describe('GET /titles/:id', () => {
     });
   });
 });
+
+describe('PUT /titles/:id/intent', () => {
+  const ID = '0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701';
+
+  const put = (body: unknown, headers: Record<string, string> = signedIn, rows: unknown[] = []) => {
+    // No `selects` override: the guard's session lookup is the first select
+    // the stub answers, and queueing one here would hand the guard the title.
+    const stub = sessionDb();
+    stub.returns = [rows];
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    return {
+      stub,
+      response: app.inject({
+        method: 'PUT',
+        url: `/titles/${ID}/intent`,
+        payload: body as object,
+        headers,
+      }),
+    };
+  };
+
+  it('records an opinion on a title nobody had one about', async () => {
+    const { stub, response } = put({ want: true }, signedIn, [
+      { want: true, droppedAt: null, excludedAt: null },
+    ]);
+
+    expect((await response).statusCode).toBe(200);
+    expect((await response).json()).toEqual({
+      intent: { want: true, dropped: false, excluded: false },
+    });
+    // Upserted, because most titles have no intent row until someone has one.
+    expect(stub.inserted[0]).toMatchObject({ onConflict: 'update' });
+  });
+
+  // A patch names what changed. Leaving a field out has to mean unchanged, or
+  // setting "dropped" would quietly un-exclude.
+  it('writes only the fields the body names', async () => {
+    const { stub, response } = put({ dropped: true }, signedIn, [
+      { want: false, droppedAt: new Date(), excludedAt: null },
+    ]);
+    await response;
+
+    const set = stub.inserted[0]?.set as Record<string, unknown> | undefined;
+    expect(Object.keys(set ?? {})).toEqual(['droppedAt']);
+  });
+
+  it('clears a flag rather than only setting it', async () => {
+    const { stub, response } = put({ excluded: false }, signedIn, [
+      { want: false, droppedAt: null, excludedAt: null },
+    ]);
+    await response;
+
+    const set = stub.inserted[0]?.set as Record<string, unknown> | undefined;
+    expect(set?.excludedAt).toBeNull();
+  });
+
+  it('refuses a body that says nothing', async () => {
+    const { response } = put({});
+
+    expect((await response).statusCode).toBe(400);
+    expect((await response).json().message).toContain('at least one');
+  });
+
+  it('refuses an id that is not one', async () => {
+    const stub = sessionDb();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/titles/the-witcher/intent',
+      payload: { want: true },
+      headers: signedIn,
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  // Wanting something is a change to the record, and the record is the
+  // owner's to change.
+  it('turns a stranger away', async () => {
+    const { response } = put({ want: true }, stranger);
+
+    expect((await response).statusCode).toBe(401);
+  });
+});

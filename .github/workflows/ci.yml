@@ -130,17 +130,22 @@ jobs:
 
       - name: smoke web
         run: |
+          set -euo pipefail
           docker run -d --name web-smoke -p 2011:2011 engram-web:smoke
-          for i in $(seq 1 20); do
-            if curl -fsS http://127.0.0.1:2011/healthz >/dev/null; then ok=1; break; fi
+          # Logs and cleanup on the way out however this ends, so a failure
+          # shows why rather than only that.
+          trap 'docker logs web-smoke || true; docker rm -f web-smoke >/dev/null || true' EXIT
+
+          ready=
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:2011/healthz >/dev/null 2>&1; then ready=1; break; fi
             sleep 1
           done
+          test -n "$ready" || { echo "web never became ready" >&2; exit 1; }
+
           # A reload on /titles/<id> must reach the SPA rather than a 404 from
           # a server that has never heard of the route.
           curl -fsS http://127.0.0.1:2011/titles/deep-link >/dev/null
-          docker logs web-smoke
-          docker rm -f web-smoke
-          test -n "$ok"
 
       - name: push api
         uses: docker/build-push-action@v6

@@ -46,7 +46,7 @@ of a single viewing, while Bleach S17E47's genuine rewatch (2026-09-05 and
 2026-09-12, two history rows) reads as two for the right reason. The library
 walk turns every such collision into three.
 
-So `play_count` counts play-grained rows only, floored at one so an episode
+So `play_count` counts completed play-grained rows only, floored at one once something finished so an episode
 known solely from a manual mark still reads as watched once. `seen` stays
 `bool_or(completed)` and needs no change.
 

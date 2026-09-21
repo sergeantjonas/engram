@@ -361,6 +361,10 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       -- The same set the figures count, or the feed and the play total it is
       -- printed beside would be talking about different things.
       and (e.season <> 0 or (e.season is null and t.kind = 'movie'))
+      -- Stopping is not watching. A play-grained source reports every stop,
+      -- and play_count takes only the finished ones, so a feed carrying the
+      -- rest would render "last 3 of 1".
+      and we.completed
     order by we.watched_at desc nulls last, we.ingested_at desc, we.id desc
     limit ${ACTIVITY_LIMIT}
   `);

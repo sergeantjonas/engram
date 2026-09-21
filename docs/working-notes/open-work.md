@@ -227,10 +227,10 @@ the viewer wants of a title. The SPA calls all four.
    to a log, and sits on the guard's open list as `POST /webhooks/tautulli` —
    the list is keyed on method and route pattern together, so nothing else
    about the path is opened with it. The parser is written and tested against
-   the captured bodies. Two chunks left, in this order:
-   `watch_state.play_count` must count completed plays rather than rows before
-   a partial one is ever stored, and then the route writes what the parser
-   plans.
+   the captured bodies, and `watch_state.play_count` now counts completed plays
+   rather than rows, so storing a partial stop inflates nothing and the
+   activity feed still counts the set the play total is printed beside. What
+   is left is the route writing what the parser plans.
 5. ~~**Go live**~~ — live 2026-09-21 at <https://engram.vyoh.gg>, second
    tenant on the netcup box. The full record restored rather than started
    empty: 82 titles, 1109 events, 2467 episodes, reaching back to 2019, every

@@ -83,6 +83,12 @@ services:
       # the account allowlist defaults to the server owner.
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       PLEX_ACCOUNT_IDS: ${PLEX_ACCOUNT_IDS:-1}
+      # Not optional in the way it looks: empty allows nobody, so a webhook
+      # with this unset records nothing. That is the safe direction, but it
+      # is silent, so it belongs in .env from the first deploy that has a
+      # webhook pointed at it. Tautulli's own ids, not Plex's — for the same
+      # owner Plex says 1 and Tautulli says 7597797.
+      TAUTULLI_USER_IDS: ${TAUTULLI_USER_IDS:-}
     ports:
       - '127.0.0.1:${API_PORT:-2012}:2012'
     deploy:

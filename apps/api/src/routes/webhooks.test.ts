@@ -25,8 +25,14 @@ const post = async (headers: Record<string, string>, payload: unknown) => {
 const good = { 'x-engram-token': testConfig.WEBHOOK_SECRET };
 
 describe('POST /webhooks/tautulli', () => {
+  const owner = testConfig.TAUTULLI_USER_IDS[0];
+
   it('accepts a payload carrying the shared secret in a header', async () => {
-    const response = await post(good, { media_type: 'episode', show_name: 'Bleach' });
+    const response = await post(good, {
+      media_type: 'episode',
+      show_name: 'Bleach',
+      user_id: owner,
+    });
     expect(response.statusCode).toBe(204);
   });
 
@@ -35,7 +41,7 @@ describe('POST /webhooks/tautulli', () => {
   it('accepts the secret in the body, which is all Tautulli can send', async () => {
     const response = await post(
       {},
-      { token: testConfig.WEBHOOK_SECRET, media_type: 'movie', title: 'Dune' },
+      { token: testConfig.WEBHOOK_SECRET, media_type: 'movie', title: 'Dune', user_id: owner },
     );
     expect(response.statusCode).toBe(204);
   });
@@ -94,7 +100,7 @@ describe('POST /webhooks/tautulli', () => {
       method: 'POST',
       url: '/webhooks/tautulli',
       headers: { 'content-type': 'application/json' },
-      payload: { token: testConfig.WEBHOOK_SECRET, media_type: 'movie' },
+      payload: { token: testConfig.WEBHOOK_SECRET, media_type: 'movie', user_id: owner },
     });
 
     // The handler's own line. Fastify's request and response lines go
@@ -135,7 +141,68 @@ describe('POST /webhooks/tautulli', () => {
   // The recording phase interprets nothing, so a body it cannot make sense
   // of still has to be accepted — finding out what arrives is the job.
   it('accepts a body it cannot interpret', async () => {
-    const response = await post(good, { unexpected: 'shape', nested: { a: 1 } });
+    const response = await post(good, { unexpected: 'shape', nested: { a: 1 }, user_id: owner });
+    expect(response.statusCode).toBe(204);
+  });
+
+  // The server is shared. A housemate's viewing must not reach this record,
+  // and a log line is a record of what they watched just as much as a row.
+  it('records nothing about a viewer who is not on the allowlist', async () => {
+    const logged: unknown[] = [];
+    const stub = sessionDb();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.info = ((obj: unknown) => {
+        logged.push(obj);
+      }) as typeof request.log.info;
+      done();
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/tautulli',
+      headers: { 'content-type': 'application/json', ...good },
+      // A real id from the same server, and not the owner's.
+      payload: { media_type: 'episode', show_name: 'Something Private', user_id: '49291007' },
+    });
+
+    // Accepted rather than refused: Tautulli logs a non-2xx as a failed
+    // notification, and a housemate watching something is not a failure.
+    expect(response.statusCode).toBe(204);
+    // The handler's own lines. Fastify's request and response lines go
+    // through its serialisers, which emit a method and a status code and
+    // never a body — these are the lines that could have written down what
+    // somebody else watched.
+    const mine = logged.filter(
+      (entry): entry is Record<string, unknown> =>
+        typeof entry === 'object' && entry !== null && 'viewer' in entry,
+    );
+    expect(mine).toHaveLength(1);
+    expect(JSON.stringify(mine)).not.toContain('Something Private');
+    expect(mine[0]).toMatchObject({ viewer: '49291007', mediaType: 'episode' });
+  });
+
+  it('keeps out a payload with no viewer at all', async () => {
+    const response = await post(good, { media_type: 'episode', show_name: 'Bleach' });
+    expect(response.statusCode).toBe(204);
+  });
+
+  // An unconfigured allowlist allows nobody. A write path opened by omission
+  // is the one failure this cannot afford.
+  it('allows nobody when the allowlist is empty', async () => {
+    const stub = sessionDb();
+    app = buildApp({
+      config: { ...testConfig, TAUTULLI_USER_IDS: [] },
+      db: stub.db,
+      tmdb: null,
+      github: githubStub,
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/tautulli',
+      headers: { 'content-type': 'application/json', ...good },
+      payload: { media_type: 'episode', user_id: owner },
+    });
     expect(response.statusCode).toBe(204);
   });
 

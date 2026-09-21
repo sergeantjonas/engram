@@ -15,6 +15,7 @@ const WEB_ORIGIN = 'http://localhost:2011';
 const config: Config = {
   DATABASE_URL: 'postgres://unused',
   PLEX_ACCOUNT_IDS: ['1'],
+  TAUTULLI_USER_IDS: ['7597797'],
   WEBHOOK_SECRET: 'x'.repeat(16),
   PORT: 0,
   HOST: '127.0.0.1',

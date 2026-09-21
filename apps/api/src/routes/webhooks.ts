@@ -81,6 +81,32 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config): voi
       return reply.code(401).send({ error: 'unauthorized' });
     }
 
+    // Whose play this is, before any of it is written down. The server is
+    // shared, and a housemate's viewing must not end up in this record —
+    // including in a log line, which is a record of what they watched just
+    // as much as a row would be. So the check sits above the logging, not
+    // beside the parsing that will come later.
+    //
+    // Tautulli's ids, not Plex's: `{user_id}` is 7597797 for the same owner
+    // the history endpoint calls account 1. An empty list allows nobody,
+    // because a write path opened by omission is the failure this cannot
+    // afford.
+    const viewer = typeof fields.user_id === 'string' ? fields.user_id : null;
+    if (viewer === null || !config.TAUTULLI_USER_IDS.includes(viewer)) {
+      request.log.info(
+        {
+          viewer,
+          allowlistSize: config.TAUTULLI_USER_IDS.length,
+          mediaType: typeof fields.media_type === 'string' ? fields.media_type : null,
+        },
+        'tautulli webhook ignored: not an allowed viewer',
+      );
+      // Accepted, not refused. Tautulli logs a non-2xx as a failed
+      // notification, and a housemate watching something is not a failure —
+      // it is simply not ours to keep.
+      return reply.code(204).send();
+    }
+
     // Never the token, whichever way it arrived. The point of keeping it out
     // of the query string is lost if the handler writes it to the log itself.
     const { token: _secret, ...rest } = fields;

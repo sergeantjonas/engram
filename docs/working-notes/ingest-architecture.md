@@ -269,10 +269,15 @@ parser written from it would have got wrong:
 account id the history endpoint uses.** Tautulli reported `7597797` for the
 owner; the server's own `/accounts` calls the owner `1` and gives its two
 shared users `49291007` and `181142893`. `PLEX_ACCOUNT_IDS=1` is right for
-the backfill and would reject every webhook event. The allowlist has to
-carry both ids, or learn to translate between the two namespaces — decided
-before the parser lands, because dropping the owner's own plays as somebody
-else's is the worst available failure.
+the backfill and would reject every webhook event.
+
+Settled 2026-09-21 with a second list rather than a shared one:
+`TAUTULLI_USER_IDS`, holding Tautulli's ids and named for it. One list
+carrying both namespaces would work, and then fail the first time somebody
+put a Plex account id in it to exclude a housemate and nothing happened.
+Empty allows nobody — a write path cannot be opened by omission — and the
+check runs before the payload is logged, because a log line is a record of
+what somebody watched just as much as a row is.
 
 Use the **Playback Stop** trigger, not **Watched**. Watched fires mid-playback at
 the threshold and loses the true final offset.

@@ -61,6 +61,36 @@ const schema = z.object({
     ),
 
   /**
+   * Whose plays Tautulli may report, as Tautulli's own user ids.
+   *
+   * Separate from `PLEX_ACCOUNT_IDS` because the two are different
+   * namespaces, which is a thing measured rather than assumed: for the same
+   * owner, Plex's history endpoint says account `1` and Tautulli's
+   * `{user_id}` says `7597797`, while the server's shared users carry ids
+   * shaped like the second. One list holding both would work and then fail
+   * the first time somebody adds a Plex account id here to exclude a
+   * housemate and nothing happens, because it is the wrong namespace for
+   * this source.
+   *
+   * Empty by default, and empty rejects everyone. A write path cannot be
+   * opened by omission — the same rule the route guard follows — so an
+   * unconfigured webhook records nothing rather than everything.
+   */
+  TAUTULLI_USER_IDS: z
+    .string()
+    .default('')
+    .transform((raw) =>
+      raw
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => id !== ''),
+    )
+    .refine(
+      (ids) => ids.every((id) => /^(0|[1-9]\d*)$/.test(id)),
+      'TAUTULLI_USER_IDS must be numeric Tautulli user ids, comma separated',
+    ),
+
+  /**
    * Signs the OAuth `state` and nothing else. The floor is what
    * `openssl rand -hex 32` produces, so a passphrase short enough to guess
    * cannot be substituted for it.

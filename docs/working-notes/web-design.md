@@ -153,7 +153,10 @@ Around it:
   decides what fraction of the picture survives: 158px is a third of the image
   in the mockup's 800px frame and a sixth in a 1700px window, which is a strip
   of the middle rather than a composition. Fifteen percent of the width holds
-  roughly the fraction the design was drawn at.
+  roughly the fraction the design was drawn at — measured against the window
+  rather than the column, so with the 216px pane beside it the band is a little
+  taller in proportion than the number says. Close enough that a container
+  query is not worth the unit.
 
   Built differently on purpose: the year sits with the kind, the state and the
   pill on one line, and the ids are a quieter mono line under it. Kind and
@@ -176,8 +179,8 @@ Around it:
 
   Built as a popover holding one free-text date field, and in three places
   rather than one: the season heading the design names, the episode popover,
-  and a whole-run control under the header — the beginning of the CTA row,
-  which is otherwise still missing. The date is free text because what a viewer
+  and a whole-run control under the header, on the row of actions the design
+  puts under everything. The date is free text because what a viewer
   backfilling a decade has is "2019" and almost never a day, and the API reads
   the precision off the shape of what was typed. Each control is gone once its
   scope is complete, so none of them offers a write that would do nothing.
@@ -243,4 +246,7 @@ the record and has to outlive a navigation.
   `auto-fill` carries itself down; the title page's figure row and the rail
   have no small-screen design.
 - **The rail's fourth item.** `YEAR` appears in the mockup's nav with no screen
-  behind it.
+  behind it. `LIST`, the other one that looked unexplained, turned out not to
+  be a screen at all: the mockup lights it up on the title page, because the
+  216px pane down that page's left *is* the list. `YEAR` has no such answer
+  anywhere in the mockup, so it stays unbuilt.

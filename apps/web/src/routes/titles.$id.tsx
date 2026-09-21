@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, Link } from '@tanstack/react-router';
 import { ApiError } from '../api/client.ts';
-import { titleQuery } from '../api/titles.ts';
+import { titleQuery, titlesQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { Activity } from '../title/Activity.tsx';
 import { IntentControls } from '../title/Intent.tsx';
@@ -9,10 +9,18 @@ import { MarkWatchedButton, TakeBack } from '../title/MarkWatched.tsx';
 import { SeasonGrid } from '../title/SeasonGrid.tsx';
 import { Section } from '../title/Section.tsx';
 import { TitleHeader } from '../title/TitleHeader.tsx';
+import { TitleList } from '../title/TitleList.tsx';
 import { YearBar } from '../title/YearBar.tsx';
 
 export const Route = createFileRoute('/titles/$id')({
-  loader: ({ context, params }) => context.queryClient.ensureQueryData(titleQuery(params.id)),
+  // Both, in parallel: the page is the title and the pane beside it is the
+  // whole library, and waiting for one after the other would show the split
+  // half-drawn.
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(titleQuery(params.id)),
+      context.queryClient.ensureQueryData(titlesQuery()),
+    ]),
   errorComponent: TitleError,
   component: TitlePage,
 });
@@ -20,65 +28,79 @@ export const Route = createFileRoute('/titles/$id')({
 function TitlePage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(titleQuery(id));
+  const { data: library } = useSuspenseQuery(titlesQuery());
   const { title, seasons, figures } = data;
+  // An excluded title is kept off the wall's listing, so the pane beside its
+  // own page would leave out the row being looked at — and excluding one from
+  // here would make it vanish from the column it sits in.
+  const inLibrary = library.titles.some((row) => row.id === id)
+    ? library.titles
+    : [title, ...library.titles];
   const isOwner = useIsOwner();
   const film = title.kind === 'movie';
   const unwatched = title.state !== 'seen';
 
   return (
-    <div className="space-y-5">
-      <TitleHeader {...data} />
+    // Out of the layout's padding so the pane can sit flush against the rail
+    // and rule the full height, then back into it inside the column: the hero
+    // is full-bleed within its own column, not across the split.
+    <div className="-m-[18px] grid min-h-full min-w-0 md:grid-cols-[216px_1fr]">
+      <TitleList titles={inLibrary} currentId={id} />
 
-      {/* What was watched and what was meant, on one row. The marking half
+      <div className="min-w-0 space-y-5 p-[18px]">
+        <TitleHeader {...data} />
+
+        {/* What was watched and what was meant, on one row. The marking half
           disappears when it has nothing to offer; the intent half is always
           there, because having no opinion is a state you change by saying so
           rather than one the page can infer. */}
-      {isOwner ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <MarkWatchedButton
-            titleId={id}
-            scope="all"
-            complete={!unwatched}
-            what={film ? 'the film' : 'the whole run'}
-            label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
-            className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
-            {...(film
-              ? { unit: 'play' as const }
-              : { hint: 'Specials are left out — mark those season by season.' })}
-          />
-          <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
-          {/* A rule rather than a gap: the two halves answer different
+        {isOwner ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <MarkWatchedButton
+              titleId={id}
+              scope="all"
+              complete={!unwatched}
+              what={film ? 'the film' : 'the whole run'}
+              label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
+              className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
+              {...(film
+                ? { unit: 'play' as const }
+                : { hint: 'Specials are left out — mark those season by season.' })}
+            />
+            <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
+            {/* A rule rather than a gap: the two halves answer different
               questions and the row would otherwise read as one list. Gone when
               the marking half is, or it is a rule at the left edge dividing
               nothing from the intent controls. */}
-          {unwatched || figures.manualPlays > 0 ? (
-            <span aria-hidden="true" className="h-5 w-px bg-line" />
-          ) : null}
-          <IntentControls titleId={id} intent={title} />
-        </div>
-      ) : null}
+            {unwatched || figures.manualPlays > 0 ? (
+              <span aria-hidden="true" className="h-5 w-px bg-line" />
+            ) : null}
+            <IntentControls titleId={id} intent={title} />
+          </div>
+        ) : null}
 
-      <YearBar
-        moments={data.recentActivity}
-        truncated={figures.plays > data.recentActivity.length}
-      />
+        <YearBar
+          moments={data.recentActivity}
+          truncated={figures.plays > data.recentActivity.length}
+        />
 
-      {seasons.length > 0 ? (
-        <Section
-          heading="Episodes"
-          aside={`${title.episodes.seen} of ${title.episodes.total}${
-            figures.rewatched > 0 ? ` · ${figures.rewatched} rewatched` : ''
-          }`}
-        >
-          {/* Seasons sit close together: the run is one object, and a
+        {seasons.length > 0 ? (
+          <Section
+            heading="Episodes"
+            aside={`${title.episodes.seen} of ${title.episodes.total}${
+              figures.rewatched > 0 ? ` · ${figures.rewatched} rewatched` : ''
+            }`}
+          >
+            {/* Seasons sit close together: the run is one object, and a
               page-worth of air between each reads as unrelated grids. */}
-          {seasons.map((season) => (
-            <SeasonGrid key={season.season} season={season} titleId={id} />
-          ))}
-        </Section>
-      ) : null}
+            {seasons.map((season) => (
+              <SeasonGrid key={season.season} season={season} titleId={id} />
+            ))}
+          </Section>
+        ) : null}
 
-      <Activity moments={data.recentActivity} plays={figures.plays} titleName={title.name} />
+        <Activity moments={data.recentActivity} plays={figures.plays} titleName={title.name} />
+      </div>
     </div>
   );
 }

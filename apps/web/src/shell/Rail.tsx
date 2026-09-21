@@ -1,5 +1,8 @@
-import { Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { titlesQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
+import { topOfList } from '../title/order.ts';
 
 /**
  * Text, not icons, at 9px mono — the way the design draws it.
@@ -13,6 +16,17 @@ const ACTIVE_ITEM = 'border-l-jade bg-raise text-tx';
 
 export function Rail() {
   const isOwner = useIsOwner();
+  // Whatever the list itself would put at the top: still going, most recently
+  // watched. Read from the cache the wall already fills, so the rail costs no
+  // request of its own and cannot point somewhere the pane does not.
+  const { data } = useQuery(titlesQuery());
+  const first = topOfList(data?.titles ?? []);
+  // Any title page, not just the one LIST happens to point at. The link has a
+  // single destination and the router would otherwise only mark it while that
+  // exact title is open.
+  const inList = useRouterState({
+    select: (state) => state.location.pathname.startsWith('/titles/'),
+  });
 
   return (
     <nav
@@ -37,9 +51,24 @@ export function Rail() {
       >
         HOME
       </Link>
-      {/* Nothing is offered that does not exist: the design's LIST and YEAR
-          have no screens behind them yet, and a rail item that goes nowhere is
-          worse than a rail with two items on it. */}
+      {/* LIST is a mode of the title page rather than a screen of its own —
+          the pane down its left is the list — so it leads to the top of that
+          pane and lights up anywhere inside it. Gone when the library is
+          empty, because then it leads nowhere.
+
+          YEAR is still not offered: the design's rail carries it with no
+          screen behind it, and an item that goes nowhere is worse than a
+          shorter rail. */}
+      {first ? (
+        <Link
+          to="/titles/$id"
+          params={{ id: first.id }}
+          aria-current={inList ? 'page' : undefined}
+          className={`${ITEM} ${inList ? ACTIVE_ITEM : ''}`}
+        >
+          LIST
+        </Link>
+      ) : null}
       {isOwner ? (
         <Link to="/add" className={ITEM} activeProps={{ className: ACTIVE_ITEM }}>
           ADD

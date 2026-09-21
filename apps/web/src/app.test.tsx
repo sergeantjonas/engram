@@ -26,6 +26,17 @@ const json = (body: unknown, status = 200) =>
     headers: { 'content-type': 'application/json' },
   });
 
+/**
+ * What a screen asks for regardless of what the test is about: who is looking,
+ * and — since the title page draws the whole library down its left — the
+ * library itself. A test that cares about either answers it before reaching
+ * this.
+ */
+const elsewhere = (url: string, isOwner = true, init?: RequestInit) =>
+  url.endsWith('/titles') && (init?.method ?? 'GET') === 'GET'
+    ? json({ titles: [] })
+    : json({ isOwner });
+
 async function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: [path] }));
@@ -64,7 +75,7 @@ describe('the shell', () => {
         return new Response(null, { status: 204 });
       }
       if (url.includes('/titles')) return json({ titles: [] });
-      return json({ isOwner: owner });
+      return elsewhere(url, owner);
     });
     await renderAt('/');
 
@@ -76,6 +87,35 @@ describe('the shell', () => {
     // again on mount because `no-store` means a cached yes is worth nothing,
     // and the sign-out invalidates and asks a third time.
     expect(calls.filter((call) => call.url.endsWith('/auth/me'))).toHaveLength(3);
+  });
+
+  // LIST is a mode of the title page rather than a screen, so it has to lead
+  // to the row the pane would open on — not to an arbitrary title.
+  it('points LIST at the top of the list the title page draws', async () => {
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({
+            titles: [
+              title({ id: 'done', name: 'Bleach', state: 'seen' }),
+              title({ id: 'going', name: 'ONE PIECE', state: 'in_progress' }),
+            ],
+          })
+        : elsewhere(url),
+    );
+    await renderAt('/');
+
+    const rail = await screen.findByRole('navigation', { name: 'Sections' });
+    const list = within(rail).getByRole('link', { name: 'LIST' });
+    expect(list.getAttribute('href')).toBe('/titles/going');
+    expect(list.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('offers nothing to list when there is nothing on record', async () => {
+    stubApi((url) => (url.endsWith('/titles') ? json({ titles: [] }) : elsewhere(url)));
+    await renderAt('/');
+
+    await screen.findByText('Nothing on record yet.');
+    expect(screen.queryByRole('link', { name: 'LIST' })).toBeNull();
   });
 
   it('says why the API sent the browser back to /login', async () => {
@@ -349,6 +389,10 @@ describe('the title page', () => {
   const hole = episode({ number: 5, name: 'WAX ON, WAX OFF', airDate: '2026-03-10' });
   const detail = (): TitleDetail => ({
     title: title({
+      // The id the route was opened at: the API answers with the title that
+      // was asked for, and a fixture that does not cannot be matched against
+      // the pane beside it.
+      id: TITLE_ID,
       name: 'ONE PIECE',
       state: 'in_progress',
       episodes: { total: 3, seen: 2 },
@@ -443,7 +487,7 @@ describe('the title page', () => {
         }
         return json(body);
       }
-      return json({ isOwner });
+      return elsewhere(url, isOwner);
     });
     return calls;
   }
@@ -573,7 +617,7 @@ describe('the title page', () => {
         for (const cell of body.seasons[1]?.episodes ?? []) cell.seen ||= marked;
         return json(body);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -603,7 +647,7 @@ describe('the title page', () => {
         return json({ title: { id: TITLE_ID }, removed: 3 });
       }
       if (url.includes('/titles/')) return json(detail());
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -624,7 +668,7 @@ describe('the title page', () => {
         return json({ written: 3, skipped: 0 }, 201);
       }
       if (url.includes('/titles/')) return json(detail());
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -650,7 +694,7 @@ describe('the title page', () => {
         if (cell) cell.manualPlays = 1;
         return json(body);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -687,7 +731,7 @@ describe('the title page', () => {
         body.figures.manualPlays = 12;
         return json(body);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -708,7 +752,7 @@ describe('the title page', () => {
         body.title.state = 'seen';
         return json(body);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -732,7 +776,7 @@ describe('the title page', () => {
         return json({ error: 'not_found', message: 'no title is stored under that id' }, 404);
       }
       if (url.includes('/titles/')) return json(detail());
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -750,7 +794,7 @@ describe('the title page', () => {
         return json({ written: 1, skipped: 0 }, 201);
       }
       if (url.includes('/titles/')) return json(detail());
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -774,7 +818,7 @@ describe('the title page', () => {
         body.title.want = want;
         return json(body);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -813,7 +857,7 @@ describe('the title page', () => {
         return json({ error: 'unauthorized', message: 'sign in to change that' }, 401);
       }
       if (url.includes('/titles/')) return json(detail());
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
@@ -856,6 +900,84 @@ describe('the title page', () => {
     expect(screen.queryByRole('button', { name: 'Mark the whole run watched' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Want to watch' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Excluded' })).toBeNull();
+  });
+
+  // The rail's LIST is a mode of this screen, so the screen carries the list.
+  it('draws every title down the left, grouped, with this one marked', async () => {
+    stubApi((url) => {
+      if (url.endsWith('/titles')) {
+        return json({
+          titles: [
+            title({ id: TITLE_ID, name: 'ONE PIECE', state: 'in_progress' }),
+            title({ id: 'b', name: 'Bleach', state: 'seen' }),
+            title({ id: 'c', name: 'Dexter', state: 'unwatched' }),
+          ],
+        });
+      }
+      if (url.includes('/titles/')) return json(detail());
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const pane = await screen.findByRole('navigation', { name: 'Every title' });
+    // Headings in the order a viewer works down them, not the order the states
+    // are declared in.
+    expect(
+      within(pane)
+        .getAllByRole('heading')
+        .map((heading) => heading.textContent),
+    ).toEqual(['Still going', 'Unwatched', 'Finished']);
+    // The one being looked at is marked, and the others are ways out of it.
+    expect(
+      within(pane)
+        .getByRole('link', { name: /ONE PIECE/ })
+        .getAttribute('aria-current'),
+    ).toBe('page');
+    expect(
+      within(pane)
+        .getByRole('link', { name: /Bleach/ })
+        .getAttribute('href'),
+    ).toBe('/titles/b');
+  });
+
+  // Excluded titles are off the wall's listing, so the pane would otherwise
+  // leave out the very row being looked at.
+  it('lists the title being looked at even when the wall hides it', async () => {
+    stubApi((url) => {
+      if (url.endsWith('/titles')) return json({ titles: [] });
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.excluded = true;
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const pane = await screen.findByRole('navigation', { name: 'Every title' });
+    expect(
+      within(pane)
+        .getByRole('link', { name: /ONE PIECE/ })
+        .getAttribute('aria-current'),
+    ).toBe('page');
+  });
+
+  // It has one destination but stands for the whole screen, so the router's
+  // own matching would light it only while that one title is open.
+  it('marks LIST on any title page, not just the one it points at', async () => {
+    stubApi((url) => {
+      if (url.endsWith('/titles')) {
+        return json({ titles: [title({ id: 'going', name: 'ONE PIECE', state: 'in_progress' })] });
+      }
+      if (url.includes('/titles/')) return json(detail());
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const rail = await screen.findByRole('navigation', { name: 'Sections' });
+    const list = within(rail).getByRole('link', { name: 'LIST' });
+    expect(list.getAttribute('href')).toBe('/titles/going');
+    expect(list.getAttribute('aria-current')).toBe('page');
   });
 
   it('says when no title is stored under the id', async () => {
@@ -969,7 +1091,7 @@ describe('adding a title', () => {
           seasons: [],
         });
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt('/add?q=heat');
 
@@ -1019,7 +1141,7 @@ describe('adding a title', () => {
       if (url.endsWith('/watch-events') && init?.method === 'POST') {
         return json({ written: 18, skipped: 0 }, 201);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt('/add?q=heat');
 
@@ -1068,7 +1190,7 @@ describe('adding a title', () => {
         const body = JSON.parse(String(init.body)) as { scope: { season: number } };
         return json({ written: body.scope.season === 0 ? 3 : 8, skipped: 0 }, 201);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt('/add?q=heat');
 
@@ -1111,7 +1233,7 @@ describe('adding a title', () => {
           ? json({ written: 3, skipped: 0 }, 201)
           : json({ error: 'unmarkable', message: 'season 1 is not on record here' }, 422);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt('/add?q=heat');
 
@@ -1134,7 +1256,7 @@ describe('adding a title', () => {
           201,
         );
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt('/add?q=heat');
 
@@ -1182,7 +1304,7 @@ describe('adding a title', () => {
       if (url.endsWith('/titles') && init?.method === 'POST') {
         return json({ error: 'upstream_failed', message: 'TMDB did not answer' }, 502);
       }
-      return json({ isOwner: true });
+      return elsewhere(url);
     });
     await renderAt('/add?q=heat');
 

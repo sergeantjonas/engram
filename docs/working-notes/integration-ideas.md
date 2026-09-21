@@ -47,9 +47,14 @@ Explicitly **not** a goal: replacing Plex, Sonarr or Radarr.
 - **Trakt-format export.** A few hours of work, and it means never being locked
   into Engram. Building this to own the data means being able to walk away from
   it too.
-- **Manual entry.** One movie in 86 plays says films get watched somewhere other
-  than Plex — cinema, someone else's couch, a plane. Without manual entry Engram
-  is a partial record, which is the thing it exists to fix.
+- **Manual entry.** Shipped 2026-09-19 as the add screen, and it earned itself
+  on shows rather than on films: 655 episodes claimed by hand against media
+  Plex had never heard of. The original reasoning here was that one movie in 86
+  plays meant films get watched off-Plex — cinema, someone else's couch, a
+  plane. Wrong, checked 2026-09-21: the viewer watches everything on Plex, and
+  the 27 unwatched films on disk are a backlog, not a hole in the record. The
+  feature was right; the argument for it was not. Films need a queue, not a
+  reconstruction.
 
 ## Postponed deliberately
 

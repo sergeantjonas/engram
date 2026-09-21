@@ -34,12 +34,12 @@ type split landed 2026-09-19, so the shell, the wall, the grid and the add
 screen are on espresso and Archivo / Martian Mono now. What the screens still
 owe the design, all checked against the running app rather than guessed:
 
-- **The title page still has no second pane and no CTA row.** The design puts a
-  216px list of every title down the left, and a row of actions under
-  everything. The hero, the stat box, the twelve-month strip and the activity
-  feed all landed.
-- Missing entirely: the list view behind the rail's LIST. The rail carries only
-  HOME and ADD until the screens behind LIST and YEAR exist.
+- ~~The title page has no second pane and no CTA row.~~ Both landed
+  2026-09-21. Everything the design names for the three screens is now built.
+- The rail carries HOME, LIST and ADD. `YEAR` is still not offered: the
+  mockup's rail has it with no screen behind it, and an item that goes nowhere
+  is worse than a shorter rail. See "Still open" in
+  [web-design.md](web-design.md).
 - ~~The add screen still only adds.~~ Landed 2026-09-21: season checkboxes and
   the commit bar, so a backfill is one screen again.
 
@@ -97,6 +97,12 @@ the viewer wants of a title. The SPA calls all four.
    besides the one already stored. The 126 are the point: they were marked by
    hand on the belief that the dates were gone, and they were not.
 
+   The films look thin — 2 watched of 29 — and that is the record being
+   right rather than incomplete. Checked with the viewer 2026-09-21: everything
+   is watched on Plex, so the other 27 are a backlog, not history to recover.
+   Movies need no reconstruction, only somewhere to be seen. See the wall item
+   below.
+
    Three commits, in this order. The walk is owner-scoped by the same property
    as the dump — per-item view state is the token's own — so it does not wait
    on the allowlist below.
@@ -107,10 +113,14 @@ the viewer wants of a title. The SPA calls all four.
       [ingest-architecture.md](ingest-architecture.md) § Claim grain and
       precedence. Land it before the data that exposes it.
    2. The walk itself: a `plex-library` source over
-      `/library/sections/{key}/all?includeGuids=1` and `…/allLeaves`, writing
-      watch events for watched episodes and `library_presence` for everything
-      seen. Read dates off the episodes, never the show row — 11 of the 22
-      watched shows have a null `lastViewedAt` at show level.
+      `/library/sections/{key}/all?includeGuids=1`, writing watch events for
+      what is watched and `library_presence` for everything it sees. **Both
+      sections, not just the shows one.** A show needs a second call to
+      `…/allLeaves` and its dates read off the episodes, never off the show row
+      — 11 of the 22 watched shows have a null `lastViewedAt` at show level. A
+      film needs neither: its `viewCount` and `lastViewedAt` are on the item
+      itself, and its event is title-level with a null `episode_id`, which is
+      the shape the one stored film already has.
    3. Wire it into the nightly reconcile, so it stays a reconciliation rather
       than a one-time import.
 
@@ -118,12 +128,37 @@ the viewer wants of a title. The SPA calls all four.
    right for a history row, which never changes, and wrong for this source,
    where a rescan of the same episode is the same claim with a later date.
 
-2. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
+2. **A wall that survives the walk, and where films live in it.** The walk
+   takes the library from 12 titles to 81 — 52 shows and 29 films — and the
+   wall has only ever been seen at 12. Films are not the problem: the code is
+   already kind-aware end to end, audited 2026-09-21. `deriveState` returns
+   only `seen` or `unwatched` for a movie ([apps/api/src/titles/plan.ts:121](../../apps/api/src/titles/plan.ts#L121)),
+   so `going`, `drifting` and `gaps` cannot false-match one; `episodesInScope`
+   gives a film a single null slot and rejects a season scope; the title page
+   already branches on `film` and drops the grid. A movie section as a separate
+   screen would duplicate all of that for nothing.
+
+   What is actually missing is narrower:
+
+   - **A kind filter on the wall.** Seven facets, four of which are structurally
+     show-only, over a list that is now a third films. Plex's own chrome is the
+     idiom — all / shows / films — and `kind` is already on every summary.
+   - **Somewhere for the backlog.** 27 films on disk and unwatched is the
+     largest single thing in the library, and it is a queue rather than a hole.
+     `unwatched` + `onDisk` + kind already expresses it; what is undecided is
+     whether that is a facet, a sort, or the film-shaped answer to the next-up
+     band — `GET /next-up` is `where t.kind = 'show'`
+     ([apps/api/src/titles/next-up.ts:133](../../apps/api/src/titles/next-up.ts#L133))
+     and nothing fills that space for a film.
+   - **The `onDisk` null problem goes away.** `library_presence` has never had
+     a row, so `onDisk` is null everywhere and the *Not on disk* chip has never
+     matched anything. The walk is what switches it on, for both kinds.
+3. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing
    it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land
    before webhooks do: the backfill is owner-only by property of the Plex
    endpoint, and Tautulli fires for every user on the server.
-3. **Webhook receivers** — Tautulli and Sonarr, per
+4. **Webhook receivers** — Tautulli and Sonarr, per
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs
    either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`, and
@@ -131,8 +166,8 @@ the viewer wants of a title. The SPA calls all four.
    jar, so the secret is their authentication rather than a session. The list
    is keyed on method and route pattern together, so the entry is `POST
    /webhooks/...` and nothing else about the path is opened with it.
-4. **Go live** — second tenant on the netcup box, planned in
-   [go-live.md](go-live.md). It is listed last but half-blocks item 3:
+5. **Go live** — second tenant on the netcup box, planned in
+   [go-live.md](go-live.md). It is listed last but half-blocks item 4:
    Tautulli and Sonarr cannot post to a laptop. The ordering constraint that
    matters is on data rather than on deployment — the 655 hand-made marks
    exist only in the development database, so the backfills run locally and
@@ -202,6 +237,28 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-21** — The title page's second pane, which turns out to be the same
+  thing as the rail's LIST rather than a screen of its own: the mockup lights
+  LIST up *on* the title page, because the 216px column down its left is the
+  list. That resolved the last two open screen items at once.
+
+  Every title, grouped still going / unwatched / finished and ordered most
+  recently watched first within each, undated last. A 24px thumbnail, the name,
+  a 2px progress bar that turns `--drift` when the title is drifting, and how
+  long ago in mono. The group order is how much each is owed rather than the
+  order the states are declared in; the mockup had no unwatched title to place
+  and this library can.
+
+  It reads the same cached `titlesQuery` the wall fills, so moving between the
+  two costs no request and they cannot disagree about what is where. The route
+  loads both in parallel rather than one after the other, or the split draws
+  half at a time. Pinned and scrolling on its own above the fold: a library of
+  three hundred would otherwise make the page as tall as the list.
+
+  LIST leads to whatever the pane would open on, derived from the same
+  `groupedTitles` the pane uses rather than sorted again beside it — the rail
+  pointing somewhere the pane does not open is the one way this can be visibly
+  wrong. It is gone entirely when the library is empty.
 - **2026-09-21** — The next-up band, over a new `GET /next-up`. Its own route
   rather than columns on `GET /titles`: it needs the episode either side of
   where each show stopped, and carrying that across three hundred cards that

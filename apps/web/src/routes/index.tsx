@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps } from '@tanstack/react-router';
 import { type TitleListFilter, titlesQuery } from '../api/titles.ts';
-import { isFacet } from '../wall/facets.ts';
+import { isFacet, isKind } from '../wall/facets.ts';
 import { Wall, type WallSearch } from '../wall/Wall.tsx';
 
 /**
@@ -19,6 +19,7 @@ const toFilter = (search: WallSearch): TitleListFilter => ({
 export const Route = createFileRoute('/')({
   validateSearch: (search: Record<string, unknown>): WallSearch => ({
     ...(isFacet(search.facet) ? { facet: search.facet } : {}),
+    ...(isKind(search.kind) ? { kind: search.kind } : {}),
     ...(typeof search.q === 'string' && search.q.trim() !== '' ? { q: search.q.trim() } : {}),
     ...(search.excluded === true ? { excluded: true } : {}),
   }),

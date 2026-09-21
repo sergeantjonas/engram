@@ -179,19 +179,39 @@ the viewer wants of a title. The SPA calls all four.
 
    What is actually missing is narrower:
 
-   - **A kind filter on the wall.** Seven facets, four of which are structurally
-     show-only, over a list that is now a third films. Plex's own chrome is the
-     idiom — all / shows / films — and `kind` is already on every summary.
-   - **Somewhere for the backlog.** 27 films on disk and unwatched is the
-     largest single thing in the library, and it is a queue rather than a hole.
-     `unwatched` + `onDisk` + kind already expresses it; what is undecided is
-     whether that is a facet, a sort, or the film-shaped answer to the next-up
-     band — `GET /next-up` is `where t.kind = 'show'`
+   - ~~**A kind filter on the wall.**~~ Landed 2026-09-21. *All · Series ·
+     Films* as one control ahead of the chips, which then count within it.
+     Under Films the three run chips are not drawn — they cannot ever match —
+     and the next-up band goes with them. Reasoning in
+     [web-design.md](web-design.md).
+   - ~~**Somewhere for the backlog.**~~ Settled 2026-09-21 by not building
+     it. Films plus *Unwatched* is the backlog, 27 of them, and a chip saying
+     that in one word would be a synonym for two controls already there. What
+     is still unfilled is the next-up band's shape for a film: `GET /next-up`
+     is `where t.kind = 'show'`
      ([apps/api/src/titles/next-up.ts:133](../../apps/api/src/titles/next-up.ts#L133))
-     and nothing fills that space for a film.
-   - **The `onDisk` null problem goes away.** `library_presence` has never had
-     a row, so `onDisk` is null everywhere and the *Not on disk* chip has never
-     matched anything. The walk is what switches it on, for both kinds.
+     and the band is simply hidden under Films rather than answered.
+   - ~~**The `onDisk` null problem goes away.**~~ The walk gave
+     `library_presence` its first 81 rows, so `onDisk` means something now.
+     *Not on disk* still reads 0, which is correct: nothing has left yet. The
+     one title with a null is Dexter, which Plex has never held.
+
+   The eighth chip, *Added by hand*, was removed the same day — it read 58 of
+   82 because a title with no events fell to a default rather than to the
+   rule, and corrected it matched one. See [web-design.md](web-design.md).
+   - **The figure reads as arithmetic, not as a duration.** `formatSince`
+     ([apps/web/src/title/format.ts:34](../../apps/web/src/title/format.ts#L34))
+     counts days and stops there, so the still-going band now puts `293d`,
+     `1277d` and `1794d` next to each other. Nobody says it that way, and past
+     a couple of months the digits stop ranking against one another at a
+     glance. `formatAgo`, ten lines below it, already settled the rule for
+     prose — days under a month, rounded months to eighteen, then years — and
+     the compact form should step the same way: `10mo`, `3y`, days only where
+     a day is what a person would name. The walk is what exposed it. Until
+     2026-09-21 the record reached no further back than 2025-10-24, so every
+     figure on the wall was a plausible day count; now half of them are not.
+     One formatter, three call sites — the wall tile, the list row and the
+     title header.
 3. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing
    it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land

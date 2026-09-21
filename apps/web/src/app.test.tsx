@@ -198,12 +198,67 @@ describe('the wall', () => {
     expect(screen.getByRole('link', { name: /Still going/ }).getAttribute('aria-current')).toBe(
       'page',
     );
-    expect(screen.getByRole('link', { name: /All/ }).getAttribute('aria-current')).toBeNull();
+    // The state chips and the kind control answer separately: a facet is on,
+    // so the clear-chip beside it is not, while kind is still on All.
+    expect(screen.getByRole('link', { name: /Any state/ }).getAttribute('aria-current')).toBeNull();
+    expect(screen.getByRole('link', { name: /All 2/ }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('link', { name: 'Show excluded' }).getAttribute('href')).toBe(
       '/?facet=going&excluded=true',
     );
     expect(screen.getByRole('link', { name: 'Bleach, In progress' }).getAttribute('href')).toMatch(
       /^\/titles\/[0-9a-f-]{36}$/,
+    );
+  });
+
+  it('narrows to films and stops offering chips a film cannot match', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({
+            titles: [
+              title({ name: 'Bleach', state: 'in_progress' }),
+              title({ kind: 'movie', key: 'movie:tmdb:2', name: 'Heat', state: 'unwatched' }),
+            ],
+          })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/?kind=movie');
+
+    await screen.findByRole('heading', { name: 'Heat' });
+    expect(screen.queryByRole('heading', { name: 'Bleach' })).toBeNull();
+    // Every episode the band could offer belongs to something the viewer has
+    // just said they are not looking at.
+    expect(screen.queryByText(/Next up/i)).toBeNull();
+
+    // Still going, Drifting and Gaps describe a run, so they are gone rather
+    // than sitting at zero and inviting the reader to wonder why.
+    expect(screen.queryByRole('link', { name: /Still going/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Drifting/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Gaps/ })).toBeNull();
+    expect(screen.getByRole('link', { name: /Unwatched 1/ })).toBeDefined();
+
+    // The counts beside the kinds describe the library; the state chips
+    // describe the kind now showing.
+    expect(screen.getByRole('link', { name: /Series 1/ })).toBeDefined();
+    expect(screen.getByRole('link', { name: /Any state 1/ })).toBeDefined();
+    expect(screen.getByRole('link', { name: /Films 1/ }).getAttribute('aria-current')).toBe('page');
+  });
+
+  it('drops a run facet when switching to films, and keeps one that fits', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({
+            titles: [title({ name: 'Bleach', state: 'in_progress' })],
+          })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/?facet=going');
+
+    await screen.findByRole('heading', { name: 'Bleach' });
+    // Carrying `going` across would land on a chip that can only ever be
+    // empty, which reads as a wall with nothing on it.
+    expect(screen.getByRole('link', { name: /Films/ }).getAttribute('href')).toBe('/?kind=movie');
+    expect(screen.getByRole('link', { name: /Series/ }).getAttribute('href')).toBe(
+      '/?kind=show&facet=going',
     );
   });
 

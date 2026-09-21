@@ -34,6 +34,43 @@ export const FACET_LABEL: Record<Facet, string> = {
 export const isFacet = (value: unknown): value is Facet =>
   typeof value === 'string' && (FACETS as readonly string[]).includes(value);
 
+/**
+ * What the wall narrows to, above the facets and apart from them.
+ *
+ * Kind is a partition where the facets are not — nothing is both a series and
+ * a film — so it reads as one control with a current value rather than as
+ * another chip. Absent means both.
+ *
+ * It earns the room at 82 titles. A third of the library is films, and the
+ * film backlog is the largest single thing on the wall: this control plus
+ * *Unwatched*, rather than a chip of its own saying the same in one word.
+ */
+export const KINDS = ['show', 'movie'] as const;
+
+export type KindFilter = (typeof KINDS)[number];
+
+export const KIND_LABEL: Record<KindFilter, string> = {
+  show: 'Series',
+  movie: 'Films',
+};
+
+export const isKind = (value: unknown): value is KindFilter =>
+  typeof value === 'string' && (KINDS as readonly string[]).includes(value);
+
+/**
+ * Three facets describe a run rather than a watch, and `deriveState` never
+ * returns `in_progress` for a film, so against Films they are not empty by
+ * accident — they cannot ever match. Offering a chip that is structurally
+ * zero invites the reader to wonder what they did wrong.
+ */
+const RUN_ONLY: readonly Facet[] = ['going', 'drifting', 'gaps'];
+
+export const appliesTo = (facet: Facet, kind: KindFilter | undefined): boolean =>
+  kind !== 'movie' || !RUN_ONLY.includes(facet);
+
+export const facetsFor = (kind: KindFilter | undefined): readonly Facet[] =>
+  FACETS.filter((facet) => appliesTo(facet, kind));
+
 const daysSince = (at: string | null, now: Date): number | null =>
   at === null ? null : Math.floor((now.getTime() - Date.parse(at)) / 86_400_000);
 

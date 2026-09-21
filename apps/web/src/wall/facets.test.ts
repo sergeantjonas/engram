@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { TitleSummary } from '../api/titles.ts';
-import { countFacets, DRIFTING_AFTER_DAYS, matchesFacet } from './facets.ts';
+import {
+  appliesTo,
+  countFacets,
+  DRIFTING_AFTER_DAYS,
+  FACETS,
+  facetsFor,
+  isKind,
+  matchesFacet,
+} from './facets.ts';
 
 const now = new Date('2026-09-20T12:00:00.000Z');
 const daysAgo = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
@@ -86,5 +94,33 @@ describe('countFacets', () => {
       unwatched: 1,
       offdisk: 0,
     });
+  });
+});
+
+describe('facetsFor', () => {
+  it('offers every facet when both kinds are on the wall', () => {
+    expect(facetsFor(undefined)).toEqual(FACETS);
+    expect(facetsFor('show')).toEqual(FACETS);
+  });
+
+  it('drops the run facets against films, which can never match one', () => {
+    // A film's state is only ever seen or unwatched, so these three are not
+    // empty by accident — offering them invites the reader to wonder why.
+    expect(facetsFor('movie')).toEqual(['finished', 'unwatched', 'offdisk']);
+  });
+
+  it('agrees with appliesTo', () => {
+    for (const facet of FACETS) {
+      expect(facetsFor('movie').includes(facet)).toBe(appliesTo(facet, 'movie'));
+    }
+  });
+});
+
+describe('isKind', () => {
+  it('accepts the two kinds and nothing else', () => {
+    expect(isKind('show')).toBe(true);
+    expect(isKind('movie')).toBe(true);
+    expect(isKind('film')).toBe(false);
+    expect(isKind(undefined)).toBe(false);
   });
 });

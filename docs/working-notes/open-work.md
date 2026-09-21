@@ -199,19 +199,15 @@ the viewer wants of a title. The SPA calls all four.
    The eighth chip, *Added by hand*, was removed the same day — it read 58 of
    82 because a title with no events fell to a default rather than to the
    rule, and corrected it matched one. See [web-design.md](web-design.md).
-   - **The figure reads as arithmetic, not as a duration.** `formatSince`
-     ([apps/web/src/title/format.ts:34](../../apps/web/src/title/format.ts#L34))
-     counts days and stops there, so the still-going band now puts `293d`,
-     `1277d` and `1794d` next to each other. Nobody says it that way, and past
-     a couple of months the digits stop ranking against one another at a
-     glance. `formatAgo`, ten lines below it, already settled the rule for
-     prose — days under a month, rounded months to eighteen, then years — and
-     the compact form should step the same way: `10mo`, `3y`, days only where
-     a day is what a person would name. The walk is what exposed it. Until
-     2026-09-21 the record reached no further back than 2025-10-24, so every
-     figure on the wall was a plausible day count; now half of them are not.
-     One formatter, three call sites — the wall tile, the list row and the
-     title header.
+   - ~~**The figure reads as arithmetic, not as a duration.**~~ Landed
+     2026-09-21. `formatSince` and `formatAgo` now share one `step`, so the
+     compact figure and the sentence cannot disagree about which unit a gap
+     deserves: days for the first month, rounded months to eighteen, then
+     years. The drifting band reads `10mo · 10mo · 11mo · 11mo · 3y · 4y · 5y`
+     where it read four-digit day counts. Sharing the stepping also fixed
+     "1 months ago", which the sentence had been saying for the fortnight
+     either side of the month threshold.
+
 3. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing
    it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land

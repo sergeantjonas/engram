@@ -89,9 +89,29 @@ describe('formatMoment', () => {
 });
 
 describe('formatSince', () => {
-  it('counts days when the record knows the day', () => {
+  it('counts days for the first month, where a day is what a person would name', () => {
     expect(formatSince('2026-09-15T20:00:00.000Z', 'exact', now)).toBe('3d');
-    expect(formatSince('2026-03-10T00:00:00.000Z', 'day', now)).toBe('193d');
+    expect(formatSince('2026-08-20T00:00:00.000Z', 'day', now)).toBe('30d');
+  });
+
+  it('steps to months and then years, the way the sentence does', () => {
+    // 293d, 1277d and 1794d side by side is a row of digits nobody ranks at a
+    // glance, and nobody says it that way either.
+    expect(formatSince('2026-03-10T00:00:00.000Z', 'day', now)).toBe('6mo');
+    expect(formatSince('2025-12-01T00:00:00.000Z', 'day', now)).toBe('10mo');
+    expect(formatSince('2023-03-28T00:00:00.000Z', 'day', now)).toBe('3y');
+    expect(formatSince('2019-06-11T00:00:00.000Z', 'day', now)).toBe('7y');
+  });
+
+  it('changes unit on the same thresholds as the sentence', () => {
+    for (const at of ['2026-08-20', '2026-06-01', '2025-01-01', '2019-06-11']) {
+      const short = formatSince(`${at}T00:00:00.000Z`, 'day', now);
+      const words = formatAgo(`${at}T00:00:00.000Z`, 'day', now);
+      const unit = short?.replace(/^\d+/, '');
+      expect(words, `${at} → ${short} / ${words}`).toContain(
+        { d: 'day', mo: 'month', y: 'year' }[unit ?? ''] ?? '—',
+      );
+    }
   });
 
   it('says today rather than 0d', () => {
@@ -125,6 +145,10 @@ describe('formatAgo', () => {
     expect(ago(60)).toBe('2 months ago');
     expect(ago(292)).toBe('10 months ago');
     expect(ago(700)).toBe('2 years ago');
+    // The first fortnight past the day threshold rounds to one, and said
+    // "1 months ago" until the two forms were made to share their stepping.
+    expect(ago(31)).toBe('1 month ago');
+    expect(ago(540)).toBe('1 year ago');
   });
 
   // A coarse entry names its period. Counting days from the first of January

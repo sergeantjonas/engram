@@ -24,12 +24,40 @@ export function formatWatched(at: string | null, precision: WatchPrecision | nul
 }
 
 /**
+ * How far back a distance is, in the unit a person would reach for at that
+ * distance: days for the first month, then rounded months, then years.
+ *
+ * Shared by the figure and the sentence so the two cannot drift apart — they
+ * are one judgement about when a day count stops carrying information, said
+ * twice at different lengths. The thresholds are the sentence's originals.
+ */
+function step(days: number): { value: number; unit: 'day' | 'month' | 'year' } {
+  if (days < 31) return { value: days, unit: 'day' };
+  const months = Math.round(days / 30.44);
+  if (months < 18) return { value: months, unit: 'month' };
+  return { value: Math.round(days / 365.25), unit: 'year' };
+}
+
+const SHORT_UNIT: Record<ReturnType<typeof step>['unit'], string> = {
+  day: 'd',
+  month: 'mo',
+  year: 'y',
+};
+
+/**
  * The wall's figure: how long ago, in the shortest form that is still true.
  *
  * Days only where the record knows the day. A coarse entry stores the first
  * instant of the period it names, so counting days from it would dress a guess
  * up as a measurement — those print the period instead. Null when there is no
  * date at all, which the tile renders as nothing rather than as a zero.
+ *
+ * Short does not mean a raw day count. The record now reaches to 2019, so the
+ * band was putting `293d`, `1277d` and `1794d` beside one another: nobody says
+ * it that way, and past a couple of months four digits stop ranking against
+ * each other at a glance. It steps to `10mo` and `3y` on the same thresholds
+ * the sentence uses, so the two forms never disagree about which unit a gap
+ * deserves.
  */
 export function formatSince(
   at: string | null,
@@ -48,7 +76,9 @@ export function formatSince(
   }
 
   const days = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
-  return days < 1 ? 'today' : `${days}d`;
+  if (days < 1) return 'today';
+  const { value, unit } = step(days);
+  return `${value}${SHORT_UNIT[unit]}`;
 }
 
 /**
@@ -85,13 +115,11 @@ export function formatAgo(
   const days = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
   if (days < 1) return 'earlier today';
   if (days === 1) return 'yesterday';
-  if (days < 31) return `${days} days ago`;
 
   // Rounded, and the unit changes with the distance: past a couple of months
   // the day count stops being information and starts being noise.
-  const months = Math.round(days / 30.44);
-  if (months < 18) return `${months} months ago`;
-  return `${Math.round(days / 365.25)} years ago`;
+  const { value, unit } = step(days);
+  return `${value} ${unit}${value === 1 ? '' : 's'} ago`;
 }
 
 /**

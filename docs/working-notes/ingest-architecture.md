@@ -105,10 +105,14 @@ rather than a custom port, so no egress filter can matter.
 proxy with its own auth, so netcup can reach its API for the nightly
 reconcile. The guess above was right.
 
-Two things came with that answer. It currently redirects to `/welcome`, so
-the install has not been through its setup wizard, and `/api/v2` replies
-`API not enabled` — both are settings, not obstacles, but neither the
-reconcile nor a payload check can happen until they are done.
+One setting came with that answer: `/api/v2` replies `API not enabled`. That
+blocks a pull and `get_activity`, and nothing else — a webhook is Tautulli
+posting outward and needs no API of its own.
+
+`/` redirects to `/welcome` on this install even though it is set up, which
+is worth writing down only because it was briefly read as evidence that it
+was not. `/home` serves the dashboard; the redirect says nothing about
+configuration.
 
 The third is a decision rather than a step: **port 8181 is plaintext, with no
 TLS listener on it.** The Plex token is already kept off the wire for this

@@ -240,10 +240,10 @@ the viewer wants of a title. The SPA calls all four.
 
 - ~~**Tautulli is not installed.**~~ Installed 2026-09-21 and reachable on a
   dedicated port, `http://enyo.bysh.me:8181` — see
-  [ingest-architecture.md](ingest-architecture.md) § Host topology. Two
-  settings still stand between it and any use: the install has not been
-  through its setup wizard, and its API is switched off. Neither is an
-  obstacle, but neither is something this repo can do.
+  [ingest-architecture.md](ingest-architecture.md) § Host topology. Set up
+  and serving its dashboard. Its API is switched off, which blocks a pull and
+  `get_activity` and nothing else — the webhook is Tautulli posting outward
+  and needs no API of its own, and the pull has been dropped.
 - **Tautulli webhook payload shape is unverified.** Which external-id parameters
   actually populate per media type needs one empirical check against a throwaway
   endpoint before any parsing code is trusted.

@@ -74,6 +74,9 @@ export interface TmdbEpisode {
   airDate: string | null;
   runtimeMin: number | null;
   tmdbEpisodeId: string | null;
+  overview: string | null;
+  /** A 16:9 frame from the episode, as a path like `posterPath`. */
+  stillPath: string | null;
 }
 
 export interface TmdbClient {
@@ -116,6 +119,8 @@ interface SeasonBody {
     air_date?: string;
     runtime?: number | null;
     id?: number;
+    overview?: string;
+    still_path?: string | null;
   }[];
 }
 
@@ -222,6 +227,8 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
           airDate: row.air_date || null,
           runtimeMin: typeof row.runtime === 'number' ? row.runtime : null,
           tmdbEpisodeId: typeof row.id === 'number' ? String(row.id) : null,
+          overview: row.overview || null,
+          stillPath: row.still_path ?? null,
         });
       }
 

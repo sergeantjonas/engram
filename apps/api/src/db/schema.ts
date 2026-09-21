@@ -91,6 +91,12 @@ export const episodes = pgTable(
     airDate: date('air_date'),
     runtimeMin: integer('runtime_min'),
     tmdbEpisodeId: text('tmdb_episode_id'),
+    // Both off the season payload the backfill already fetches, so they cost
+    // no TMDB call. Nullable: rows written before the columns existed, and
+    // rows the Plex import created, stay empty until the backfill next runs.
+    overview: text('overview'),
+    /** The path as TMDB gives it; the CDN URL and size are the reader's choice. */
+    stillPath: text('still_path'),
   },
   (t) => [
     unique('episode_title_season_number').on(t.titleId, t.season, t.number),

@@ -623,6 +623,8 @@ const episode = (overrides: Partial<EpisodeCell>): EpisodeCell => ({
   name: null,
   airDate: null,
   runtimeMin: null,
+  overview: null,
+  stillPath: null,
   seen: false,
   playCount: 0,
   manualPlays: 0,
@@ -859,6 +861,45 @@ describe('the title page', () => {
     await screen.findByRole('heading', { name: 'ONE PIECE' });
     expect(screen.queryByText(OVERVIEW)).toBeNull();
     expect(screen.queryByRole('button', { name: 'more' })).toBeNull();
+  });
+
+  // The popover is a card about the episode where the record has one, and
+  // exactly the label it was before where it does not: production rows are
+  // null between the deploy and the backfill, and a fresh clone's forever.
+  it('shows an episode as a card when it knows what it is, and as a label when not', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        const cell = body.seasons[1]?.episodes[1];
+        if (cell) {
+          cell.runtimeMin = 42;
+          cell.overview = 'Luffy meets a boy who will not let go of a straw hat.';
+          cell.stillPath = '/wax.jpg';
+        }
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    const card = within(await screen.findByRole('dialog'));
+    expect(card.getByRole('presentation').getAttribute('src')).toBe(
+      'https://image.tmdb.org/t/p/w300/wax.jpg',
+    );
+    expect(card.getByText('WAX ON, WAX OFF')).toBeDefined();
+    expect(card.getByText(/^S2E5 · .*2026 · 42 min$/)).toBeDefined();
+    expect(card.getByText(/straw hat/)).toBeDefined();
+    cleanup();
+
+    stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    const label = await screen.findByRole('dialog');
+    expect(label.querySelector('img')).toBeNull();
+    expect(within(label).getByText(/^S2E5 · .*2026$/)).toBeDefined();
+    expect(within(label).queryByText(/straw hat/)).toBeNull();
   });
 
   // Indistinguishable from an unwatched episode until now, which is how two
@@ -1103,7 +1144,7 @@ describe('the title page', () => {
 
     (await screen.findByRole('button', { name: 'Episode 4, seen' })).click();
 
-    await screen.findByText('4. Untitled');
+    await screen.findByText('Untitled');
     expect(screen.queryByRole('button', { name: /Take back/ })).toBeNull();
   });
 
@@ -1279,7 +1320,7 @@ describe('the title page', () => {
     (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
 
     // The popover still opens and still says what it knows.
-    await screen.findByText('5. WAX ON, WAX OFF');
+    await screen.findByText('WAX ON, WAX OFF');
     expect(screen.getByText('Not seen')).toBeDefined();
     expect(screen.queryByRole('radio', { name: 'Never had it' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();

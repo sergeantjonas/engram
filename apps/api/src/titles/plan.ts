@@ -23,6 +23,8 @@ export interface PlannedEpisodeRow {
   airDate: string | null;
   runtimeMin: number | null;
   tmdbEpisodeId: string | null;
+  overview: string | null;
+  stillPath: string | null;
 }
 
 export type TitlePlan =
@@ -84,6 +86,8 @@ export function planEpisodes(episodes: TmdbEpisode[]): PlannedEpisodeRow[] {
       airDate: episode.airDate,
       runtimeMin: episode.runtimeMin,
       tmdbEpisodeId: episode.tmdbEpisodeId,
+      overview: episode.overview,
+      stillPath: episode.stillPath,
     });
   }
 

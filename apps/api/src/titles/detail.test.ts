@@ -95,6 +95,20 @@ describe('titleDetail', () => {
     expect(result?.seasons[0]?.episodes.map((e) => e.id)).toEqual(['b', 'c']);
   });
 
+  // Null is what every row holds between the deploy that adds the columns and
+  // the backfill that fills them, so it has to travel as null, not as absent.
+  it('carries the synopsis and still, and null where the backfill has not been', async () => {
+    const result = await detail([
+      episodeRow({ id: 'a', overview: 'Luffy sets sail.', still_path: '/still.jpg' }),
+      episodeRow({ id: 'b', number: 2, overview: null, still_path: null }),
+    ]);
+
+    expect(result?.seasons[0]?.episodes.map((e) => [e.overview, e.stillPath])).toEqual([
+      ['Luffy sets sail.', '/still.jpg'],
+      [null, null],
+    ]);
+  });
+
   // The gap the whole grid exists to show: no `watch_state` row at all, which
   // must read as unwatched rather than as missing data.
   it('reads an episode with no history as unwatched', async () => {

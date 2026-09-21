@@ -6,6 +6,7 @@ import {
   clearGap,
   type GapReason,
   setGap,
+  stillUrl,
   titleQuery,
 } from '../api/titles.ts';
 import { Tip } from '../shell/Tooltip.tsx';
@@ -71,6 +72,19 @@ export function EpisodeCell({
   const [open, setOpen] = useState(false);
   const status = statusOf(episode, today);
   const label = `Episode ${episode.number}${episode.name ? `: ${episode.name}` : ''}, ${STATUS_LABEL[status]}`;
+  const still = stillUrl(episode.stillPath);
+  // Figures only on the mono line; the sentence about a missing date or an
+  // episode TMDB has never heard of is prose, and prose is set in Archivo.
+  const facts = [
+    `S${season}E${episode.number}`,
+    ...(episode.airDate === null || episode.unmatched ? [] : [formatAirDate(episode.airDate)]),
+    ...(episode.runtimeMin === null ? [] : [`${episode.runtimeMin} min`]),
+  ];
+  const caveat = episode.unmatched
+    ? 'TMDB does not list this episode'
+    : episode.airDate === null
+      ? 'No air date'
+      : null;
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -95,15 +109,29 @@ export function EpisodeCell({
           side="top"
           sideOffset={6}
           collisionPadding={16}
-          className="w-72 rounded border border-line bg-surf p-4 text-sm text-tx shadow-lg"
+          // Capped at what Radix says fits and scrolling past it: with a still,
+          // three lines of synopsis and both forms open, the controls must
+          // stay reachable on a laptop rather than slide under the fold.
+          className="max-h-[var(--radix-popover-content-available-height)] w-80 overflow-y-auto rounded border border-line bg-surf p-4 text-sm text-tx shadow-lg"
         >
-          <p className="font-medium">
-            {episode.number}. {episode.name ?? 'Untitled'}
-          </p>
-          <p className="mt-1 text-xs text-dim">
-            {episode.unmatched ? 'TMDB does not list this episode' : formatAirDate(episode.airDate)}
-            {episode.runtimeMin !== null ? ` · ${episode.runtimeMin} min` : ''}
-          </p>
+          {/* A card, not a label: this is the page built for backfilling by
+              hand, and people remember a scene before they remember a number.
+              The still and the synopsis are each drawn only when stored — a
+              blank box or "no synopsis" would be the state of every row
+              between a deploy and the backfill, and of any clone with no key. */}
+          {still === null ? null : (
+            <img
+              src={still}
+              alt=""
+              className="-mx-4 -mt-4 mb-3 aspect-video w-[calc(100%_+_2rem)] max-w-none rounded-t object-cover"
+            />
+          )}
+          <p className="font-medium">{episode.name ?? 'Untitled'}</p>
+          <p className="mt-1 font-mono text-[10px] text-dim">{facts.join(' · ')}</p>
+          {caveat === null ? null : <p className="mt-1 text-xs text-dim">{caveat}</p>}
+          {episode.overview === null ? null : (
+            <p className="mt-2 line-clamp-3 text-xs text-dim">{episode.overview}</p>
+          )}
           <p className="mt-2 text-xs text-tx">
             {episode.seen
               ? `Watched ${formatWatched(episode.lastWatchedAt, episode.lastWatchedPrecision)}` +

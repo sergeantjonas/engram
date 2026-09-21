@@ -15,6 +15,8 @@ const episode = (season: number, number: number) => ({
   airDate: null,
   runtimeMin: null,
   tmdbEpisodeId: null,
+  overview: `What happens in S${season}E${number}.`,
+  stillPath: `/s${season}e${number}.jpg`,
 });
 
 /**
@@ -25,7 +27,12 @@ const episode = (season: number, number: number) => ({
  * counted the whole `episode` table.
  */
 const stubDb = (storedBySlot: Record<string, { season: number; number: number }[]> = {}) => {
-  const inserted: { titleId: string; rows: Record<string, unknown>[] }[] = [];
+  const inserted: {
+    titleId: string;
+    rows: Record<string, unknown>[];
+    /** The columns the conflict clause refreshes on a row already stored. */
+    refreshed: string[];
+  }[] = [];
   const predicates: unknown[] = [];
   let call = 0;
 
@@ -41,8 +48,12 @@ const stubDb = (storedBySlot: Record<string, { season: number; number: number }[
     select: () => ({ from: () => ({ where }) }),
     insert: () => ({
       values: (rows: Record<string, unknown>[]) => ({
-        onConflictDoUpdate: async () => {
-          inserted.push({ titleId: String(rows[0]?.titleId), rows });
+        onConflictDoUpdate: async (clause: { set: Record<string, unknown> }) => {
+          inserted.push({
+            titleId: String(rows[0]?.titleId),
+            rows,
+            refreshed: Object.keys(clause.set),
+          });
         },
       }),
     }),
@@ -79,6 +90,23 @@ describe('backfillEpisodes', () => {
       expect.objectContaining({ season: 1, number: 1, titleId: 'a' }),
       expect.objectContaining({ season: 1, number: 2, titleId: 'a' }),
     ]);
+  });
+
+  // The synopsis and still ride the season call the backfill already makes,
+  // and a row the importer created arrives with neither, so the conflict
+  // clause has to refresh them or the watched episodes stay the blank ones.
+  it('writes the synopsis and still, and refreshes them on a row already stored', async () => {
+    const { db, inserted } = stubDb({ a: [{ season: 1, number: 1 }] });
+
+    await backfillEpisodes(db, stubTmdb());
+
+    expect(inserted[0]?.rows[0]).toMatchObject({
+      overview: 'What happens in S1E1.',
+      stillPath: '/s1e1.jpg',
+    });
+    expect(inserted[0]?.refreshed).toEqual(
+      expect.arrayContaining(['name', 'airDate', 'runtimeMin', 'overview', 'stillPath']),
+    );
   });
 
   // Every query has to be narrowed; a stub that dropped the predicate would

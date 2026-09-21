@@ -1,8 +1,8 @@
 # Web depth
 
 **Status:** In progress — scoped 2026-09-21 from a review of the three built
-screens against [web-design.md](web-design.md); arc 1 chunk 1 landed the same
-day. Arcs are ordered; chunks inside an arc are one commit each, and each one
+screens against [web-design.md](web-design.md); arc 1 chunks 1 and 2 landed
+the same day. Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -120,16 +120,27 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    clamp of the overview since the espresso palette landed, so the review's
    "candidates without artwork" was stale. Null draws nothing, which is what
    production shows for a title `backfill:metadata` has not reached.
-2. **Episode synopsis and still.** Two nullable columns on `episode`,
-   `overview` and `still_path`, filled by `backfill:episodes` from the season
-   payload it already parses. `EpisodeCell` in `GET /titles/:id` carries both.
-   The cell popover becomes a card: still at 16:9 across the popover's width,
-   name, `S2E5 · 14 Jun 2019 · 42 min`, then up to three lines of synopsis,
-   then the marking controls as today. Width goes from `w-72` to about
-   `w-80`; the still must not push the actions below the fold on a laptop.
-   Deploy, then run the episode backfill on the box as described under
-   Shipping against production; it is idempotent, and until it has run the
-   popover reads exactly as it does today.
+2. ~~**Episode synopsis and still.**~~ Landed 2026-09-21 as migration 0011:
+   two nullable columns on `episode`, `overview` and `still_path`, read off the
+   season payload by the TMDB client, carried through `planEpisodes`, and
+   written by `backfill:episodes` on the same upsert — the conflict clause
+   refreshes both, so the rows the Plex import created gain them too.
+   `EpisodeCell` in `GET /titles/:id` carries both and the web type mirrors it.
+   The popover is a `w-80` card: the still bleeds to the card's edges at 16:9,
+   then the name alone, then `S2E5 · 14 Jun 2019 · 42 min` in 10px mono (the
+   number moved from the name line into that line, which is the one departure
+   from the sketch), then up to three lines of synopsis, then the controls
+   unchanged. Still and synopsis are each drawn only when stored, so a null
+   row reads exactly as before — no placeholder, no empty box.
+
+   Rehearsed locally the same day against a restore of the production record:
+   2467 episode rows, all null before; after one run 2376 carry both a
+   synopsis and a still, 0 rows added, 8 stored rows TMDB does not list. The 91
+   left null are those 8 plus episodes TMDB itself has no text or frame for.
+   **Not yet run on the box** — the production steps are under Shipping
+   against production: backup, deploy, then `backfill-cli.js` in the api
+   container. Until that has run every popover in production reads as it did
+   before this chunk.
 3. **Season facts on the heading.** A `season` table does not exist and one
    row per season is not worth one yet. Instead the heading derives what it
    can: `SEASON 2 · 2019–2020 · 10 EP · ONE MISSING`, the year range from the

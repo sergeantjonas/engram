@@ -31,8 +31,8 @@ const slot = (episode: { season: number; number: number }) => `${episode.season}
  * and fills in the rest.
  *
  * Existing rows keep their identity and gain their metadata: the conflict
- * clause updates name, air date, runtime and TMDB episode id but never
- * `episode.id`, so `watch_event`'s composite foreign key is untouched and no
+ * clause updates name, air date, runtime, synopsis, still and TMDB episode id
+ * but never `episode.id`, so `watch_event`'s composite foreign key is untouched and no
  * history moves. That matters because the rows the importer created are exactly
  * the watched ones, and they are the only rows that arrived with no name or air
  * date at all — without this the grid could label every episode except the ones
@@ -104,6 +104,8 @@ export async function backfillEpisodes(
             airDate: sql`excluded.air_date`,
             runtimeMin: sql`excluded.runtime_min`,
             tmdbEpisodeId: sql`excluded.tmdb_episode_id`,
+            overview: sql`excluded.overview`,
+            stillPath: sql`excluded.still_path`,
           },
         });
     }

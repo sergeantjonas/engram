@@ -17,6 +17,9 @@ export interface EpisodeCell {
   name: string | null;
   airDate: string | null;
   runtimeMin: number | null;
+  /** Both null until `backfill:episodes` has run since the columns existed. */
+  overview: string | null;
+  stillPath: string | null;
   seen: boolean;
   playCount: number;
   /**
@@ -220,6 +223,8 @@ interface EpisodeRow extends Record<string, unknown> {
   air_date: string | null;
   runtime_min: number | null;
   tmdb_episode_id: string | null;
+  overview: string | null;
+  still_path: string | null;
   seen: boolean | null;
   play_count: number | null;
   first_watched_at: string | null;
@@ -309,6 +314,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
   const rows = await db.execute<EpisodeRow>(sql`
     select
       e.id, e.season, e.number, e.name, e.runtime_min, e.tmdb_episode_id,
+      e.overview, e.still_path,
       -- A date column prints as YYYY-MM-DD already, but to_json is what makes
       -- that a documented guarantee rather than a default that could change.
       to_json(e.air_date) as air_date,
@@ -381,6 +387,8 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       name: row.name,
       airDate: row.air_date,
       runtimeMin: row.runtime_min,
+      overview: row.overview,
+      stillPath: row.still_path,
       // No `watch_state` row means nothing has ever been watched, which is not
       // the same as a row saying so — but it reads the same to the grid.
       seen: row.seen ?? false,

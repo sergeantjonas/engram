@@ -34,6 +34,8 @@ const episode = (over: Partial<TmdbEpisode> = {}): TmdbEpisode => ({
   airDate: '2019-12-20',
   runtimeMin: 62,
   tmdbEpisodeId: '1927355',
+  overview: 'Geralt of Rivia hunts a kikimora.',
+  stillPath: '/still.jpg',
   ...over,
 });
 
@@ -88,6 +90,8 @@ describe('planEpisodes', () => {
         airDate: '2019-12-20',
         runtimeMin: 62,
         tmdbEpisodeId: '1927355',
+        overview: 'Geralt of Rivia hunts a kikimora.',
+        stillPath: '/still.jpg',
       },
       {
         season: 1,
@@ -96,6 +100,8 @@ describe('planEpisodes', () => {
         airDate: '2019-12-20',
         runtimeMin: 62,
         tmdbEpisodeId: '1927355',
+        overview: 'Geralt of Rivia hunts a kikimora.',
+        stillPath: '/still.jpg',
       },
     ]);
   });

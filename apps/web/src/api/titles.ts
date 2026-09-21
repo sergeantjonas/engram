@@ -50,6 +50,9 @@ export interface EpisodeCell {
   name: string | null;
   airDate: string | null;
   runtimeMin: number | null;
+  /** Both null until the episode backfill has run since the columns existed. */
+  overview: string | null;
+  stillPath: string | null;
   seen: boolean;
   playCount: number;
   /**
@@ -163,6 +166,11 @@ export function posterUrl(
 /** A backdrop is wide and sits behind text, so it is fetched at its own sizes. */
 export function backdropUrl(backdropPath: string | null, size: 'w780' | 'w1280' = 'w1280') {
   return backdropPath === null ? null : `https://image.tmdb.org/t/p/${size}${backdropPath}`;
+}
+
+/** An episode still is 16:9 and TMDB cuts it at its own widths, none of them a poster's. */
+export function stillUrl(stillPath: string | null, size: 'w185' | 'w300' = 'w300') {
+  return stillPath === null ? null : `https://image.tmdb.org/t/p/${size}${stillPath}`;
 }
 
 export function titleQuery(id: string) {

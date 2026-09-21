@@ -183,8 +183,18 @@ describe('createTmdbClient', () => {
           air_date: '2021-12-17',
           runtime: 60,
           id: 2661333,
+          overview: 'Geralt takes a job.',
+          still_path: '/still.jpg',
         },
-        { episode_number: 2, name: null, air_date: '', runtime: null, id: null },
+        {
+          episode_number: 2,
+          name: null,
+          air_date: '',
+          runtime: null,
+          id: null,
+          overview: '',
+          still_path: null,
+        },
       ],
     });
 
@@ -199,8 +209,19 @@ describe('createTmdbClient', () => {
         airDate: '2021-12-17',
         runtimeMin: 60,
         tmdbEpisodeId: '2661333',
+        overview: 'Geralt takes a job.',
+        stillPath: '/still.jpg',
       },
-      { season: 2, number: 2, name: null, airDate: null, runtimeMin: null, tmdbEpisodeId: null },
+      {
+        season: 2,
+        number: 2,
+        name: null,
+        airDate: null,
+        runtimeMin: null,
+        tmdbEpisodeId: null,
+        overview: null,
+        stillPath: null,
+      },
     ]);
   });
 

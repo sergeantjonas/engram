@@ -182,6 +182,21 @@ export const watchEvents = pgTable(
     watchedAt: timestamp('watched_at', { withTimezone: true }),
     watchedPrecision: watchPrecision('watched_precision').notNull(),
 
+    /**
+     * How many plays this one row stands for, where the source counts instead
+     * of enumerating.
+     *
+     * Null for every source that writes a row per play — Plex history and
+     * Tautulli — and for a mark by hand, which asserts that something was seen
+     * rather than how often. The Plex library walk is the reason it exists: it
+     * gives `viewCount` and a single `lastViewedAt`, so *how many times*
+     * survives there even where *when* does not, and that is exactly the fact
+     * that goes with the media when the media goes.
+     *
+     * See ingest-architecture.md § Claim grain and precedence.
+     */
+    plays: integer('plays'),
+
     durationSec: integer('duration_sec'),
     viewOffsetSec: integer('view_offset_sec'),
     percentComplete: real('percent_complete'),
@@ -326,6 +341,10 @@ export const watchState = pgView('watch_state', {
    */
   firstWatchedPrecision: watchPrecision('first_watched_precision').notNull(),
   lastWatchedPrecision: watchPrecision('last_watched_precision').notNull(),
+  /**
+   * Viewings, not claims. Six sources describe the same watching and a count of
+   * rows would treble a single one; see the view's own SQL for the rule.
+   */
   playCount: integer('play_count').notNull(),
   seen: boolean('seen').notNull(),
 }).as(sql`
@@ -338,7 +357,18 @@ export const watchState = pgView('watch_state', {
       as first_watched_precision,
     (array_agg(watched_precision order by watched_at desc nulls last))[1]
       as last_watched_precision,
-    count(*)::int as play_count,
+    -- Viewings rather than claims. Sources differ in grain: Plex history and
+    -- Tautulli write one row per play, so those are counted; the library walk
+    -- writes one row per episode carrying its own total, so that is taken
+    -- whole; a mark by hand asserts only that something was seen. The larger
+    -- of the two wins because they describe the same viewing from different
+    -- angles, and the floor of one keeps an episode known solely from a manual
+    -- mark reading as watched once rather than never.
+    greatest(
+      count(*) filter (where source in ('plex-history', 'tautulli')),
+      coalesce(max(plays), 0),
+      1
+    )::int as play_count,
     bool_or(completed) as seen
   from watch_event
   group by title_id, episode_id

@@ -50,6 +50,13 @@
       "when": 1789943675634,
       "tag": "0006_fancy_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789998649934,
+      "tag": "0007_dear_captain_universe",
+      "breakpoints": true
     }
   ]
 }

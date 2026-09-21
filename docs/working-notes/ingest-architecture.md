@@ -48,6 +48,19 @@ So `play_count` counts play-grained rows only, floored at one so an episode
 known solely from a manual mark still reads as watched once. `seen` stays
 `bool_or(completed)` and needs no change.
 
+Built 2026-09-21, ahead of the walk that exposes it, and with one addition the
+plan above did not have: `watch_event.plays`. An episode-grained source counts
+rather than enumerates, so its row carries its own total and the view takes
+`greatest(play-grained rows, max(plays), 1)` — the larger wins because the two
+describe the same viewing from different angles. Null everywhere else: a
+play-grained row is one play by definition and a mark by hand asserts only that
+something was seen.
+
+Measured against the live record on the day: Stranger Things dropped from 50
+claims to 42 viewings, because its eight S5 episodes each carried a manual mark
+*and* a history row; Bleach S17E45 and S17E47, two genuine rewatches with two
+history rows apiece, still read as two.
+
 **Two sources feed `library_presence`, and neither is a watch.** Sonarr and
 Radarr know what is on disk; the Plex library walk knows what Plex can see.
 Neither knows what was viewed, and nothing about presence may ever be inferred

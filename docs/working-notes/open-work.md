@@ -107,11 +107,10 @@ the viewer wants of a title. The SPA calls all four.
    as the dump — per-item view state is the token's own — so it does not wait
    on the allowlist below.
 
-   1. `play_count` counts play-grained rows only, floored at one. It is
-      already wrong for eight Stranger Things episodes and the walk would
-      treble them; the reasoning and the grain table are in
-      [ingest-architecture.md](ingest-architecture.md) § Claim grain and
-      precedence. Land it before the data that exposes it.
+   1. ~~`play_count` counts play-grained rows only, floored at one.~~ Done
+      2026-09-21, with `watch_event.plays` for the count an episode-grained
+      source gives instead of enumerating. Stranger Things went from 50 claims
+      to 42 viewings; Bleach's two real rewatches still read as two.
    2. The walk itself: a `plex-library` source over
       `/library/sections/{key}/all?includeGuids=1`, writing watch events for
       what is watched and `library_presence` for everything it sees. **Both
@@ -208,14 +207,6 @@ the viewer wants of a title. The SPA calls all four.
   five still in rotation, where 90 would have called almost everything
   drifting. Worth revisiting once the library is bigger, or once `dropped` can
   be set and says the same thing explicitly.
-- **Whether to keep Plex's `viewCount` for the rewatches it is the only record
-  of.** The library walk knows an episode was played twice but only when it was
-  last played, so one event per episode loses the count. A `watch_event` is one
-  play, and there is no column for "this claim stands for three of them".
-  Recommend storing it — a column, or read out of `raw` — because it is exactly
-  the kind of fact that becomes unrecoverable the moment the media is deleted,
-  which is the thing this project exists to prevent. The alternative is to
-  accept that rewatches before 2025-10-24 collapse to one.
 - **Whether legacy-agent libraries exist here.** If they do, the season and
   episode in a legacy GUID are the only carrier of that information and
   `parseGuid` currently discards it. See
@@ -223,6 +214,21 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-21** — Settled: keep Plex's `viewCount`. `watch_event.plays` holds
+  how many plays one row stands for, where the source counts instead of
+  enumerating, and `watch_state.play_count` became
+  `greatest(play-grained rows, max(plays), 1)`.
+
+  The walk that produces the number is not built yet, which is exactly why this
+  went first: `open-work.md` already said to land the counting change before the
+  data that exposes it, and a walk with nowhere to put `viewCount` would discard
+  the one fact about a rewatch that survives the media being deleted.
+
+  It also fixed a count that was already wrong. `count(*)` counted claims, not
+  viewings, so the eight Stranger Things S5 episodes carrying both a manual mark
+  and a history row read as two plays of one viewing — 50 for the show against
+  42 real ones. Bleach S17E45 and S17E47 are two genuine rewatches and still
+  read as two.
 - **2026-09-21** — Settled: what the owner meant is theirs, what they watched is
   the record. `want`, `dropped` and `excluded` come back false to a stranger on
   both reads; `onDisk` stays, being a fact about the record rather than an

@@ -1,5 +1,5 @@
 import { parseWatchedAt } from '@engram/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
@@ -8,7 +8,7 @@ import {
   titles as titleTable,
   watchEvents as watchEventTable,
 } from '../db/schema.js';
-import { planWatchEvents, type WatchScope } from '../watch/plan.js';
+import { episodesInScope, MANUAL_SOURCE, planWatchEvents, type WatchScope } from '../watch/plan.js';
 
 /**
  * How much of a title one request marks.
@@ -43,6 +43,62 @@ export const toScope = (scope: z.infer<typeof scopeSchema>): WatchScope => {
 };
 
 /**
+ * How much of a title one request retracts, as a query string rather than a
+ * body: a DELETE that carries one is legal but poorly supported by everything
+ * between the browser and the route.
+ *
+ * Absent `season` is the whole title, which mirrors the `all` a mark defaults
+ * to — specials included in neither.
+ */
+const removeQuery = z
+  .object({
+    titleId: z.uuid('titleId must be the id of a stored title'),
+    // A digit string rather than coercion. `z.coerce.number()` reads `season=`
+    // as 0, and 0 is a real season, so a whole-title undo would quietly become
+    // a retraction of the specials nobody named — and it would equally accept
+    // `2.5`, `1e3` and `0x10` as seasons.
+    season: z.string().regex(/^\d+$/, 'season must be a whole number').transform(Number).optional(),
+    episode: z
+      .string()
+      .regex(/^[1-9]\d*$/, 'episode must be a whole number, counting from 1')
+      .transform(Number)
+      .optional(),
+  })
+  .refine((query) => query.episode === undefined || query.season !== undefined, {
+    message: 'an episode has to name the season it is in',
+  });
+
+/** The title a request is about and the grid a scope is resolved against. */
+async function loadTarget(db: Database, titleId: string) {
+  const [title] = await db
+    .select({
+      id: titleTable.id,
+      key: titleTable.key,
+      kind: titleTable.kind,
+      name: titleTable.name,
+    })
+    .from(titleTable)
+    .where(eq(titleTable.id, titleId))
+    .limit(1);
+
+  if (!title) return null;
+
+  const episodes =
+    title.kind === 'movie'
+      ? []
+      : await db
+          .select({
+            id: episodeTable.id,
+            season: episodeTable.season,
+            number: episodeTable.number,
+          })
+          .from(episodeTable)
+          .where(eq(episodeTable.titleId, title.id));
+
+  return { title, episodes };
+}
+
+/**
  * Recording that something was watched, which for history older than this Plex
  * server is the only way it gets in at all.
  *
@@ -69,38 +125,17 @@ export function registerWatchEventRoutes(app: FastifyInstance, db: Database): vo
       });
     }
 
-    const [title] = await db
-      .select({
-        id: titleTable.id,
-        key: titleTable.key,
-        kind: titleTable.kind,
-        name: titleTable.name,
-      })
-      .from(titleTable)
-      .where(eq(titleTable.id, titleId))
-      .limit(1);
-
-    if (!title) {
+    const target = await loadTarget(db, titleId);
+    if (!target) {
       return reply
         .code(404)
         .send({ error: 'not_found', message: 'no title is stored under that id' });
     }
-
-    const grid =
-      title.kind === 'movie'
-        ? []
-        : await db
-            .select({
-              id: episodeTable.id,
-              season: episodeTable.season,
-              number: episodeTable.number,
-            })
-            .from(episodeTable)
-            .where(eq(episodeTable.titleId, title.id));
+    const { title } = target;
 
     const plan = planWatchEvents({
       target: title,
-      episodes: grid,
+      episodes: target.episodes,
       scope: toScope(scope),
       moment,
       // The date as written rather than as stored, so a year and the first of
@@ -131,6 +166,72 @@ export function registerWatchEventRoutes(app: FastifyInstance, db: Database): vo
       title: { id: title.id, key: title.key, name: title.name },
       written: written.length,
       skipped: plan.rows.length - written.length,
+    });
+  });
+
+  /**
+   * Retracting a mark, because a mark is a claim and a claim can be a mistake.
+   *
+   * Only what this record was told by hand. A play Plex reported is something
+   * that was observed, and deleting it here would neither make it untrue nor
+   * survive the next reconciliation pass, so `source` is part of the predicate
+   * rather than an afterthought — one misdirected undo must not be able to eat
+   * the imported history this project exists to keep.
+   *
+   * The scope resolves through the same function a mark uses, so an undo covers
+   * exactly what the mark covered: specials stay out of a whole-title retraction
+   * the way they stay out of a whole-title mark.
+   */
+  app.delete('/watch-events', async (request, reply) => {
+    const parsed = removeQuery.safeParse(request.query);
+    if (!parsed.success) {
+      const message = parsed.error.issues.map((issue) => issue.message).join('; ');
+      return reply.code(400).send({ error: 'bad_request', message });
+    }
+    const { titleId, season, episode } = parsed.data;
+
+    const target = await loadTarget(db, titleId);
+    if (!target) {
+      return reply
+        .code(404)
+        .send({ error: 'not_found', message: 'no title is stored under that id' });
+    }
+
+    const scope: WatchScope =
+      season === undefined
+        ? { kind: 'title' }
+        : episode === undefined
+          ? { kind: 'season', season }
+          : { kind: 'episode', season, episode };
+
+    const scoped = episodesInScope(target.title.kind, target.episodes, scope);
+    if (!scoped.ok) {
+      return reply.code(422).send({ error: 'unmarkable', message: scoped.reason });
+    }
+
+    const episodeIds = scoped.slots.filter((slot) => slot !== null).map((slot) => slot.id);
+    const removed = await db
+      .delete(watchEventTable)
+      .where(
+        and(
+          eq(watchEventTable.titleId, target.title.id),
+          eq(watchEventTable.source, MANUAL_SOURCE),
+          // On the kind rather than on the list being empty. They agree today,
+          // but only the kind says why: a film's events name no episode, and
+          // reading it off an empty list would turn any future scope that
+          // resolves to nothing into "every title-level row".
+          target.title.kind === 'movie'
+            ? isNull(watchEventTable.episodeId)
+            : inArray(watchEventTable.episodeId, episodeIds),
+        ),
+      )
+      .returning({ id: watchEventTable.id });
+
+    // Zero is an answer rather than an error: the scope was valid and nothing
+    // in it had been claimed by hand, which is what the caller wanted to know.
+    return reply.send({
+      title: { id: target.title.id, key: target.title.key, name: target.title.name },
+      removed: removed.length,
     });
   });
 }

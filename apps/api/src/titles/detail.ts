@@ -1,6 +1,7 @@
 import type { WatchPrecision } from '@engram/shared';
 import { sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
+import { MANUAL_SOURCE } from '../watch/plan.js';
 import { listTitles, type TitleSummary } from './list.js';
 
 /** What the viewer has said about a hole, if anything. */
@@ -18,6 +19,11 @@ export interface EpisodeCell {
   runtimeMin: number | null;
   seen: boolean;
   playCount: number;
+  /**
+   * How many of those plays this record was told about by hand, which is how
+   * many can be taken back. A play Plex reported is not one of them.
+   */
+  manualPlays: number;
   /**
    * Each boundary carries the precision of the event it came from, not the best
    * precision in the group: a remembered 2019 and an exact play last week must
@@ -71,6 +77,12 @@ export interface TitleFigures {
   plays: number;
   /** Episodes watched more than once, not the number of extra plays. */
   rewatched: number;
+  /**
+   * Of those plays, the ones entered by hand — counted over the same set, so
+   * specials are excluded and a null episode counts only for a film. What a
+   * whole-title undo would retract.
+   */
+  manualPlays: number;
   firstWatchedAt: string | null;
   firstWatchedPrecision: WatchPrecision | null;
   /**
@@ -151,6 +163,9 @@ export function withoutGapNotes(detail: TitleDetail): TitleDetail {
     title: detail.title,
     ids: detail.ids,
     backdropPath: detail.backdropPath,
+    // Whole, `manualPlays` included. How much of the record was typed rather
+    // than observed is already public: `recentActivity` carries each event's
+    // source, and the wall's "added by hand" facet counts titles by it.
     figures: detail.figures,
     recentActivity: detail.recentActivity,
     seasons: detail.seasons.map((season) => ({
@@ -171,6 +186,7 @@ interface IdentityRow extends Record<string, unknown> {
   backdrop_path: string | null;
   plays: number;
   rewatched: number;
+  manual_plays: number;
   first_watched_at: string | null;
   first_watched_precision: WatchPrecision | null;
   last_watched_at: string | null;
@@ -202,6 +218,7 @@ interface EpisodeRow extends Record<string, unknown> {
   first_watched_precision: WatchPrecision | null;
   last_watched_at: string | null;
   last_watched_precision: WatchPrecision | null;
+  manual_plays: number;
   gap_reason: 'skipped' | 'missing' | null;
   gap_note: string | null;
 }
@@ -226,6 +243,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
         t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path,
         coalesce(f.plays, 0)::int as plays,
         coalesce(f.rewatched, 0)::int as rewatched,
+        coalesce(m.manual_plays, 0)::int as manual_plays,
         -- to_json for the same reason listTitles uses it: Postgres prints a
         -- timestamptz with a space and no milliseconds, and a raw execute
         -- leaves no mapping layer to fix it afterwards.
@@ -262,6 +280,20 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
             and (ep.season <> 0 or (ep.season is null and tt.kind = 'movie'))
           group by ws.title_id
         ) f on f.title_id = t.id
+        left join (
+          -- Events, not states: this counts what could be retracted, and two
+          -- manual marks on one episode are two claims even though the grid
+          -- shows one seen cell. The set is the one above, or a figure saying
+          -- what an undo would remove would not match the plays beside it.
+          select we.title_id, count(*) as manual_plays
+          from watch_event we
+            left join episode ep on ep.id = we.episode_id
+            join title tt on tt.id = we.title_id
+          where tt.id = ${titleId}
+            and we.source = ${MANUAL_SOURCE}
+            and (ep.season <> 0 or (ep.season is null and tt.kind = 'movie'))
+          group by we.title_id
+        ) m on m.title_id = t.id
       where t.id = ${titleId}
     `)),
   ];
@@ -273,6 +305,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       -- that a documented guarantee rather than a default that could change.
       to_json(e.air_date) as air_date,
       w.seen, w.play_count,
+      coalesce(m.manual_plays, 0)::int as manual_plays,
       to_json(w.first_watched_at) as first_watched_at, w.first_watched_precision,
       to_json(w.last_watched_at) as last_watched_at, w.last_watched_precision,
       g.reason as gap_reason, g.note as gap_note
@@ -283,6 +316,15 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       -- LEFT again: most episodes have no comment, and saying nothing is the
       -- default rather than an omission.
       left join episode_gap g on g.episode_id = e.id
+      -- What an undo of this one cell would retract. Counted per episode so
+      -- the grid can offer the control only where there is something to take
+      -- back, rather than on every watched cell.
+      left join (
+        select episode_id, count(*) as manual_plays
+        from watch_event
+        where title_id = ${titleId} and source = ${MANUAL_SOURCE} and episode_id is not null
+        group by episode_id
+      ) m on m.episode_id = e.id
     where e.title_id = ${titleId}
     order by e.season asc, e.number asc
   `);
@@ -331,6 +373,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       // the same as a row saying so — but it reads the same to the grid.
       seen: row.seen ?? false,
       playCount: row.play_count ?? 0,
+      manualPlays: row.manual_plays,
       firstWatchedAt: row.first_watched_at,
       firstWatchedPrecision: row.first_watched_precision,
       lastWatchedAt: row.last_watched_at,
@@ -359,6 +402,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     figures: {
       plays: identity?.plays ?? 0,
       rewatched: identity?.rewatched ?? 0,
+      manualPlays: identity?.manual_plays ?? 0,
       firstWatchedAt: identity?.first_watched_at ?? null,
       firstWatchedPrecision: identity?.first_watched_precision ?? null,
       lastWatchedAt: identity?.last_watched_at ?? null,

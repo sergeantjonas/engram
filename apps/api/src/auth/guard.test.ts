@@ -80,6 +80,7 @@ describe('the owner guard', () => {
 
     for (const write of [
       { method: 'POST' as const, url: '/watch-events' },
+      { method: 'DELETE' as const, url: `/watch-events?titleId=${id}` },
       { method: 'PUT' as const, url: `/episodes/${id}/gap` },
       { method: 'DELETE' as const, url: `/episodes/${id}/gap` },
     ]) {

@@ -1,8 +1,9 @@
+import { PgDialect } from 'drizzle-orm/pg-core';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { githubStub, testConfig } from '../app.fixture.js';
 import { buildApp } from '../app.js';
-import { sessionDb, signedIn } from '../auth/session.fixture.js';
+import { OWNER_GITHUB_USER_ID, sessionDb, signedIn } from '../auth/session.fixture.js';
 import { toScope } from './watch-events.js';
 
 const titleId = '5e2f6f0c-6a5e-4f3b-9a4f-2b1d1c0e9a77';
@@ -88,6 +89,140 @@ describe('POST /watch-events', () => {
     const response = await post({ titleId, watchedAt: '2019-02-30' });
 
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe('DELETE /watch-events', () => {
+  /**
+   * The guard's session lookup is the first select the stub answers, so a test
+   * that queues the title has to hand the guard its own row first.
+   */
+  const session = {
+    githubUserId: OWNER_GITHUB_USER_ID,
+    expiresAt: new Date(Date.now() + 60_000),
+    absoluteExpiresAt: new Date(Date.now() + 60_000),
+  };
+  const show = { id: titleId, key: 'show:tvdb:1', kind: 'show', name: 'Fallout' };
+
+  /** The WHERE the route handed drizzle, rendered so a missing term shows. */
+  const predicateOf = (stub: ReturnType<typeof sessionDb>) =>
+    new PgDialect().sqlToQuery(stub.deletedWhere[0] as Parameters<PgDialect['sqlToQuery']>[0]);
+
+  const remove = (query: string, selects?: unknown[][], returns?: unknown[][]) => {
+    const stub = sessionDb();
+    if (selects) stub.selects = selects;
+    if (returns) stub.returns = returns;
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    return {
+      stub,
+      response: app.inject({ method: 'DELETE', url: `/watch-events${query}`, headers: signedIn }),
+    };
+  };
+
+  it('rejects a request naming no title', async () => {
+    const { response } = remove('');
+
+    expect((await response).statusCode).toBe(400);
+    expect((await response).json().message).toContain('titleId');
+  });
+
+  it('rejects an episode named without its season', async () => {
+    const { response } = remove(`?titleId=${titleId}&episode=5`);
+
+    expect((await response).statusCode).toBe(400);
+    expect((await response).json().message).toContain('season');
+  });
+
+  it('rejects a season that is not a number', async () => {
+    const { response } = remove(`?titleId=${titleId}&season=two`);
+
+    expect((await response).statusCode).toBe(400);
+  });
+
+  // Bare coercion reads this as season 0, which is a real season: the whole
+  // title the caller meant would become the specials they did not name.
+  it('rejects an empty season rather than reading it as the specials', async () => {
+    const { response } = remove(`?titleId=${titleId}&season=`);
+
+    expect((await response).statusCode).toBe(400);
+    expect((await response).json().message).toContain('season');
+  });
+
+  it('answers 404 when no title is stored under the id', async () => {
+    const { response } = remove(`?titleId=${titleId}`, [[session], []]);
+
+    expect((await response).statusCode).toBe(404);
+  });
+
+  it('retracts the marks in one season and says how many went', async () => {
+    const { stub, response } = remove(
+      `?titleId=${titleId}&season=2`,
+      [
+        [session],
+        [show],
+        [
+          { id: 'e1', season: 2, number: 1 },
+          { id: 'e2', season: 2, number: 2 },
+          // Another season, which the scope must leave alone.
+          { id: 'e9', season: 3, number: 1 },
+        ],
+      ],
+      [[{ id: 'w1' }, { id: 'w2' }]],
+    );
+
+    expect((await response).statusCode).toBe(200);
+    expect((await response).json().removed).toBe(2);
+    // The predicate, not just that a delete happened: losing the source term
+    // would eat imported history, and losing the episode term would eat the
+    // seasons the caller did not name. Neither shows up in a row count.
+    expect(predicateOf(stub)).toMatchObject({
+      sql: expect.stringContaining('"source" ='),
+      params: [titleId, 'manual', 'e1', 'e2'],
+    });
+  });
+
+  // A film's events name no episode, so the scope resolves to no ids at all —
+  // which the route has to read as the film rather than as covering nothing.
+  it('retracts a film, whose events name no episode', async () => {
+    const { stub, response } = remove(
+      `?titleId=${titleId}`,
+      [[session], [{ ...show, kind: 'movie', key: 'movie:tmdb:2' }]],
+      [[{ id: 'w1' }]],
+    );
+
+    expect((await response).statusCode).toBe(200);
+    expect((await response).json().removed).toBe(1);
+    // No episode ids at all, and an `is null` rather than an empty list.
+    expect(predicateOf(stub)).toMatchObject({
+      sql: expect.stringContaining('"episode_id" is null'),
+      params: [titleId, 'manual'],
+    });
+  });
+
+  // 422 rather than 404: the title is here, the season named is not, and the
+  // two read very differently to whoever sent it.
+  it('answers 422 for a season the title does not have', async () => {
+    const { response } = remove(`?titleId=${titleId}&season=9`, [
+      [session],
+      [show],
+      [{ id: 'e1', season: 1, number: 1 }],
+    ]);
+
+    expect((await response).statusCode).toBe(422);
+    expect((await response).json().message).toContain('season 9');
+  });
+
+  // Nothing to take back is an answer, not a failure: the caller asked whether
+  // there was, and zero says no.
+  it('answers zero when the scope holds nothing entered by hand', async () => {
+    const { response } = remove(
+      `?titleId=${titleId}&season=2&episode=1`,
+      [[session], [show], [{ id: 'e1', season: 2, number: 1 }]],
+      [[]],
+    );
+
+    expect((await response).statusCode).toBe(200);
+    expect((await response).json().removed).toBe(0);
   });
 });
 

@@ -16,7 +16,9 @@ season and episode number, which survive a re-download.
 **Events are append-only.** A `watch_event` is a fact that happened. Whether
 something counts as "seen" is a projection derived from those events and can be
 rebuilt at any time. Raw ingest payloads are kept alongside the parsed rows, so
-a normalizer bug is recoverable rather than lossy.
+a normalizer bug is recoverable rather than lossy. The one retraction is a mark
+entered by hand, which is a claim rather than an observation and can simply be
+the wrong one; nothing an ingest reported can be deleted through the API.
 
 **Webhooks are an optimization, not the source of truth.** Plex does not always
 emit a clean playback-stop (app killed, network drop, server restart), so a

@@ -30,6 +30,7 @@ const episodeRow = (over: Record<string, unknown> = {}) => ({
   tmdb_episode_id: '4638765',
   seen: true,
   play_count: 1,
+  manual_plays: 0,
   first_watched_at: '2026-03-01T20:00:00+00:00',
   first_watched_precision: 'exact',
   last_watched_at: '2026-03-01T20:00:00+00:00',
@@ -115,6 +116,14 @@ describe('titleDetail', () => {
       playCount: 0,
       unmatched: false,
     });
+  });
+
+  // What the grid needs to know whether a cell has anything to take back: a
+  // play Plex reported is not retractable, and one of three here is.
+  it('says how many of a cell\u2019s plays were entered by hand', async () => {
+    const result = await detail([episodeRow({ play_count: 3, manual_plays: 1 })]);
+
+    expect(result?.seasons[0]?.episodes[0]).toMatchObject({ playCount: 3, manualPlays: 1 });
   });
 
   it('keeps both precisions as they were stored', async () => {
@@ -217,6 +226,7 @@ describe('titleDetail', () => {
     expect(result?.figures).toEqual({
       plays: 0,
       rewatched: 0,
+      manualPlays: 0,
       firstWatchedAt: null,
       firstWatchedPrecision: null,
       lastWatchedAt: null,

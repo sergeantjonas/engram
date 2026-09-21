@@ -41,10 +41,21 @@ export interface SessionDb {
    * silently swapped for `onConflictDoNothing` would otherwise look identical.
    */
   inserted: { values: unknown; onConflict: 'update' | 'nothing'; set?: unknown }[];
-  /** Rows an upsert's `.returning()` answers with, one result set per call. */
+  /**
+   * Rows the next `.returning()` answers with, one result set per call, shared
+   * by the upsert and the delete.
+   */
   returns: unknown[][];
   /** Set when a row was reaped, and when the sliding window was rewritten. */
   deleted: number;
+  /**
+   * The condition each `delete` carried, in order.
+   *
+   * Kept for the same reason the insert keeps its conflict clause: a delete
+   * that quietly lost a term from its predicate would otherwise pass every
+   * test here while removing far more than it was asked to.
+   */
+  deletedWhere: unknown[];
   extended: Date[];
 }
 
@@ -71,6 +82,7 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
 
   const state: SessionDb = {
     deleted: 0,
+    deletedWhere: [],
     extended: [],
     rows: [],
     executions: [],
@@ -108,8 +120,17 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
         }),
       }),
       delete: () => ({
-        where: async () => {
+        // Awaitable on its own and chainable to `.returning()`, like the
+        // upsert above: reaping a session wants neither, and retracting a
+        // mark counts what it removed. The queued rows are taken by
+        // `returning()` rather than here, so a reap that never asks for them
+        // does not eat the set a later test queued.
+        where: (condition: unknown) => {
           state.deleted += 1;
+          state.deletedWhere.push(condition);
+          return Object.assign(Promise.resolve([]), {
+            returning: async () => state.returns.shift() ?? [],
+          });
         },
       }),
       update: () => ({

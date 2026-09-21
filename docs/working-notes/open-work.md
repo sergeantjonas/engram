@@ -143,6 +143,30 @@ the viewer wants of a title. The SPA calls three of the four.
 
 ## Done
 
+- **2026-09-21** — `DELETE /watch-events`, which takes a mark back. A mark is a
+  claim, a claim typed into a box can be the wrong one, and a record you cannot
+  correct is one you stop trusting.
+
+  It deletes only `source = 'manual'`. A play Plex reported is something that
+  was observed; deleting it here would not make it untrue and the next
+  reconciliation pass would put it back, so the source is part of the predicate
+  rather than an assumption about who is calling — one misdirected undo must not
+  be able to eat the imported history this project exists to keep. Verified
+  against the live database inside a rolled-back transaction: The Boys holds 32
+  manual events across seasons 1-4 and 8 `plex-history` events in season 5, and
+  a whole-title undo removes the 32 and leaves the 8.
+
+  The scope is a query string rather than a body, because a DELETE carrying one
+  is legal and badly supported by everything in between. It resolves through
+  `episodesInScope`, extracted from `planWatchEvents` so that marking and
+  unmarking cannot drift: specials stay out of a whole-title retraction exactly
+  as they stay out of a whole-title mark, and both refuse a season the title
+  does not have with the same 422.
+
+  `GET /titles/:id` gained `manualPlays`, per episode and on the figure row, so
+  the page can offer the control only where there is something to take back.
+  Counted over the same set as `plays` — specials out, a null episode only for a
+  film — or the figure would not match the one beside it.
 - **2026-09-21** — Marking something watched from the title page, which is the
   half of the record Plex cannot supply. `POST /watch-events` had taken an
   episode, a season or a whole title since chunk 4; nothing in the SPA had ever
@@ -168,9 +192,7 @@ the viewer wants of a title. The SPA calls three of the four.
   A bulk mark still writes over an episode the viewer declared they never had;
   see the open decision below.
 
-  Unmarking is not here. There is no `DELETE /watch-events`, and an event is a
-  fact rather than a flag, so undoing one is a design question rather than a
-  missing route.
+  Unmarking followed the same day; see the entry above it.
 - **2026-09-21** — `PUT /titles/:id/intent`, the write path that was missing.
   Booleans on the wire — want, dropped, excluded — against a flag and two
   timestamps in the table: when a title was dropped is worth keeping, but a

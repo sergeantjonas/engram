@@ -87,13 +87,17 @@ flag on.
 - **The `VITE_API_ORIGIN` repository variable** on GitHub, since the image is
   built in CI rather than on a laptop. CI fails the run if it is unset rather
   than shipping a bundle that calls localhost.
-- **Both GHCR packages made public.** A container package is private on its
-  first push even from a public repository, and GHCR answers an anonymous
-  request for a private one with 404 rather than 401 — so the failure reads
-  as "no such image" rather than "not allowed". Verified private on
-  2026-09-21, after the first green CI run. The box carries no registry
-  credential and should not need one: these images hold no secret, which was
-  checked rather than assumed.
+- **Nothing, for the registry.** Both packages are pullable from the box with
+  no credential, verified 2026-09-21 by pulling both from the box itself.
+  That is "Inherit access from source repository", GHCR's default, doing its
+  job over a public repo — the same reason vyoh has never needed a credential
+  either. The images hold no secret, which was checked rather than assumed.
+
+  Recorded because it was briefly got wrong: an anonymous `curl` against
+  `ghcr.io/v2/...` returned 404 for both projects and was read as "private".
+  The token that request fetches does not grant pull, so it answers 404 for
+  a public package as readily as a private one. The only test worth running
+  is the one the deploy runs — `docker pull` from the box.
 
 ## Backups, before anything is entrusted to it
 

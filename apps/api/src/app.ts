@@ -9,6 +9,7 @@ import { registerEpisodeRoutes } from './routes/episodes.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerTitleRoutes } from './routes/titles.js';
 import { registerWatchEventRoutes } from './routes/watch-events.js';
+import { registerWebhookRoutes } from './routes/webhooks.js';
 import type { TmdbClient } from './tmdb/client.js';
 
 export interface AppDeps {
@@ -89,6 +90,7 @@ export function buildApp({ config, db, tmdb, github }: AppDeps): FastifyInstance
   registerSearchRoutes(app, tmdb);
   registerTitleRoutes(app, db, tmdb);
   registerWatchEventRoutes(app, db);
+  registerWebhookRoutes(app, config);
 
   return app;
 }

@@ -32,7 +32,9 @@ declare module 'fastify' {
  * /titles` is open and `POST /titles` is not, and nothing else about the wall
  * distinguishes them.
  *
- * The webhook receivers will join this list when they land, and are not an
+ * The Tautulli receiver is on it: it authenticates with a shared secret in
+ * its own handler because it has no session to present. Sonarr and Radarr
+ * will join it the same way, and are not an
  * exception to being authenticated: Tautulli and Sonarr have no browser and no
  * cookie jar, so they present `WEBHOOK_SECRET` instead of a session.
  */
@@ -52,6 +54,10 @@ const OPEN_ROUTES = new Set([
   // Same reasoning as the two above, and it discloses nothing they do not:
   // what was watched and what comes after it is the record itself.
   'GET /next-up',
+  // Tautulli has no cookie jar, so its own shared secret is what
+  // authenticates it — checked in the handler, not here. Open by method and
+  // pattern together, so nothing else about /webhooks is opened with it.
+  'POST /webhooks/tautulli',
 ]);
 
 /** What the SPA sends; the API has no other kind of caller with a browser. */

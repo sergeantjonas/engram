@@ -244,15 +244,16 @@ the viewer wants of a title. The SPA calls all four.
   and serving its dashboard. Its API is switched off, which blocks a pull and
   `get_activity` and nothing else — the webhook is Tautulli posting outward
   and needs no API of its own, and the pull has been dropped.
-- **Tautulli webhook payload shape is unverified.** Which external-id
-  parameters actually populate per media type still needs one empirical check
-  before any parsing code is trusted. No longer blocked: `POST
-  /webhooks/tautulli` landed 2026-09-21 in a recording phase — it
-  authenticates, logs what arrived with the filled and empty keys separated,
-  and interprets nothing. Point Tautulli at
-  `https://api.engram.vyoh.gg/webhooks/tautulli` with the `X-Engram-Token`
-  header, stop one episode and one film, and read `docker compose logs api`.
-  The parser is written against that.
+- ~~**Tautulli webhook payload shape is unverified.**~~ Measured 2026-09-21
+  against the live install, one real film and one real episode. Every
+  external id populates for both kinds, so neither needs a resolution pass,
+  and both matched what the walk had already stored. Four traps and one
+  silent failure came with it — season and episode arriving as `"0"` on a
+  film, `episode_name` holding the film's title, `view_offset` in
+  milliseconds beside `duration_sec` in seconds, everything a string, and
+  `{user_id}` being a different namespace from the account id the backfill
+  filters on. All in [ingest-architecture.md](ingest-architecture.md)
+  § Tautulli specifics.
 
 ## Decisions still open
 

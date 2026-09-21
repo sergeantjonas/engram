@@ -211,14 +211,22 @@ for every viewer on the server.
 
 ## Tautulli specifics
 
-**The agent sends a URL, a method and a JSON body, and nothing else.** There
-is no field for a custom header, checked against the running install
-2026-09-21 — so the shared secret travels as a `token` key in the payload.
-The query string was the alternative and is worse: nginx writes it to its
-access log in full and Fastify repeats it in its own request log, so the
-secret would be at rest in two places. A body is logged by neither, and the
-receiver strips `token` before it logs the payload it was sent. The header is
-still accepted, for Sonarr and Radarr, which can send one.
+**The shared secret travels as a `token` key in the payload.** Not because
+the agent cannot send a header — it can, there is a JSON Headers field
+beside the JSON Data one — but because a body is the better place for it.
+The query string, the third option, is the worst: nginx writes it to its
+access log in full and Fastify repeats it in its own request log, leaving
+the secret at rest in two files. A header and a body are both absent from
+those logs, and the body keeps the whole configuration in one field.
+
+The receiver strips `token` before it logs the payload, which is the part
+that would otherwise undo the choice, and it accepts a header too — Sonarr
+and Radarr are next through here and may prefer one.
+
+Recorded because it was first written down wrong: the note claimed the agent
+had no header field at all, inferred from a report that none was visible
+under the trigger rather than from looking at the agent's own settings.
+Where a thing is in a UI and whether it exists are different questions.
 
 The webhook body is authored by hand in the notification agent, using Tautulli's
 parameter substitution. Fields worth requesting: `{media_type}`, `{show_name}`,
@@ -227,10 +235,44 @@ parameter substitution. Fields worth requesting: `{media_type}`, `{show_name}`,
 `{grandparent_rating_key}`, `{duration_sec}`, `{view_offset}`,
 `{progress_percent}`, `{user_id}`, `{player}`, `{platform}`, `{unixtime}`.
 
-Per-media-type availability of the external-id parameters is **unverified** —
-coverage differs between movies and episodes and depends on which agent scanned
-the library. Point the webhook at a throwaway endpoint and watch one episode and
-one movie before trusting any of them.
+**Measured 2026-09-21** against the live install, one real episode and one
+real film, and the answer is the good one: **every external id populates for
+both kinds.** Nothing needs a resolution pass.
+
+| | film | episode |
+|---|---|---|
+| `themoviedb_id` | 1311031 | 205715 |
+| `thetvdb_id` | 357931 | 417909 |
+| `imdb_id` | tt32820897 | tt13159924 |
+| `empty` | `show_name`, `grandparent_rating_key` | *nothing* |
+
+For an episode the ids are the **show's**, not the episode's, which is
+exactly what `titleKey()` takes. Both matched what the library walk had
+already stored, so the webhook and the walk agree on identity.
+
+Four things the documented parameter list does not tell you, each of which a
+parser written from it would have got wrong:
+
+- **`season_num` and `episode_num` are `"0"` on a film, not empty.** A
+  parser testing for presence mints a phantom S0E0 for every movie. Gate on
+  `media_type`, never on whether a field arrived.
+- **`episode_name` on a film is the film's title.** Only `show_name` is
+  empty, so "has an episode name" does not mean "is an episode".
+- **The units differ inside one payload.** `view_offset` is milliseconds,
+  `duration_sec` is seconds — 502000 against 9301 for a film stopped 8:22
+  into 2:35:01, which `progress_percent: 5` confirms. Dividing one by the
+  other without converting is out by a thousand.
+- **Everything is a string.** Tautulli substitutes into a JSON template, so
+  `"season_num": "1"`, never `1`.
+
+**And the one that would have failed silently: `{user_id}` is not the
+account id the history endpoint uses.** Tautulli reported `7597797` for the
+owner; the server's own `/accounts` calls the owner `1` and gives its two
+shared users `49291007` and `181142893`. `PLEX_ACCOUNT_IDS=1` is right for
+the backfill and would reject every webhook event. The allowlist has to
+carry both ids, or learn to translate between the two namespaces — decided
+before the parser lands, because dropping the owner's own plays as somebody
+else's is the worst available failure.
 
 Use the **Playback Stop** trigger, not **Watched**. Watched fires mid-playback at
 the threshold and loses the true final offset.

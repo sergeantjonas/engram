@@ -37,12 +37,10 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config): voi
     const fields =
       body !== null && typeof body === 'object' ? (body as Record<string, unknown>) : {};
 
-    // In the body, because Tautulli's webhook agent sends a URL, a method and
-    // a JSON payload — it has no field for a custom header. The alternative
-    // was the query string, which nginx writes to its access log in full and
-    // Fastify repeats in its own request log, so the secret would be at rest
-    // in two places. A body is logged by neither, and is stripped below
-    // before this handler logs anything itself.
+    // In the body rather than the query string, which nginx writes to its
+    // access log in full and Fastify repeats in its own request log — the
+    // secret would be at rest in two files. A body is in neither, and is
+    // stripped below before this handler logs anything itself.
     //
     // The header is still accepted: Sonarr and Radarr can send one, and they
     // are the next two through here.

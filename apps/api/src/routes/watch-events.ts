@@ -68,6 +68,15 @@ const removeQuery = z
     message: 'an episode has to name the season it is in',
   });
 
+/**
+ * Today as `YYYY-MM-DD`, in UTC, which is the shape an `air_date` comes back in.
+ *
+ * Comparing two date strings rather than two instants: an air date is a day
+ * rather than a moment, and turning it into one would make "has it aired" turn
+ * on a timezone nobody chose.
+ */
+const today = (): string => new Date().toISOString().slice(0, 10);
+
 /** The title a request is about and the grid a scope is resolved against. */
 async function loadTarget(db: Database, titleId: string) {
   const [title] = await db
@@ -91,6 +100,7 @@ async function loadTarget(db: Database, titleId: string) {
             id: episodeTable.id,
             season: episodeTable.season,
             number: episodeTable.number,
+            airDate: episodeTable.airDate,
           })
           .from(episodeTable)
           .where(eq(episodeTable.titleId, title.id));
@@ -146,6 +156,9 @@ export function registerWatchEventRoutes(app: FastifyInstance, db: Database): vo
       // episode. Zod strips what the schema does not name, and what is left
       // still determines the derivation entirely.
       raw: parsed.data,
+      // The server's day, not the caller's: a browser an hour ahead could
+      // otherwise mark tomorrow's episode watched tonight.
+      today: today(),
     });
 
     if (!plan.ok) {
@@ -204,7 +217,7 @@ export function registerWatchEventRoutes(app: FastifyInstance, db: Database): vo
           ? { kind: 'season', season }
           : { kind: 'episode', season, episode };
 
-    const scoped = episodesInScope(target.title.kind, target.episodes, scope);
+    const scoped = episodesInScope(target.title.kind, target.episodes, scope, today());
     if (!scoped.ok) {
       return reply.code(422).send({ error: 'unmarkable', message: scoped.reason });
     }

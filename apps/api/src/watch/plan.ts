@@ -17,6 +17,13 @@ export interface EpisodeSlot {
   id: string;
   season: number;
   number: number;
+  /**
+   * As TMDB gives it, which is often nothing at all. Null is "no date on
+   * record" rather than "not yet": eight Bleach episodes carry real plays and
+   * no air date, so treating the absence as future would refuse to mark
+   * history that already happened.
+   */
+  airDate: string | null;
 }
 
 /** How much of a title one request marks. */
@@ -49,6 +56,8 @@ export interface WatchMark {
   on: string | null;
   /** The request as it arrived, kept so a normalizer change is re-derivable. */
   raw: unknown;
+  /** Today, as `YYYY-MM-DD`. Passed in rather than read: this stays pure. */
+  today: string;
 }
 
 /**
@@ -58,6 +67,16 @@ export interface WatchMark {
  * should be able to say so.
  */
 const SPECIALS = 0;
+
+/**
+ * An episode dated after today, which nobody has watched.
+ *
+ * A bulk mark steps over these rather than refusing: "I watched season 2" is
+ * true of the season as it stands, and the two episodes out next month are not
+ * part of what was meant. Naming one outright is refused instead — that is a
+ * claim about a specific episode, and it cannot be right.
+ */
+const unaired = (slot: EpisodeSlot, today: string) => slot.airDate !== null && slot.airDate > today;
 
 /**
  * The `source` every entry by hand carries.
@@ -87,6 +106,8 @@ export function episodesInScope(
   kind: TitleKind,
   episodes: EpisodeSlot[],
   scope: WatchScope,
+  /** Today, as `YYYY-MM-DD`, compared against air dates in the same shape. */
+  today: string,
 ): ScopedSlots {
   if (kind === 'movie') {
     if (scope.kind !== 'title') return { ok: false, reason: 'a movie has no seasons' };
@@ -98,15 +119,25 @@ export function episodesInScope(
     if (!slot) {
       return { ok: false, reason: `S${scope.season}E${scope.episode} is not on record here` };
     }
+    if (unaired(slot, today)) {
+      return { ok: false, reason: `S${scope.season}E${scope.episode} has not aired yet` };
+    }
     return { ok: true, slots: [slot] };
   }
 
-  const marked =
+  const inScope =
     scope.kind === 'season'
       ? episodes.filter((e) => e.season === scope.season)
       : episodes.filter((e) => e.season !== SPECIALS);
+  // Dropped after the scope is taken, not before: a season made entirely of
+  // episodes still to come is a season that exists, and "nothing of it has
+  // aired" is a different answer from "there is no such season".
+  const marked = inScope.filter((slot) => !unaired(slot, today));
 
   if (marked.length === 0) {
+    if (inScope.length > 0) {
+      return { ok: false, reason: 'none of that has aired yet' };
+    }
     if (scope.kind === 'season') {
       return { ok: false, reason: `season ${scope.season} is not on record here` };
     }
@@ -138,6 +169,7 @@ export function planWatchEvents({
   moment,
   on,
   raw,
+  today,
 }: WatchMark): WatchPlan {
   const event = (slot: EpisodeSlot | null): PlannedWatchEventRow => ({
     source: MANUAL_SOURCE,
@@ -155,7 +187,7 @@ export function planWatchEvents({
     raw,
   });
 
-  const scoped = episodesInScope(target.kind, episodes, scope);
+  const scoped = episodesInScope(target.kind, episodes, scope, today);
   if (!scoped.ok) return scoped;
 
   return { ok: true, rows: scoped.slots.map((slot) => event(slot)) };

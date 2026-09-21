@@ -58,6 +58,9 @@ interface Row extends Record<string, unknown> {
  * watched. Someone who watched S1E1-5 and then S1E8 is owed S1E9, not S1E6:
  * the episode they skipped is a hole, and the wall has a facet that says so.
  *
+ * An episode that has not aired is never offered, and neither is one the
+ * viewer declared they skipped on purpose.
+ *
  * Where there is nothing after that point it falls back to the earliest
  * unwatched episode, and says so through `continues`. That case is common
  * rather than exotic here — an import that captured only recent plays leaves
@@ -106,6 +109,10 @@ export async function nextUp(db: Database, limit = NEXT_UP_LIMIT): Promise<NextU
         -- them. One they never had is: the reason it is missing does not stop
         -- it being the next thing to watch.
         and g.reason is distinct from 'skipped'
+        -- Nor is one that has not aired. A null date is "no date on record"
+        -- rather than "not yet" — episodes with real plays and no air date
+        -- exist — so only a date in the future disqualifies.
+        and (e.air_date is null or e.air_date <= current_date)
     )
     select
       t.id as title_id, t.name, t.poster_path, t.backdrop_path,

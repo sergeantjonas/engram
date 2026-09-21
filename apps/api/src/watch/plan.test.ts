@@ -5,11 +5,14 @@ import { type EpisodeSlot, planWatchEvents, type WatchMark } from './plan.js';
 const show = { id: 'title-uuid', key: 'show:tvdb:392276', kind: 'show' as const };
 const movie = { id: 'movie-uuid', key: 'movie:tmdb:603', kind: 'movie' as const };
 
+const TODAY = '2026-09-21';
+
+/** Aired unless a test says otherwise; a null date is "no date", not "not yet". */
 const episodes: EpisodeSlot[] = [
-  { id: 'sp1', season: 0, number: 1 },
-  { id: 's1e1', season: 1, number: 1 },
-  { id: 's1e2', season: 1, number: 2 },
-  { id: 's2e1', season: 2, number: 1 },
+  { id: 'sp1', season: 0, number: 1, airDate: '2024-01-01' },
+  { id: 's1e1', season: 1, number: 1, airDate: '2024-01-02' },
+  { id: 's1e2', season: 1, number: 2, airDate: null },
+  { id: 's2e1', season: 2, number: 1, airDate: '2024-01-03' },
 ];
 
 const mark = (over: Partial<WatchMark> = {}): WatchMark => ({
@@ -19,12 +22,65 @@ const mark = (over: Partial<WatchMark> = {}): WatchMark => ({
   moment: UNDATED,
   on: null,
   raw: { scope: 'all' },
+  today: TODAY,
   ...over,
 });
 
 const rowsOf = (plan: ReturnType<typeof planWatchEvents>) => (plan.ok ? plan.rows : []);
 
 describe('planWatchEvents', () => {
+  // "I watched season 2" is true of the season as it stands. The episodes out
+  // next month are not part of what was meant, and claiming them would put a
+  // play on the record for television that does not exist yet.
+  it('steps over an episode that has not aired', () => {
+    const rows = rowsOf(
+      planWatchEvents(
+        mark({
+          scope: { kind: 'season', season: 2 },
+          episodes: [
+            { id: 's2e1', season: 2, number: 1, airDate: '2024-01-03' },
+            { id: 's2e2', season: 2, number: 2, airDate: '2026-10-20' },
+          ],
+        }),
+      ),
+    );
+
+    expect(rows.map((row) => row.episodeId)).toEqual(['s2e1']);
+  });
+
+  // A null date is "no date on record", not "not yet": Bleach carries eight
+  // episodes with real plays and nothing from TMDB to date them by.
+  it('marks an episode TMDB has no date for', () => {
+    const rows = rowsOf(planWatchEvents(mark({ scope: { kind: 'season', season: 1 } })));
+
+    expect(rows.map((row) => row.episodeId)).toContain('s1e2');
+  });
+
+  // Naming one outright is a claim about that episode, and it cannot be right.
+  it('refuses a named episode that has not aired, rather than ignoring it', () => {
+    const plan = planWatchEvents(
+      mark({
+        scope: { kind: 'episode', season: 2, episode: 2 },
+        episodes: [{ id: 's2e2', season: 2, number: 2, airDate: '2026-10-20' }],
+      }),
+    );
+
+    expect(plan).toEqual({ ok: false, reason: 'S2E2 has not aired yet' });
+  });
+
+  // Different from "there is no such season", and the caller should be able to
+  // tell the two apart.
+  it('says a season exists but has not started rather than that it is missing', () => {
+    const plan = planWatchEvents(
+      mark({
+        scope: { kind: 'season', season: 3 },
+        episodes: [{ id: 's3e1', season: 3, number: 1, airDate: '2026-12-01' }],
+      }),
+    );
+
+    expect(plan).toEqual({ ok: false, reason: 'none of that has aired yet' });
+  });
+
   // watch_state groups on episode_id, so a season-level row would be invisible
   // to every query the UI makes.
   it('writes one event per episode rather than one for the mark', () => {
@@ -106,7 +162,9 @@ describe('planWatchEvents', () => {
   // Not the same as having no episodes, and saying so is what tells the viewer
   // that naming season 0 would work.
   it('refuses a specials-only title by pointing at the specials', () => {
-    const plan = planWatchEvents(mark({ episodes: [{ id: 'sp1', season: 0, number: 1 }] }));
+    const plan = planWatchEvents(
+      mark({ episodes: [{ id: 'sp1', season: 0, number: 1, airDate: '2024-01-01' }] }),
+    );
 
     expect(plan).toEqual({
       ok: false,

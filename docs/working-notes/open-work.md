@@ -185,14 +185,6 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Decisions still open
 
-- **Whether the next-up band should offer an episode that has not aired.**
-  `episode` holds every episode TMDB lists, including ones with a future air
-  date, so a show watched to the end of what has aired is told "next is S5E1"
-  about something out next month. `listTitles` counts those in
-  `episode_total` the same way, so the band is at least consistent with the
-  fraction on the card. Options: filter the band on `air_date`, filter both,
-  or leave it and treat an unaired episode as a legitimate thing to be waiting
-  for. Nothing is wrong either way; the band just reads oddly.
 - **Whether marking a season watched should step over a declared hole.** It
   does not today: `planWatchEvents` expands a season mark over every episode in
   it, so a season holding an episode the viewer declared `missing` — never had
@@ -237,6 +229,30 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-21** — Settled: an episode that has not aired is neither marked nor
+  offered. It was an open question and turned out to be a defect — marking a
+  season wrote plays for television that does not exist yet, and two of them
+  were on the record (Bleach S2E49 and S2E50, airing 20 and 27 October). Both
+  retracted; Bleach reads 422 of 424 and is in progress again, which is true.
+
+  A bulk mark steps over them, because "I watched season 2" is true of the
+  season as it stands. Naming one outright is refused with `has not aired yet`,
+  because that is a claim about a specific episode and it cannot be right. A
+  season entirely still to come answers `none of that has aired yet` rather
+  than "no such season" — the caller should be able to tell those apart.
+
+  **A null air date is not "unaired".** It means TMDB has no date, and eight
+  Bleach episodes carry real Plex plays with nothing to date them by; treating
+  the absence as future would refuse to record history that already happened.
+  Only a date after today disqualifies. The comparison is two `YYYY-MM-DD`
+  strings against the server's day: an air date is a day rather than a moment,
+  and making it one would put "has it aired" at the mercy of a timezone nobody
+  chose.
+
+  The card's fraction still counts unaired episodes, so a show you are caught
+  up on reads as short rather than complete. That is consistent with TMDB's
+  episode list and with `episode_total` everywhere else, and changing it would
+  touch the wall query, the facets and every seen/total figure.
 - **2026-09-21** — The title page's second pane, which turns out to be the same
   thing as the rail's LIST rather than a screen of its own: the mockup lights
   LIST up *on* the title page, because the 216px column down its left is the

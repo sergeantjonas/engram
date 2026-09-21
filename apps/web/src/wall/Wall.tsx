@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import type { TitleSummary } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { countFacets, FACET_LABEL, FACETS, type Facet, matchesFacet } from './facets.ts';
+import { NextUp } from './NextUp.tsx';
 import { TitleCard } from './TitleCard.tsx';
 
 /** The wall's URL state. `excluded` is `true` or absent: `false` is the default and never written. */
@@ -63,6 +64,12 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
 
   return (
     <div className="space-y-6">
+      {/* Above the chips, which is where the design puts it: the wall answers
+          "what do I have" and this answers "what now", and the second question
+          is the one someone opening the app is usually asking. It draws
+          nothing when there is nothing owed. */}
+      <NextUp />
+
       <nav aria-label="Filter the wall" className="flex flex-wrap items-center gap-1.5">
         {/* Links, not buttons: a filter is a place, and the back button should return to it. */}
         <Link

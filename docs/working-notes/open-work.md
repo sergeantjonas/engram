@@ -38,9 +38,8 @@ owe the design, all checked against the running app rather than guessed:
   216px list of every title down the left, and a row of actions under
   everything. The hero, the stat box, the twelve-month strip and the activity
   feed all landed.
-- Missing entirely: the next-up strip and the list view behind the rail's LIST.
-  The rail carries only HOME and ADD until the screens behind LIST and YEAR
-  exist.
+- Missing entirely: the list view behind the rail's LIST. The rail carries only
+  HOME and ADD until the screens behind LIST and YEAR exist.
 - ~~The add screen still only adds.~~ Landed 2026-09-21: season checkboxes and
   the commit bar, so a backfill is one screen again.
 
@@ -79,12 +78,52 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Next
 
-1. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
+1. **The Plex library walk, and the merge that follows it.** Measured
+   2026-09-21 and written up in
+   [plex-api-findings.md](plex-api-findings.md) § Watched state outlives the
+   history log: the history endpoint was the wrong endpoint. It gave 85
+   episodes back to 2025-10-24; the library carries 373 back to 2019-06-11,
+   every one of them dated, and hands over imdb / tmdb / tvdb inline so no
+   resolution pass is needed. Against what is stored today:
+
+   | | episodes |
+   |---|---|
+   | Already covered by a dated event | 79 |
+   | Covered only by an undated manual mark, so they gain a real date | 126 |
+   | Belong to 11 shows Engram has never heard of | 168 |
+
+   Plus 52 shows and 29 movies for `library_presence`, which has never had a
+   row in it, and *Dune: Part One* — watched 2021, the only watched film
+   besides the one already stored. The 126 are the point: they were marked by
+   hand on the belief that the dates were gone, and they were not.
+
+   Three commits, in this order. The walk is owner-scoped by the same property
+   as the dump — per-item view state is the token's own — so it does not wait
+   on the allowlist below.
+
+   1. `play_count` counts play-grained rows only, floored at one. It is
+      already wrong for eight Stranger Things episodes and the walk would
+      treble them; the reasoning and the grain table are in
+      [ingest-architecture.md](ingest-architecture.md) § Claim grain and
+      precedence. Land it before the data that exposes it.
+   2. The walk itself: a `plex-library` source over
+      `/library/sections/{key}/all?includeGuids=1` and `…/allLeaves`, writing
+      watch events for watched episodes and `library_presence` for everything
+      seen. Read dates off the episodes, never the show row — 11 of the 22
+      watched shows have a null `lastViewedAt` at show level.
+   3. Wire it into the nightly reconcile, so it stays a reconciliation rather
+      than a one-time import.
+
+   Idempotency needs deciding rather than copying: `onConflictDoNothing` is
+   right for a history row, which never changes, and wrong for this source,
+   where a rescan of the same episode is the same claim with a later date.
+
+2. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing
    it. Reasoning in [ingest-architecture.md](ingest-architecture.md). Must land
    before webhooks do: the backfill is owner-only by property of the Plex
    endpoint, and Tautulli fires for every user on the server.
-2. **Webhook receivers** — Tautulli and Sonarr, per
+3. **Webhook receivers** — Tautulli and Sonarr, per
    [ingest-architecture.md](ingest-architecture.md). Deferred deliberately:
    Tautulli is not installed, and receiving live webhooks in development needs
    either a tunnel or a netcup deploy. Routes must check `WEBHOOK_SECRET`, and
@@ -92,6 +131,13 @@ the viewer wants of a title. The SPA calls all four.
    jar, so the secret is their authentication rather than a session. The list
    is keyed on method and route pattern together, so the entry is `POST
    /webhooks/...` and nothing else about the path is opened with it.
+4. **Go live** — second tenant on the netcup box, planned in
+   [go-live.md](go-live.md). It is listed last but half-blocks item 3:
+   Tautulli and Sonarr cannot post to a laptop. The ordering constraint that
+   matters is on data rather than on deployment — the 655 hand-made marks
+   exist only in the development database, so the backfills run locally and
+   production starts from a restore of that database, never from an empty
+   schema.
 
 ## Blocked
 
@@ -104,6 +150,14 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Decisions still open
 
+- **Whether the next-up band should offer an episode that has not aired.**
+  `episode` holds every episode TMDB lists, including ones with a future air
+  date, so a show watched to the end of what has aired is told "next is S5E1"
+  about something out next month. `listTitles` counts those in
+  `episode_total` the same way, so the band is at least consistent with the
+  fraction on the card. Options: filter the band on `air_date`, filter both,
+  or leave it and treat an unaired episode as a legitimate thing to be waiting
+  for. Nothing is wrong either way; the band just reads oddly.
 - **Whether marking a season watched should step over a declared hole.** It
   does not today: `planWatchEvents` expands a season mark over every episode in
   it, so a season holding an episode the viewer declared `missing` — never had
@@ -133,6 +187,14 @@ the viewer wants of a title. The SPA calls all four.
   holds. Left public when the read/write split landed because the wall is the
   library — but that was not argued, it was defaulted. See
   [authentication.md](authentication.md) § What a stranger may read.
+- **Whether to keep Plex's `viewCount` for the rewatches it is the only record
+  of.** The library walk knows an episode was played twice but only when it was
+  last played, so one event per episode loses the count. A `watch_event` is one
+  play, and there is no column for "this claim stands for three of them".
+  Recommend storing it — a column, or read out of `raw` — because it is exactly
+  the kind of fact that becomes unrecoverable the moment the media is deleted,
+  which is the thing this project exists to prevent. The alternative is to
+  accept that rewatches before 2025-10-24 collapse to one.
 - **Whether legacy-agent libraries exist here.** If they do, the season and
   episode in a legacy GUID are the only carrier of that information and
   `parseGuid` currently discards it. See
@@ -140,6 +202,39 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-21** — The next-up band, over a new `GET /next-up`. Its own route
+  rather than columns on `GET /titles`: it needs the episode either side of
+  where each show stopped, and carrying that across three hundred cards that
+  never read it would pay for the band on every page.
+
+  "Next" is the first unwatched regular episode after the *furthest* one
+  watched, not the most recent by clock — a rewatch of an early episode must
+  not offer to continue from there — and not the first unwatched episode
+  overall. Someone who watched S1E1-5 and then S1E8 is owed S1E9: the episode
+  they skipped is a hole, and the wall has a facet that says so.
+
+  Where nothing sits after that point it falls back to the earliest unwatched
+  episode and says so through `continues`, which the band words differently
+  ("still to see" rather than "next is"). That case is common rather than
+  exotic here: an import that captured only recent plays leaves shows watched
+  to the end of what is recorded and empty before it, and a band silent about
+  all of them would be silent almost always.
+
+  An episode declared `skipped` is never offered — the viewer already said they
+  did not want it — while one declared `missing` still is: why it is absent does
+  not stop it being the next thing to watch.
+
+  Dropped and excluded titles are out, which is the first thing the intent flags
+  are read for beyond display. Ordered by when the *furthest* episode was
+  watched, not by the title's last play of any kind: rewatching the pilot last
+  night says nothing about where the run is. Undated sorts last.
+
+  The mockup's "play in Plex" action is not built and cannot be: Engram keeps
+  no `ratingKey`, deliberately, because they are ephemeral and outliving them
+  is the point of the project. There is nothing to build a deep link out of,
+  and a button that opens nothing is worse than no button. "Not now" is kept
+  and means this sitting only — held in component state, so a title still owed
+  comes back next time the wall is opened.
 - **2026-09-21** — The add screen's second half, which is the screen the
   working notes were missing and the reason the project got reframed: nothing
   here needs the title to be on disk, in Sonarr, or in Plex at all. Adding a

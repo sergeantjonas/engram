@@ -52,6 +52,49 @@ export function formatSince(
 }
 
 /**
+ * How long ago, in words, for a sentence rather than a stat cell.
+ *
+ * `formatSince` answers the same question in as few characters as possible,
+ * which is right in a box under a label and wrong inside prose: "you stopped
+ * after S4E2 292d" is not a sentence. This rounds to the unit a person would
+ * actually say, because nobody reaches for "292 days" when they mean most of
+ * a year.
+ *
+ * A coarse entry names its period instead of counting from it — "in 2019"
+ * rather than a number of days from the first of January, which is a date the
+ * viewer never claimed. Null when the record holds no date at all, and the
+ * caller writes the sentence without the clause.
+ */
+export function formatAgo(
+  at: string | null,
+  precision: WatchPrecision | null,
+  now: Date = new Date(),
+): string | null {
+  if (at === null || precision === null || precision === 'unknown') return null;
+  const date = new Date(at);
+
+  if (precision === 'year' || precision === 'month') {
+    const named = new Intl.DateTimeFormat(undefined, {
+      timeZone: 'UTC',
+      year: 'numeric',
+      ...(precision === 'month' ? { month: 'long' } : {}),
+    }).format(date);
+    return `in ${named}`;
+  }
+
+  const days = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
+  if (days < 1) return 'earlier today';
+  if (days === 1) return 'yesterday';
+  if (days < 31) return `${days} days ago`;
+
+  // Rounded, and the unit changes with the distance: past a couple of months
+  // the day count stops being information and starts being noise.
+  const months = Math.round(days / 30.44);
+  if (months < 18) return `${months} months ago`;
+  return `${Math.round(days / 365.25)} years ago`;
+}
+
+/**
  * The same date in as few characters as the precision allows, for a stat cell
  * whose figure has to hold one line.
  *

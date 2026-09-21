@@ -263,6 +263,32 @@ export function setIntent(titleId: string, patch: Partial<Intent>): Promise<{ in
   });
 }
 
+/** An episode named by where it sits, which is how the band says it. */
+export interface NextUpEpisode {
+  season: number;
+  number: number;
+  name: string | null;
+}
+
+/** One show worth picking back up, as `GET /next-up` answers it. */
+export interface NextUp {
+  titleId: string;
+  name: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  stoppedAfter: NextUpEpisode & { watchedAt: string | null; watchedPrecision: WatchPrecision };
+  next: NextUpEpisode;
+  /** False when the only thing left sits behind where you stopped. */
+  continues: boolean;
+}
+
+export function nextUpQuery() {
+  return queryOptions({
+    queryKey: ['next-up'],
+    queryFn: () => apiFetch<{ nextUp: NextUp[] }>('/next-up'),
+  });
+}
+
 /** A TMDB search hit, as `GET /search` answers it. Not stored until it is added. */
 export interface TmdbCandidate {
   kind: 'show' | 'movie';

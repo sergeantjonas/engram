@@ -1,6 +1,7 @@
 # Ingest architecture
 
-**Status:** Design — agreed 2026-09-16. Read before chunk 4.
+**Status:** Design — agreed 2026-09-16, extended 2026-09-21 with the library
+walk and the claim-grain rule. Read before chunk 4.
 
 ## Sources
 
@@ -10,6 +11,49 @@
 | Tautulli webhook | live playback stops | Body is author-defined, so the payload contains exactly the fields wanted. Does not need Plex Pass, unlike Plex's own webhooks. |
 | Tautulli history pull | nightly reconcile | The authoritative record. Catches everything the webhook missed. |
 | Plex history dump | one-time backfill | Already captured — see [plex-api-findings.md](plex-api-findings.md). |
+| Plex library walk | one-time backfill, then reconcile | The deeper record. Reaches 2019 where the history log stops at Oct 2025, and carries external ids inline. Added 2026-09-21. |
+| The viewer, by hand | claims about media that was never here | The only source for a show watched before this server existed, or never on it at all. Undated by nature. |
+
+## Claim grain and precedence
+
+Six sources now describe the same viewing, so the question stops being "which
+source is right" and becomes "what does a row mean". A `watch_event` is not a
+play. It is **one source's claim about one episode**, and sources differ in how
+finely they can make one:
+
+| Grain | Sources | A row means |
+|---|---|---|
+| Play-grained | Plex history, Tautulli | This episode was played, at this instant. Two rows are two viewings. |
+| Episode-grained | Plex library walk | This episode has been watched, most recently then. One row per episode however often it was played. |
+| Claim-grained | The viewer, by hand | This episode has been watched. No date, and possibly no file. |
+
+Nothing is deduplicated at ingest and nothing supersedes anything. Every source
+keeps writing its own claims under its own `(source, source_event_id)`, the
+append-only rule holds, and reconciliation happens in the projection — which is
+the whole reason `watch_state` is a view. A manual mark from before the walk
+and a dated claim from the walk are both true: the viewer really did assert it,
+and Plex really does know when.
+
+`watch_state` already collapses correctly on everything except one column. It
+groups by `(title_id, episode_id)`, `min`/`max(watched_at)` ignore the undated
+claims, and `array_agg(… ORDER BY watched_at)` sorts nulls last, so both
+precisions already resolve to the dated claim on their own. But `play_count` is
+`count(*)`, which counts claims. It is already wrong today: the eight Stranger
+Things S5 episodes carrying a manual mark *and* a history row read as two plays
+of a single viewing, while Bleach S17E47's genuine rewatch (2026-09-05 and
+2026-09-12, two history rows) reads as two for the right reason. The library
+walk turns every such collision into three.
+
+So `play_count` counts play-grained rows only, floored at one so an episode
+known solely from a manual mark still reads as watched once. `seen` stays
+`bool_or(completed)` and needs no change.
+
+**Two sources feed `library_presence`, and neither is a watch.** Sonarr and
+Radarr know what is on disk; the Plex library walk knows what Plex can see.
+Neither knows what was viewed, and nothing about presence may ever be inferred
+from a watch or the reverse — Bleach is the standing proof, with 416 episodes
+claimed by hand against 8 on disk. Radarr belongs in the table above alongside
+Sonarr for the same reason it always did.
 
 ## Host topology
 

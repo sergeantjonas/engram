@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EpisodeCell, TitleDetail, TitleSummary, TmdbCandidate } from './api/titles.ts';
 import { createAppRouter } from './router.tsx';
@@ -166,6 +166,81 @@ describe('the wall', () => {
     expect(screen.getByRole('link', { name: 'Bleach, In progress' }).getAttribute('href')).toMatch(
       /^\/titles\/[0-9a-f-]{36}$/,
     );
+  });
+
+  // The question someone opening the app is usually asking, which the wall
+  // cannot answer by being looked at.
+  it('opens on what there is to pick back up', async () => {
+    stubApi((url) => {
+      if (url.endsWith('/next-up')) {
+        return json({
+          nextUp: [
+            {
+              titleId: 'a1',
+              name: 'The Witcher',
+              posterPath: '/p.jpg',
+              backdropPath: '/b.jpg',
+              stoppedAfter: {
+                season: 4,
+                number: 2,
+                name: 'Dream',
+                watchedAt: new Date(Date.now() - 4 * 86_400_000).toISOString(),
+                watchedPrecision: 'exact',
+              },
+              next: { season: 4, number: 3, name: 'Trial by Ordeal' },
+              continues: true,
+            },
+            {
+              titleId: 'a2',
+              name: 'Fallout',
+              posterPath: null,
+              backdropPath: null,
+              stoppedAfter: {
+                season: 2,
+                number: 8,
+                name: null,
+                watchedAt: null,
+                watchedPrecision: 'unknown',
+              },
+              next: { season: 1, number: 1, name: null },
+              continues: false,
+            },
+          ],
+        });
+      }
+      return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: true });
+    });
+    await renderAt('/');
+
+    // What to watch leads; where you left off is the reason and goes second.
+    const band = await screen.findByRole('region', { name: 'Next up' });
+    expect(band.textContent).toContain('S4E3 Trial by Ordeal');
+    expect(band.textContent).toContain('You stopped after S4E2, 4 days ago.');
+    expect(within(band).getByRole('link', { name: 'The Witcher' }).getAttribute('href')).toBe(
+      '/titles/a1',
+    );
+
+    // "Not now" is this sitting only, and it moves on rather than emptying.
+    within(band).getByRole('button', { name: 'Not now' }).click();
+    await screen.findByRole('link', { name: 'Fallout' });
+    // Nothing ahead of where it stopped, so the band must not imply it follows
+    // on — and with no date on the play there is no "ago" clause to write.
+    expect(screen.getByRole('region', { name: 'Next up' }).textContent).toContain(
+      'You stopped after S2E8, but this one is still unseen.',
+    );
+    // And with one candidate left there is nowhere to move on to.
+    expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull();
+  });
+
+  it('draws no band when there is nothing owed', async () => {
+    stubApi((url) => {
+      if (url.endsWith('/next-up')) return json({ nextUp: [] });
+      return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: true });
+    });
+    await renderAt('/');
+
+    await screen.findByText('Nothing on record yet.');
+    expect(screen.queryByRole('region', { name: 'Next up' })).toBeNull();
   });
 
   it('asks for the excluded titles only when the URL says so', async () => {

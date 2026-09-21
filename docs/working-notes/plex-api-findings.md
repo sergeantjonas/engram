@@ -1,6 +1,6 @@
 # Plex API findings
 
-**Status:** Reference — empirical, verified against a live server 2026-09-16. Read before writing any ingest code.
+**Status:** Reference — empirical, verified against a live server 2026-09-16, extended 2026-09-21. Read before writing any ingest code.
 
 Everything here was measured against the real server, not inferred from docs.
 
@@ -78,7 +78,10 @@ the fuzzy matcher is not needed on day one — but the eager-resolution rule is,
 because that 100% becomes unrecoverable the first time a series is removed.
 
 History depth is shallower than the library suggests: either the server was built
-in Oct 2025 or Plex has already pruned older rows. Anything before that is gone.
+in Oct 2025 or Plex has already pruned older rows. Anything before that is gone
+**from this endpoint** — the sentence originally ended at "gone", which was
+wrong, and cost four months of believing the record started in Oct 2025. The
+per-item watched state below reaches back to 2019.
 
 ## History is scoped to the token's own account (2026-09-17)
 
@@ -97,6 +100,44 @@ imported are the owner's. This is a property of the endpoint, not of Engram, and
 it covers only this one path — see "Whose history this is" in
 [ingest-architecture.md](ingest-architecture.md) for the paths where it does not
 hold.
+
+## Watched state outlives the history log (2026-09-21)
+
+The history endpoint is a server-local log. Per-item watched state is account
+data and syncs through plex.tv, so it survives a server rebuild that the log
+does not. Measured against the same server:
+
+| | history endpoint | library walk |
+|---|---|---|
+| Shows covered | 10 | 22 (of 52 in the library) |
+| Episodes covered | 85 | 373 |
+| Reaches back to | 2025-10-24 | **2019-06-11** |
+
+Every one of the 373 carries a `lastViewedAt`; none are undated. That is the
+whole finding: the four years the log is missing were never lost, they were
+being read from the wrong endpoint.
+
+**The endpoints.** `/library/sections` lists the sections;
+`/library/sections/{key}/all?includeGuids=1` returns every item in one call
+*with* its `Guid` array, so a library walk needs no per-title resolution pass —
+all 52 shows came back carrying imdb, tmdb and tvdb. That is a different answer
+from the one in "History rows carry no external ids" above, and it applies only
+to the library walk; history rows still need the second call.
+`/library/metadata/{ratingKey}/allLeaves` then gives every episode of a show
+with `viewCount` and `lastViewedAt`.
+
+Two traps found while measuring:
+
+- **Read the dates off the episodes, not the show.** 11 of the 22 watched shows
+  have a null `lastViewedAt` at show level while every watched episode under
+  them carries one. A walk that trusts the show row records those as undated.
+- **`parseGuids` takes the metadata object, not the array.** `parseGuids(meta)`,
+  never `parseGuids(meta.Guid)` — the latter returns `{}` silently rather than
+  throwing ([packages/shared/src/guid.ts:63](../../packages/shared/src/guid.ts)).
+
+**What the walk cannot recover.** One `lastViewedAt` per episode, so rewatches
+before the log's window collapse to their most recent date. `viewCount` survives
+as a number, so *how many times* is recoverable even where *when* is not.
 
 ## Write-back
 

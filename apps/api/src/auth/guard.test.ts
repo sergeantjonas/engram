@@ -69,6 +69,7 @@ describe('the owner guard', () => {
     const server = start(null).app;
 
     expect((await get(server, '/titles')).statusCode).toBe(200);
+    expect((await get(server, '/next-up')).statusCode).toBe(200);
     expect((await server.inject({ method: 'POST', url: '/titles' })).statusCode).toBe(401);
   });
 

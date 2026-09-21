@@ -9,6 +9,7 @@ import {
 } from '../db/schema.js';
 import { titleDetail, withoutGapNotes } from '../titles/detail.js';
 import { listTitles } from '../titles/list.js';
+import { nextUp } from '../titles/next-up.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
 import {
   type TmdbClient,
@@ -113,6 +114,16 @@ export function registerTitleRoutes(
 
     return { titles };
   });
+
+  /**
+   * What to pick back up, which is the one question the wall cannot answer by
+   * being looked at.
+   *
+   * Its own route rather than columns on `GET /titles`: it needs the episode
+   * either side of where each show stopped, and carrying that across three
+   * hundred cards that never read it would pay for the band on every page.
+   */
+  app.get('/next-up', async () => ({ nextUp: await nextUp(db) }));
 
   /**
    * One title and its grid, which is where the work happens.

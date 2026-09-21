@@ -10,6 +10,7 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
 - **What's next?** → [open-work.md](open-work.md)
 - **What are we building on top of?** → [plex-api-findings.md](plex-api-findings.md)
 - **What should a screen look like?** → [web-design.md](web-design.md)
+- **How does this ship?** → [go-live.md](go-live.md)
 - **Browse before scoping** → [integration-ideas.md](integration-ideas.md)
 
 ## The notes
@@ -27,6 +28,9 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
 - `authentication.md` — design. GitHub OAuth for an app with exactly one user,
   and why a browser and a webhook are authenticated differently. Read before
   any route that writes.
+- `go-live.md` — plan. Engram as the netcup box's second tenant, and why the
+  backfills run locally first: the hand-made marks exist nowhere else. Read
+  before the first deploy, alongside the `shared-vps` skill.
 - `web-design.md` — design. The settled three screens, the palette and the type
   system, with the mockup they were approved from in `docs/design/`. Read
   before building or changing anything in `apps/web`.

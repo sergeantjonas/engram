@@ -123,6 +123,15 @@ opacity behind a left-to-right scrim, 52px poster, the sentence "You stopped
 after S17E48 four days ago · next is S17E49", and two actions (play in Plex,
 not now).
 
+Built with one action. "Play in Plex" cannot exist: Engram keeps no
+`ratingKey` on purpose, so there is nothing to build a deep link out of, and a
+button that opens nothing is worse than no button — the same reason the
+mockup's `Import` is missing from the chrome. "Not now" moves to the next
+candidate rather than emptying the band, and only appears while there is one
+to move to. The sentence says "still to see" in place of "next is" when the
+only thing left sits behind where the run stopped, which the mockup's library
+never had to express.
+
 Titles wrap to two lines under the tile and a subtitle past a colon is trimmed
 with the full name on hover. Truncation was accepted as a layout problem rather
 than a font one — it is not a reason to revisit the type.

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { titleQuery } from '../api/titles.ts';
+import { nextUpQuery, titleQuery } from '../api/titles.ts';
 
 /**
  * Refetches what a write to this title changed.
@@ -15,5 +15,8 @@ export function useSettle(titleId: string): () => Promise<unknown> {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: titleQuery(titleId).queryKey }),
       queryClient.invalidateQueries({ queryKey: ['titles'] }),
+      // Marking an episode is the one thing that moves what comes next, and
+      // the band lives on a screen this write never navigates through.
+      queryClient.invalidateQueries({ queryKey: nextUpQuery().queryKey }),
     ]);
 }

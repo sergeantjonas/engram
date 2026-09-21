@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoment, formatSince, formatWatchedShort } from './format.ts';
+import { formatAgo, formatMoment, formatSince, formatWatchedShort } from './format.ts';
 
 const now = new Date('2026-09-19T12:00:00.000Z');
 
@@ -101,5 +101,36 @@ describe('formatSince', () => {
   it('has nothing to say about a title with no date', () => {
     expect(formatSince(null, null, now)).toBeNull();
     expect(formatSince('2019-01-01T00:00:00.000Z', 'unknown', now)).toBeNull();
+  });
+});
+
+describe('formatAgo', () => {
+  const now = new Date('2026-09-21T12:00:00.000Z');
+  const ago = (days: number) =>
+    formatAgo(new Date(now.getTime() - days * 86_400_000).toISOString(), 'exact', now);
+
+  // The unit a person would actually reach for. "292 days" is arithmetic; the
+  // sentence it sits in wants most of a year.
+  it('rounds to the unit the sentence needs', () => {
+    expect(ago(0)).toBe('earlier today');
+    expect(ago(1)).toBe('yesterday');
+    expect(ago(4)).toBe('4 days ago');
+    expect(ago(30)).toBe('30 days ago');
+    expect(ago(60)).toBe('2 months ago');
+    expect(ago(292)).toBe('10 months ago');
+    expect(ago(700)).toBe('2 years ago');
+  });
+
+  // A coarse entry names its period. Counting days from the first of January
+  // would report a distance from a date the viewer never claimed.
+  it('names the period a coarse entry gave, rather than counting from it', () => {
+    expect(formatAgo('2019-01-01T00:00:00.000Z', 'year', now)).toBe('in 2019');
+    expect(formatAgo('2019-06-01T00:00:00.000Z', 'month', now)).toContain('2019');
+    expect(formatAgo('2019-06-01T00:00:00.000Z', 'month', now)).not.toContain('ago');
+  });
+
+  it('says nothing at all when the record holds no date', () => {
+    expect(formatAgo(null, 'exact', now)).toBeNull();
+    expect(formatAgo('2019-01-01T00:00:00.000Z', 'unknown', now)).toBeNull();
   });
 });

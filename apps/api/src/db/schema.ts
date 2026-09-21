@@ -241,6 +241,13 @@ export const watchEvents = pgTable(
       'watch_event_precision_date',
       sql`(${t.watchedPrecision} = 'unknown') = (${t.watchedAt} is null)`,
     ),
+    /**
+     * `play_count` takes the greatest of the play-grained rows and this, so a
+     * bad value here silently inflates a figure rather than failing. Null is
+     * the normal state — a source that enumerates plays has no count to give —
+     * and zero would claim a watch that did not happen.
+     */
+    check('watch_event_plays_positive', sql`${t.plays} is null or ${t.plays} >= 1`),
   ],
 );
 

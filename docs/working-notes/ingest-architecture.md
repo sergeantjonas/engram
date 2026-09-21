@@ -68,6 +68,15 @@ from a watch or the reverse — Bleach is the standing proof, with 416 episodes
 claimed by hand against 8 on disk. Radarr belongs in the table above alongside
 Sonarr for the same reason it always did.
 
+The walk was the first thing to write that table at all, on 2026-09-21: 81
+rows where there had been none, so `onDisk` stopped being null everywhere and
+the *Not on disk* facet stopped matching nothing. It also does the half a
+webhook structurally cannot. A webhook reports events, so silence is
+ambiguous; a walk sees the whole library at once, so a title that was present
+and is not in this walk has gone, and gets `present = false` with a
+`removed_at`. That sweep is scoped to rows whose `source` is the walk's own,
+because Plex not seeing a file says nothing about what Sonarr knows.
+
 ## Host topology
 
 The media stack (Plex, Sonarr, Radarr, Tautulli) runs on a Bytesized slot.

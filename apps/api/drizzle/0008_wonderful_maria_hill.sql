@@ -1,0 +1,1 @@
+ALTER TABLE "watch_event" ADD CONSTRAINT "watch_event_plays_positive" CHECK ("watch_event"."plays" is null or "watch_event"."plays" >= 1);

@@ -116,19 +116,50 @@ the viewer wants of a title. The SPA calls all four.
       show's watched episodes to `tools/out/`, the same split the history dump
       uses so a normalizer bug stays recoverable. Measured against the live
       server on the day: 81 items, 24 of them watched, 373 watched episodes,
-      none undated, 2019-06-11 to 2026-09-13. The importer is the other half.
+      none undated, 2019-06-11 to 2026-09-13.
 
-      A `plex-library` source over
-      `/library/sections/{key}/all?includeGuids=1`, writing watch events for
-      what is watched and `library_presence` for everything it sees. **Both
-      sections, not just the shows one.** A show needs a second call to
-      `…/allLeaves` and its dates read off the episodes, never off the show row
-      — 11 of the 22 watched shows have a null `lastViewedAt` at show level. A
-      film needs neither: its `viewCount` and `lastViewedAt` are on the item
-      itself, and its event is title-level with a null `episode_id`, which is
-      the shape the one stored film already has.
+      `planLibrary` landed the same day: pure, and unlike the history importer
+      it needs no resolution report, because `includeGuids=1` decides identity
+      inline. Against that dump it plans 81 titles, 81 presence rows, 373
+      episodes and 375 events with no collisions and nothing dropped — and 68
+      of those events carry a `plays` above one, rewatches the log never knew
+      about. The writer is what is left.
+
+      ~~The writer.~~ Landed 2026-09-21. `pnpm import:library` against the
+      live record, and it did what the table above predicted:
+
+      | | before | after |
+      |---|---|---|
+      | Shows | 11 | 53 |
+      | Films | 1 | 29 |
+      | `library_presence` rows | 0 | 81 |
+      | Dated events | 86 | 461 |
+      | Record reaches back to | 2025-10-24 | **2019-06-11** |
+
+      **126 hand-made marks gained a real date**, the number measured before
+      any of this was written. The import deletes nothing — it touches only
+      rows of its own source, so the 653 manual claims and 86 history rows
+      standing at the time were left exactly as they were. The dates arrive
+      because the projection prefers a dated claim, not because a better one
+      replaced a worse one. A second run wrote 0 new events.
+
+      One episode reads three viewings where the log knew of one — Fallout
+      S2E6, whose `viewCount` is 3 against a single history row. That is
+      `plays` doing the job it was added for.
+
+      The two existing backfills finished the job the same day, both against
+      the enlarged library and neither needing a change: `backfill:episodes`
+      took the grids from 1135 rows to 2467, because the walk writes only the
+      episodes something was watched in and the rest of each season would
+      otherwise read as holes; `backfill:metadata` fetched art and overviews
+      for the 70 titles that had never had any. Posters are now on every title
+      in the database. Run them after any walk that adds titles.
    3. Wire it into the nightly reconcile, so it stays a reconciliation rather
-      than a one-time import.
+      than a one-time import. The writer already does the half a webhook
+      cannot: a title that was present and is not in this walk is marked gone
+      rather than left standing, scoped to rows the walk owns so Sonarr and
+      Radarr are not overwritten later. It has never fired — the first walk
+      found nothing missing — so it is unproven against real removals.
 
    Idempotency is not copied from the history importer. Settled 2026-09-21:
    `onConflictDoNothing` is right for a history row, which never changes, and

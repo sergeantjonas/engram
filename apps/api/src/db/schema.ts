@@ -333,10 +333,12 @@ export const watchState = pgView('watch_state', {
   titleId: uuid('title_id').notNull(),
   episodeId: uuid('episode_id'),
   /**
-   * Null when every event behind this row is undated. Aggregates skip nulls, so
-   * one dated event among several still yields a real first and last — but any
-   * ordering on these columns has to say `nulls last` or Postgres sorts the
-   * things you cannot date to the top.
+   * Null when every event behind this row is undated, and equally when none of
+   * them finished: stopping is not watching, so a play abandoned two minutes in
+   * must not date the row as though the thing had been seen that day. Aggregates
+   * skip nulls, so one dated event among several still yields a real first and
+   * last — but any ordering on these columns has to say `nulls last` or Postgres
+   * sorts the things you cannot date to the top.
    */
   firstWatchedAt: timestamp('first_watched_at', { withTimezone: true }),
   lastWatchedAt: timestamp('last_watched_at', { withTimezone: true }),
@@ -345,6 +347,9 @@ export const watchState = pgView('watch_state', {
    * in the group. A group holding a remembered 2019 and an exact play last week
    * would otherwise describe its own `first_watched_at` as exact, and the UI
    * would render the January that the precision column exists to prevent.
+   *
+   * `unknown` where the boundary is null, which is the same pairing the events
+   * themselves are held to by `watch_event_precision_date`.
    */
   firstWatchedPrecision: watchPrecision('first_watched_precision').notNull(),
   lastWatchedPrecision: watchPrecision('last_watched_precision').notNull(),
@@ -358,12 +363,24 @@ export const watchState = pgView('watch_state', {
   select
     title_id,
     episode_id,
-    min(watched_at) as first_watched_at,
-    max(watched_at) as last_watched_at,
-    (array_agg(watched_precision order by watched_at asc nulls last))[1]
-      as first_watched_precision,
-    (array_agg(watched_precision order by watched_at desc nulls last))[1]
-      as last_watched_precision,
+    -- Finished plays only, for the same reason play_count counts them: a
+    -- play-grained source reports stopping, and a title sampled for two
+    -- minutes would otherwise read as watched today everywhere a date is
+    -- shown, while the episode under it still read unseen.
+    min(watched_at) filter (where completed) as first_watched_at,
+    max(watched_at) filter (where completed) as last_watched_at,
+    -- A null boundary collapses to unknown precision, the same pairing
+    -- watch_event_precision_date holds the events themselves to.
+    coalesce(
+      (array_agg(watched_precision order by watched_at asc nulls last)
+        filter (where completed))[1],
+      'unknown'::watch_precision
+    ) as first_watched_precision,
+    coalesce(
+      (array_agg(watched_precision order by watched_at desc nulls last)
+        filter (where completed))[1],
+      'unknown'::watch_precision
+    ) as last_watched_precision,
     -- Viewings rather than claims. Sources differ in grain: Plex history and
     -- Tautulli write one row per play, so those are counted; the library walk
     -- writes one row per episode carrying its own total, so that is taken

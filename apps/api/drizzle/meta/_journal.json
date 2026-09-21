@@ -71,6 +71,13 @@
       "when": 1790020423463,
       "tag": "0009_flawless_orphan",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790022006255,
+      "tag": "0010_open_redwing",
+      "breakpoints": true
     }
   ]
 }

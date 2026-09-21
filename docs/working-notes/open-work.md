@@ -228,7 +228,8 @@ the viewer wants of a title. The SPA calls all four.
    together, so nothing else about the path is opened with it — and turns a
    Playback Stop into a title, an episode and a play. Idempotent on the
    instant, so a redelivery collapses and a rewatch does not; a stop that did
-   not finish is stored too, and `watch_state` counts only the ones that did.
+   not finish is stored too, and `watch_state` counts and dates only the ones
+   that did.
    It refuses nothing: a body it cannot plan is logged and answered 204,
    because the nightly walk is what recovers the play and a non-2xx only marks
    the delivery bad in Tautulli's own log.

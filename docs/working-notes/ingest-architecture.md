@@ -36,7 +36,8 @@ the whole reason `watch_state` is a view. A manual mark from before the walk
 and a dated claim from the walk are both true: the viewer really did assert it,
 and Plex really does know when.
 
-`watch_state` already collapses correctly on everything except one column. It
+`watch_state` already collapses correctly on everything except its count and
+its dates. It
 groups by `(title_id, episode_id)`, `min`/`max(watched_at)` ignore the undated
 claims, and `array_agg(… ORDER BY watched_at)` sorts nulls last, so both
 precisions already resolve to the dated claim on their own. But `play_count` is
@@ -53,8 +54,9 @@ known solely from a manual mark still reads as watched once. `seen` stays
 Built 2026-09-21, ahead of the walk that exposes it, and with one addition the
 plan above did not have: `watch_event.plays`. An episode-grained source counts
 rather than enumerates, so its row carries its own total and the view takes
-`greatest(play-grained rows, max(plays), 1)` — the larger wins because the two
-describe the same viewing from different angles. Null everywhere else: a
+`greatest(completed play-grained rows, max(plays), one if anything completed)`
+— the larger wins because the two describe the same viewing from different
+angles. Null everywhere else: a
 play-grained row is one play by definition and a mark by hand asserts only that
 something was seen.
 
@@ -288,9 +290,18 @@ stop, including the 18 second sample that happened to be the first real
 payload this received. Those are kept rather than dropped: a partial play is a
 fact like any other, `view_offset_sec` and `percent_complete` are columns the
 nightly walk can never fill, and `watch_state.seen` is `bool_or(completed)`, so
-nothing partial reads as watched. What it does cost is `play_count`, which
-counts rows for this source — one episode watched across three sittings would
-otherwise read as three plays — so that count takes only completed rows.
+nothing partial reads as watched.
+
+Everything else in `watch_state` takes the same filter, and each for a reason
+found by asking what the column would say otherwise. `play_count` counts rows
+for this source, so one episode watched across three sittings would have read
+as three plays. `first_watched_at` and `last_watched_at` would have moved to
+the day of a two-minute sample, which is worse than it sounds: the wall's
+ordering, the title header and the next-up band all read them, so a title
+glanced at would sort and date as watched today while the episode under it
+still read unseen. A null
+boundary pairs with `unknown` precision, the same rule
+`watch_event_precision_date` holds the events themselves to.
 
 `completed` is decided at **90%**, which is Plex's own default rather than a
 figure of our own. The walk reports Plex's binary watched flag, so any other

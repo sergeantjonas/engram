@@ -74,7 +74,8 @@ watch_state       SQL view over watch_event, not a table: it cannot drift
                    first_watched_precision, last_watched_precision,
                    play_count, seen)
                   first/last are null when every event behind the row is
-                  undated, so ordering on them needs NULLS LAST
+                  undated, and when nothing behind it completed, so ordering
+                  on them needs NULLS LAST
 ```
 
 ## Why presence and intent are separate tables

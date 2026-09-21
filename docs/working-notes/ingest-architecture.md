@@ -10,7 +10,7 @@ rather than planned. Read before chunk 4.
 |---|---|---|
 | Sonarr / Radarr webhooks | library add + delete | Payload already carries `tvdbId`, `tmdbId`, `imdbId`. No resolution pass needed. Fires `SeriesAdd` before anything downloads, and `SeriesDelete` / `EpisodeFileDelete` on removal. |
 | Tautulli webhook | live playback stops | Body is author-defined, so the payload contains exactly the fields wanted. Does not need Plex Pass, unlike Plex's own webhooks. |
-| Tautulli history pull | nightly reconcile | The authoritative record. Catches everything the webhook missed. |
+| ~~Tautulli history pull~~ | ~~nightly reconcile~~ | Dropped 2026-09-21. The library walk took this job and does it better — see below. |
 | Plex history dump | one-time backfill | Already captured — see [plex-api-findings.md](plex-api-findings.md). |
 | Plex library walk | one-time backfill, then reconcile | The deeper record. Reaches 2019 where the history log stops at Oct 2025, and carries external ids inline. Added 2026-09-21. |
 | The viewer, by hand | claims about media that was never here | The only source for a show watched before this server existed, or never on it at all. Undated by nature. |
@@ -125,9 +125,41 @@ Plex does not reliably emit a clean playback-stop: app killed, network drop,
 server restart. A push-only design loses episodes silently, which is the worst
 possible failure for an app whose only job is remembering.
 
-So: the webhook gives freshness, the nightly `get_history` pull gives
-correctness. Idempotency on `(source, source_event_id)` makes re-running the
-reconcile free, so there is no reason not to.
+So: the webhook gives freshness and the nightly reconcile gives correctness.
+Idempotency on `(source, source_event_id)` makes re-running the reconcile
+free, so there is no reason not to.
+
+**What the reconcile is changed on 2026-09-21.** It was Tautulli's
+`get_history`; it is the Plex library walk. The walk reaches 2019 where
+Tautulli can only know what it has watched since it was installed, it carries
+external ids inline, and it was already built. Keeping a second pull beside it
+would mean issuing a Tautulli API key — a secret that reads the whole
+server's viewing — and sending it over a port with no TLS on it. The job was
+already done by something that needs no key at all.
+
+**Tautulli keeps the webhook, and earns it.** Four things the walk cannot
+give, none of which are about being authoritative:
+
+- **Latency.** The walk is a nightly poll. A webhook is seconds, which is the
+  difference between a record and a log you check on.
+- **Grain.** The walk writes one row per episode carrying a `viewCount` and
+  the most recent date, so every rewatch but the last is a number rather than
+  a moment. Tautulli reports each play with its own instant.
+- **Progress.** `view_offset` and percent complete, which is what
+  `watch_event.completed` is supposed to be decided from. The walk sees only
+  Plex's binary watched flag.
+- **Who and where.** `{user_id}` is what the owner allowlist filters on for a
+  source that is not owner-scoped by construction, and `player` / `platform`
+  are columns that exist and nothing has ever filled.
+
+It also needs no key from us: Tautulli posts to Engram and `WEBHOOK_SECRET`
+authenticates it, so nothing of ours travels over 8181 at all.
+
+**"Now watching" needs neither.** Plex answers `/status/sessions` directly
+with the account token Engram already holds — current sessions with user,
+player, platform and view offset. Verified 2026-09-21. Reaching for Tautulli
+to display live playback would add a dependency for something the server
+already says.
 
 ## Whose history this is
 

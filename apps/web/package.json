@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@engram/shared": "workspace:*",
     "@radix-ui/react-popover": "^1.1.23",
     "@radix-ui/react-toast": "^1.2.23",
     "@tanstack/react-query": "^5.103.1",

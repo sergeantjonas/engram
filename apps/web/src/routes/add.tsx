@@ -1,10 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
+import { Backfill } from '../add/Backfill.tsx';
 import { CandidateRow } from '../add/CandidateRow.tsx';
 import { meQuery } from '../api/auth.ts';
 import { ApiError } from '../api/client.ts';
-import { addTitle, candidateKey, searchQuery, type TmdbCandidate } from '../api/titles.ts';
+import {
+  type AddedTitle,
+  addTitle,
+  candidateKey,
+  searchQuery,
+  type TmdbCandidate,
+} from '../api/titles.ts';
 
 interface AddSearch {
   q?: string;
@@ -42,6 +49,10 @@ function Add() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState(q ?? '');
   const [failed, setFailed] = useState<{ key: string; message: string } | null>(null);
+  // The kind comes with the candidate, not with the response: `POST /titles`
+  // answers with seasons, and a film's empty list is indistinguishable from a
+  // show whose grid has not been backfilled yet.
+  const [added, setAdded] = useState<{ result: AddedTitle; kind: 'show' | 'movie' } | null>(null);
 
   // Only the search params change between one search and the next, so the
   // component is never remounted and the initializer above runs once. Without
@@ -58,14 +69,30 @@ function Add() {
   const add = useMutation({
     mutationFn: addTitle,
     onMutate: () => setFailed(null),
-    onSuccess: async (added) => {
+    // Stays here rather than navigating. Adding a title is half of what
+    // someone came to do: the other half is saying which of it they have
+    // already seen, and sending them to the title page to do it makes a
+    // backfill two screens instead of one.
+    onSuccess: async (result, candidate) => {
       // The wall is now wrong by one title, whatever filter it is showing.
       await queryClient.invalidateQueries({ queryKey: ['titles'] });
-      await navigate({ to: '/titles/$id', params: { id: added.title.id } });
+      setAdded({ result, kind: candidate.kind });
     },
     onError: (error, candidate) =>
       setFailed({ key: candidateKey(candidate), message: describe(error) }),
   });
+
+  if (added) {
+    return (
+      <Backfill
+        added={added.result}
+        kind={added.kind}
+        onCommitted={() =>
+          void navigate({ to: '/titles/$id', params: { id: added.result.title.id } })
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

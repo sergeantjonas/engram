@@ -41,11 +41,8 @@ owe the design, all checked against the running app rather than guessed:
 - Missing entirely: the next-up strip and the list view behind the rail's LIST.
   The rail carries only HOME and ADD until the screens behind LIST and YEAR
   exist.
-- **The add screen still only adds.** The design has it marking whole seasons
-  in the same action, over season-level checkboxes and a commit bar that states
-  the write before it happens. It writes the title and navigates away, so a
-  backfill is two screens instead of one. The marking half exists on the title
-  page now, which is what makes this a shortcut rather than a gap.
+- ~~The add screen still only adds.~~ Landed 2026-09-21: season checkboxes and
+  the commit bar, so a backfill is one screen again.
 
 The chip row landed 2026-09-20 with the facets the design names, and
 `PUT /titles/:id/intent`, the marking controls and the intent controls all on
@@ -143,6 +140,37 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-21** — The add screen's second half, which is the screen the
+  working notes were missing and the reason the project got reframed: nothing
+  here needs the title to be on disk, in Sonarr, or in Plex at all. Adding a
+  title no longer navigates away from it — the seasons come back from
+  `POST /titles` with their episode counts, and ticking them writes the history
+  in the same visit.
+
+  Season-level, never episode-level. "All seasons" leaves the specials out, the
+  way a whole-title mark does, and a selection that covers every regular season
+  collapses to one `scope: 'all'` request instead of one per season. The rest go
+  sequentially: the API orders each expansion to keep concurrent writes off each
+  other's row locks, and firing them together is the one thing that defeats it.
+  A film gets a single tick instead, since `scope: 'all'` is the only mark it
+  has.
+
+  A failure partway through says how far it got. That is not politeness: a
+  manual event id carries the date as written, so an owner who believes nothing
+  landed and ticks again with a different date writes a second set of plays
+  over the episodes the first pass already claimed.
+
+  The commit bar states the write before it happens —
+  `writes 19 episodes · source manual · precision year · presence not on disk`
+  — and an unreadable date blocks it rather than being sent to be rejected. That
+  is what finally justified `@engram/shared` in `apps/web`: the bar names the
+  precision, and reading it with anything but `parseWatchedAt` would be a second
+  date grammar in the browser describing a write that is not the one about to
+  happen. `tsconfig.app.json` references the package so `tsc -b` builds it
+  first.
+
+  The planning is pure and unit-tested in `apps/web/src/add/plan.ts`, the same
+  split the API's write paths use.
 - **2026-09-21** — The intent controls, which is the last of the four numbered
   screens. Three toggles on the title page's action row — want to watch,
   dropped, excluded — over `PUT /titles/:id/intent`, which had been sitting

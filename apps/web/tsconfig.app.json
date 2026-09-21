@@ -15,5 +15,9 @@
     "moduleDetection": "force",
     "allowImportingTsExtensions": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Built before this project is checked. `@engram/shared` resolves through
+  // node_modules to its `dist`, and without the reference `tsc -b` is free to
+  // check this one first and find no types there.
+  "references": [{ "path": "../../packages/shared" }]
 }

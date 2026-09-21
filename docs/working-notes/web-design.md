@@ -198,9 +198,15 @@ quietly never gets used.
 The commit bar states what the write will do before it happens: `writes 54
 episodes · source manual · precision year · presence not on disk`.
 
-Built as half of that: the screen adds the title and navigates to it, and the
-marking happens on the title page. The season checkboxes and the commit bar are
-not built, so a backfill is two screens rather than one.
+Built as described, in two steps rather than one screen: the search and its
+results, then the seasons, once the title exists and its grid is known. The
+checkboxes cannot be drawn before `POST /titles` answers with the season list,
+and asking TMDB for it twice to draw them earlier would spend the owner's key
+to save a click.
+
+"All seasons" leaves the specials out, matching the mark it stands for. An
+unreadable date disables the commit rather than being sent to be refused, so
+the bar never states a precision the write will not have.
 
 This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 2019" has no timestamp, and the alternative — a nullable `watched_at` — would

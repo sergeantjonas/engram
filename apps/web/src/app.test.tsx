@@ -863,7 +863,7 @@ describe('adding a title', () => {
     );
   });
 
-  it('adds the chosen candidate and lands on its title page', async () => {
+  it('adds the chosen candidate and goes on to its title page', async () => {
     const id = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
     const calls = stubApi((url, init) => {
       if (url.includes('/search')) return json({ results: [candidate({})] });
@@ -885,6 +885,7 @@ describe('adding a title', () => {
           figures: {
             plays: 2,
             rewatched: 0,
+            manualPlays: 0,
             firstWatchedAt: null,
             firstWatchedPrecision: null,
             lastWatchedAt: null,
@@ -898,6 +899,11 @@ describe('adding a title', () => {
     await renderAt('/add?q=heat');
 
     (await screen.findByRole('button', { name: 'Add Heat' })).click();
+
+    // A film has no seasons, so it gets the one tick there is to give. Not
+    // used here: this is the path for someone who has not seen it.
+    await screen.findByRole('checkbox', { name: 'Seen it' });
+    (await screen.findByRole('button', { name: 'Nothing yet — open the title' })).click();
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Heat' });
     // A film's header renders from the API's figures alone — it has no grid to
@@ -914,6 +920,157 @@ describe('adding a title', () => {
     const post = calls.find((call) => call.init?.method === 'POST');
     expect(JSON.parse(String(post?.init?.body))).toEqual({ kind: 'movie', tmdbId: '949' });
     expect(calls.some((call) => call.url.includes(`/titles/${id}`))).toBe(true);
+  });
+
+  // The screen the working notes were missing, and the reason it exists: a
+  // decade of television is backfilled by season or it is not backfilled.
+  it('marks the seasons already watched without leaving the screen', async () => {
+    const id = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({ kind: 'show' })] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json(
+          {
+            title: { id, name: 'Heat' },
+            seasons: [
+              { season: 0, episodeCount: 3 },
+              { season: 1, episodeCount: 8 },
+              { season: 2, episodeCount: 10 },
+            ],
+          },
+          201,
+        );
+      }
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        return json({ written: 18, skipped: 0 }, 201);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt('/add?q=heat');
+
+    (await screen.findByRole('button', { name: 'Add Heat' })).click();
+    (await screen.findByRole('checkbox', { name: 'All seasons' })).click();
+    fireEvent.change(screen.getByRole('textbox', { name: /When\?/ }), {
+      target: { value: '2019' },
+    });
+
+    // The bar states the write before it happens; the specials are outside it,
+    // because "all seasons" is the mark that steps over them.
+    await screen.findByText(
+      'writes 18 episodes · source manual · precision year · presence not on disk',
+    );
+    screen.getByRole('button', { name: 'Write it' }).click();
+
+    await screen.findByText('Marked 18 episodes of Heat.');
+    const mark = calls.find((call) => call.url.endsWith('/watch-events'));
+    expect(JSON.parse(String(mark?.init?.body))).toEqual({
+      titleId: id,
+      scope: 'all',
+      watchedAt: '2019',
+    });
+  });
+
+  // A selection that is not every regular season goes one request at a time,
+  // in order, and the count is the sum of what each answered.
+  it('writes the chosen seasons one at a time, in order', async () => {
+    const id = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({ kind: 'show' })] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json(
+          {
+            title: { id, name: 'Heat' },
+            seasons: [
+              { season: 0, episodeCount: 3 },
+              { season: 1, episodeCount: 8 },
+              { season: 2, episodeCount: 10 },
+            ],
+          },
+          201,
+        );
+      }
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { scope: { season: number } };
+        return json({ written: body.scope.season === 0 ? 3 : 8, skipped: 0 }, 201);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt('/add?q=heat');
+
+    (await screen.findByRole('button', { name: 'Add Heat' })).click();
+    (await screen.findByRole('checkbox', { name: /Specials/ })).click();
+    screen.getByRole('checkbox', { name: /Season 1/ }).click();
+
+    await screen.findByText(/writes 11 episodes/);
+    screen.getByRole('button', { name: 'Write it' }).click();
+
+    await screen.findByText('Marked 11 episodes of Heat.');
+    const marks = calls
+      .filter((call) => call.url.endsWith('/watch-events'))
+      .map((call) => (JSON.parse(String(call.init?.body)) as { scope: unknown }).scope);
+    expect(marks).toEqual([{ season: 0 }, { season: 1 }]);
+  });
+
+  // Believing nothing landed, the owner ticks again with a different date —
+  // and a manual event id carries the date as written, so that writes a second
+  // set of plays over the episodes the first pass already claimed.
+  it('says how far it got when a season fails partway through', async () => {
+    const id = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
+    stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({ kind: 'show' })] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json(
+          {
+            title: { id, name: 'Heat' },
+            seasons: [
+              { season: 0, episodeCount: 3 },
+              { season: 1, episodeCount: 8 },
+            ],
+          },
+          201,
+        );
+      }
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { scope: { season: number } };
+        return body.scope.season === 0
+          ? json({ written: 3, skipped: 0 }, 201)
+          : json({ error: 'unmarkable', message: 'season 1 is not on record here' }, 422);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt('/add?q=heat');
+
+    (await screen.findByRole('button', { name: 'Add Heat' })).click();
+    (await screen.findByRole('checkbox', { name: /Specials/ })).click();
+    screen.getByRole('checkbox', { name: /Season 1/ }).click();
+    screen.getByRole('button', { name: 'Write it' }).click();
+
+    await screen.findByText('Wrote 3 episodes, then stopped: season 1 is not on record here');
+  });
+
+  // The bar would otherwise describe a precision the server is about to reject.
+  it('will not write against a date it cannot read', async () => {
+    const id = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
+    stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({ kind: 'show' })] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json(
+          { title: { id, name: 'Heat' }, seasons: [{ season: 1, episodeCount: 8 }] },
+          201,
+        );
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt('/add?q=heat');
+
+    (await screen.findByRole('button', { name: 'Add Heat' })).click();
+    (await screen.findByRole('checkbox', { name: /Season 1/ })).click();
+    fireEvent.change(screen.getByRole('textbox', { name: /When\?/ }), {
+      target: { value: 'summer 2019' },
+    });
+
+    await screen.findByText(/precision unreadable/);
+    expect(screen.getByRole('button', { name: 'Write it' })).toHaveProperty('disabled', true);
   });
 
   it('puts the previous query back in the box on the way back', async () => {

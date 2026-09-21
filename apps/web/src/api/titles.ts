@@ -287,10 +287,16 @@ export function searchQuery(q: string) {
   });
 }
 
+/** A season as `POST /titles` reports it back, with what the grid holds. */
+export interface AddedSeason {
+  season: number;
+  episodeCount: number;
+}
+
 /** What `POST /titles` returns. */
 export interface AddedTitle {
   title: { id: string; name: string };
-  seasons: Array<{ season: number; episodeCount: number }>;
+  seasons: AddedSeason[];
 }
 
 /**

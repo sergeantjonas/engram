@@ -250,6 +250,33 @@ the viewer wants of a title. The SPA calls all four.
    field that remembers, keyboard walk), the screens the rail owes (YEAR,
    export, a home for `want`) and the visual pass (the state bar as a
    progress bar). Arc 1 first; its first three chunks spend no TMDB calls.
+7. **"Now watching"** — not started. The only part settled is which API
+   answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
+   server, which returns every current session with its user, player, platform
+   and view offset. Tautulli is not involved and would only add a dependency
+   for something the server already says — reasoning in
+   [ingest-architecture.md](ingest-architecture.md) § Webhooks are an
+   optimization.
+
+   Three things make it unlike anything built so far. **It stores nothing**: a
+   live session is true for ten minutes and has no place in an append-only
+   record, so this is the first route with no table behind it and the first
+   screen state that cannot be rebuilt. **It needs a Plex token on the box**,
+   which production does not have — `PLEX_TOKEN` is a tools-only variable and
+   the deploy's documented environment omits it deliberately — and the token
+   has to stay server-side, so the SPA polls Engram and Engram polls Plex.
+   **The server is shared**, so the response is filtered by viewer again, and
+   this time on `PLEX_ACCOUNT_IDS`: `/status/sessions` speaks Plex's own
+   namespace, where the owner is `1`, not Tautulli's `7597797`. That is the
+   third source with its own account namespace and the third chance to use the
+   wrong one.
+
+   Two unknowns to settle before scoping. Whether the netcup box can reach the
+   Plex server at all: the tools find it through plex.tv discovery rather than
+   a configured URL, and that has only ever run from the laptop. And the poll
+   interval, which is the whole cost of the feature — nothing else in the app
+   asks a question on a timer. Surface, and the band it competes with, in
+   [web-design.md](web-design.md) § Still open.
 
 ## Blocked
 

@@ -369,6 +369,19 @@ has an answer.
 - **Responsive behaviour.** Everything was judged at desktop width. The wall's
   `auto-fill` carries itself down; the title page's figure row and the rail
   have no small-screen design.
+- **"Now watching".** Nothing in the mockup, and the first surface that would
+  show something the record does not contain — a live Plex session is true for
+  ten minutes and is never written down. It competes with Next up for the one
+  band above the chips, and while something is playing the two say opposite
+  things: "you stopped after S17E48 four days ago" is wrong the moment S17E49
+  is on screen. So the open question is whether it replaces that band while a
+  session is live or sits above it. Absent rather than empty when nothing is
+  playing, on the same reasoning as the missing `Import` button.
+
+  It is also the one band that can carry "Play in Plex". That action was
+  dropped from Next up because Engram keeps no `ratingKey` on purpose and
+  there is nothing to build a deep link out of — but a live session response
+  carries one, and it never has to be stored to be used.
 - **The rail's fourth item.** `YEAR` appears in the mockup's nav with no screen
   behind it. `LIST`, the other one that looked unexplained, turned out not to
   be a screen at all: the mockup lights it up on the title page, because the

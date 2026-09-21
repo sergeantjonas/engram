@@ -131,7 +131,7 @@ the viewer wants of a title. The SPA calls all four.
       | | before | after |
       |---|---|---|
       | Shows | 11 | 53 |
-      | Films | 1 | 29 |
+      | Movies | 1 | 29 |
       | `library_presence` rows | 0 | 81 |
       | Dated events | 86 | 461 |
       | Record reaches back to | 2025-10-24 | **2019-06-11** |
@@ -168,8 +168,8 @@ the viewer wants of a title. The SPA calls all four.
    `plays` and `raw`, scoped to `plex-library` alone.
 
 2. **A wall that survives the walk, and where films live in it.** The walk
-   takes the library from 12 titles to 81 — 52 shows and 29 films — and the
-   wall has only ever been seen at 12. Films are not the problem: the code is
+   takes the library from 12 titles to 82 — 53 shows and 29 movies — and the
+   wall has only ever been seen at 12. Movies are not the problem: the code is
    already kind-aware end to end, audited 2026-09-21. `deriveState` returns
    only `seen` or `unwatched` for a movie ([apps/api/src/titles/plan.ts:121](../../apps/api/src/titles/plan.ts#L121)),
    so `going`, `drifting` and `gaps` cannot false-match one; `episodesInScope`
@@ -180,25 +180,21 @@ the viewer wants of a title. The SPA calls all four.
    What is actually missing is narrower:
 
    - ~~**A kind filter on the wall.**~~ Landed 2026-09-21. *All · Series ·
-     Films* as one control ahead of the chips, which then count within it.
-     Under Films the three run chips are not drawn — they cannot ever match —
+     Movies* as one control ahead of the chips, which then count within it.
+     Under Movies the three run chips are not drawn — they cannot ever match —
      and the next-up band goes with them. Reasoning in
      [web-design.md](web-design.md).
    - ~~**Somewhere for the backlog.**~~ Settled 2026-09-21 by not building
-     it. Films plus *Unwatched* is the backlog, 27 of them, and a chip saying
+     it. Movies plus *Unwatched* is the backlog, 27 of them, and a chip saying
      that in one word would be a synonym for two controls already there. What
      is still unfilled is the next-up band's shape for a film: `GET /next-up`
      is `where t.kind = 'show'`
      ([apps/api/src/titles/next-up.ts:133](../../apps/api/src/titles/next-up.ts#L133))
-     and the band is simply hidden under Films rather than answered.
+     and the band is simply hidden under Movies rather than answered.
    - ~~**The `onDisk` null problem goes away.**~~ The walk gave
      `library_presence` its first 81 rows, so `onDisk` means something now.
      *Not on disk* still reads 0, which is correct: nothing has left yet. The
      one title with a null is Dexter, which Plex has never held.
-
-   The eighth chip, *Added by hand*, was removed the same day — it read 58 of
-   82 because a title with no events fell to a default rather than to the
-   rule, and corrected it matched one. See [web-design.md](web-design.md).
    - ~~**The figure reads as arithmetic, not as a duration.**~~ Landed
      2026-09-21. `formatSince` and `formatAgo` now share one `step`, so the
      compact figure and the sentence cannot disagree about which unit a gap
@@ -207,6 +203,10 @@ the viewer wants of a title. The SPA calls all four.
      where it read four-digit day counts. Sharing the stepping also fixed
      "1 months ago", which the sentence had been saying for the fortnight
      either side of the month threshold.
+
+   The eighth chip, *Added by hand*, was removed the same day — it read 58 of
+   82 because a title with no events fell to a default rather than to the
+   rule, and corrected it matched one. See [web-design.md](web-design.md).
 
 3. **Owner-only ingest** — an allowlist of Plex account ids in config, enforced
    at the ingest boundary, dropping a play by anyone else rather than storing

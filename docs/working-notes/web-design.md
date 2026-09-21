@@ -85,7 +85,7 @@ Fonts.
 - **Archivo** names things — every title, label, button and control. Display
   sizes run 700 weight with tight negative tracking (`-.03em` at 23px).
 - **Martian Mono** sets every figure, date, count and external id, and nothing
-  else: `173d`, `S17E48`, `tvdb 392276`, the chips' uppercase labels.
+  else: `10mo`, `S17E48`, `tvdb 392276`, the chips' uppercase labels.
 
 Every mono size sits a step below the Archivo next to it — Martian is wide and
 otherwise reads optically larger. The reason the split is by job is that it
@@ -104,24 +104,24 @@ whole library; with something in it, a count of the library would describe
 nothing the viewer can see. *Unwatched* is the seventh, added to the mockup's six: that library had
 nothing in the state, this one can. As built:
 
-**Kind comes first, and is not a chip.** *All · Series · Films*, borders
+**Kind comes first, and is not a chip.** *All · Series · Movies*, borders
 collapsed into one control, ahead of the chips and divided from them by a
 rule. Added 2026-09-21, when the library went from 12 titles to 82 and a third
-of them became films. Kind is a partition where the facets are not — nothing
+of them became movies. Kind is a partition where the facets are not — nothing
 is both — so it reads as one control with a current position rather than as
 three more things that can each be on. The state chips then count within it,
 the way they already count within the search box, and the first one is *Any
 state* rather than a second *All*.
 
-Under Films the three run chips are not drawn at all. `deriveState` never
-returns `in_progress` for a film, so *Still going*, *Drifting* and *Gaps* are
+Under Movies the three run chips are not drawn at all. `deriveState` never
+returns `in_progress` for a movie, so *Still going*, *Drifting* and *Gaps* are
 not empty by accident there — they cannot ever match, and a chip that is
 structurally zero invites the reader to wonder what they did wrong. Switching
-to Films drops a run chip that was active rather than landing on an empty
+to Movies drops a run chip that was active rather than landing on an empty
 wall. The next-up band goes too: every episode it could offer belongs to
 something the viewer has just said they are not looking at.
 
-The film backlog gets no chip of its own. It is Films plus *Unwatched* — 27
+The movie backlog gets no chip of its own. It is Movies plus *Unwatched* — 27
 the day this landed — and a third control saying that in one word would be a
 synonym, not an answer.
 

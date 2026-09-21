@@ -210,7 +210,7 @@ describe('the wall', () => {
     );
   });
 
-  it('narrows to films and stops offering chips a film cannot match', async () => {
+  it('narrows to movies and stops offering chips a movie cannot match', async () => {
     stubApi((url) =>
       url.includes('/titles')
         ? json({
@@ -240,10 +240,12 @@ describe('the wall', () => {
     // describe the kind now showing.
     expect(screen.getByRole('link', { name: /Series 1/ })).toBeDefined();
     expect(screen.getByRole('link', { name: /Any state 1/ })).toBeDefined();
-    expect(screen.getByRole('link', { name: /Films 1/ }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: /Movies 1/ }).getAttribute('aria-current')).toBe(
+      'page',
+    );
   });
 
-  it('drops a run facet when switching to films, and keeps one that fits', async () => {
+  it('drops a run facet when switching to movies, and keeps one that fits', async () => {
     stubApi((url) =>
       url.includes('/titles')
         ? json({
@@ -256,9 +258,58 @@ describe('the wall', () => {
     await screen.findByRole('heading', { name: 'Bleach' });
     // Carrying `going` across would land on a chip that can only ever be
     // empty, which reads as a wall with nothing on it.
-    expect(screen.getByRole('link', { name: /Films/ }).getAttribute('href')).toBe('/?kind=movie');
+    expect(screen.getByRole('link', { name: /Movies/ }).getAttribute('href')).toBe('/?kind=movie');
     expect(screen.getByRole('link', { name: /Series/ }).getAttribute('href')).toBe(
       '/?kind=show&facet=going',
+    );
+  });
+
+  it('keeps the kind when the search box is used, and when it empties one', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({
+            titles: [
+              title({ name: 'Bleach' }),
+              title({ kind: 'movie', key: 'movie:tmdb:2', name: 'Heat' }),
+            ],
+          })
+        : json({ isOwner: true }),
+    );
+    const router = await renderAt('/?kind=movie');
+    await screen.findByRole('heading', { name: 'Heat' });
+
+    const box = screen.getByRole('searchbox');
+    fireEvent.change(box, { target: { value: 'bleach' } });
+    fireEvent.submit(box);
+
+    // Searching narrows where you already are rather than being a way back to
+    // the unfiltered wall.
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ kind: 'movie' }));
+    // And the wall says the query found nothing here, not that the library
+    // holds no movies — it holds one.
+    await screen.findByText(/matches/);
+  });
+
+  it('ignores a facet the kind beside it can never match', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({ titles: [title({ kind: 'movie', key: 'movie:tmdb:2', name: 'Heat' })] })
+        : json({ isOwner: true }),
+    );
+    // A URL the wall never writes. Honouring it would answer a plausible
+    // bookmark with an empty wall and nothing lit to explain it, because the
+    // chip is not drawn under Movies.
+    const router = await renderAt('/?kind=movie&facet=going');
+    console.log(
+      'SEARCH',
+      JSON.stringify(router.state.location.search),
+      'MATCH',
+      JSON.stringify(router.state.matches.at(-1)?.search),
+    );
+
+    await screen.findByRole('heading', { name: 'Heat' });
+    expect(screen.getByRole('link', { name: /Any state 1/ }).getAttribute('aria-current')).toBe(
+      'page',
     );
   });
 

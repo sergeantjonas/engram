@@ -18,7 +18,7 @@ import { TitleCard } from './TitleCard.tsx';
 /** The wall's URL state. `excluded` is `true` or absent: `false` is the default and never written. */
 export interface WallSearch {
   facet?: Facet;
-  /** Series or films. Absent is both, and is what the wall opens on. */
+  /** Series or movies. Absent is both, and is what the wall opens on. */
   kind?: KindFilter;
   /** A name to narrow by, from the chrome's search box. Trimmed and never empty. */
   q?: string;
@@ -37,8 +37,13 @@ const ACTIVE_CHIP = 'border-tx text-tx';
  * The same chip, with the gap between them closed. Kind is one control with
  * three positions rather than three chips, and collapsing the borders is what
  * says so before the labels are read.
+ *
+ * Sharing an edge means whichever segment paints last owns it, so the lit one
+ * has to be lifted or its neighbour draws a dim border straight over the side
+ * they share and the current position reads as a broken box.
  */
 const SEG = `${CHIP} relative hover:z-10`;
+const ACTIVE_SEG = `${ACTIVE_CHIP} z-10`;
 
 /**
  * 118px is the width the design's type was judged at: a wider tile reads as a
@@ -71,7 +76,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
     : titles;
 
   // Kind narrows before the chips are counted, for the same reason the search
-  // box does: with Films showing, a count of the whole library describes
+  // box does: with Movies showing, a count of the whole library describes
   // something the viewer cannot see.
   const kind = search.kind;
   const ofKind = kind ? matching.filter((title) => title.kind === kind) : matching;
@@ -86,7 +91,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
   const withFacet = facet ? { facet } : {};
   const keep = { ...withQuery, ...withExcluded };
   // A chip keeps the kind beside it; a kind keeps the chip, unless that chip
-  // describes a run and the kind is Films, where it could only ever show
+  // describes a run and the kind is Movies, where it could only ever show
   // nothing.
   const keepForFacet = { ...keep, ...withKind };
   const keepForKind = (next: KindFilter | undefined) =>
@@ -99,7 +104,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
           is the one someone opening the app is usually asking. It draws
           nothing when there is nothing owed.
 
-          Gone under Films, where every episode it could offer belongs to
+          Gone under Movies, where every episode it could offer belongs to
           something the viewer has just said they are not looking at. */}
       {kind === 'movie' ? null : <NextUp />}
 
@@ -107,14 +112,15 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
         {/* Links, not buttons: a filter is a place, and the back button should
             return to it. Kind sits in a group of its own, borders collapsed
             into one control, because it is a choice between three rather than
-            three things that can each be on. */}
+            three things that can each be on.
+ */}
         <span className="flex items-center">
           <Link
             to="/"
             search={keepForKind(undefined)}
             activeOptions={{ exact: true, includeSearch: true }}
             className={SEG}
-            activeProps={{ className: ACTIVE_CHIP }}
+            activeProps={{ className: ACTIVE_SEG }}
           >
             All <b className="font-semibold">{matching.length}</b>
           </Link>
@@ -125,7 +131,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
               search={{ kind: option, ...keepForKind(option) }}
               activeOptions={{ exact: true, includeSearch: true }}
               className={`${SEG} -ml-px`}
-              activeProps={{ className: ACTIVE_CHIP }}
+              activeProps={{ className: ACTIVE_SEG }}
             >
               {KIND_LABEL[option]}{' '}
               <b className="font-semibold">
@@ -175,7 +181,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
 
       {shown.length === 0 ? (
         <p className="text-dim">
-          {search.q !== undefined && matching.length === 0
+          {search.q !== undefined && ofKind.length === 0
             ? `Nothing on record matches “${search.q}”.`
             : facet
               ? EMPTY[facet]

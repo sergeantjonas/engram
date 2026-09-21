@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AuthStatus } from '../auth/AuthStatus.tsx';
 import { useIsOwner } from '../auth/useIsOwner.ts';
-import { isFacet } from '../wall/facets.ts';
+import { isFacet, isKind } from '../wall/facets.ts';
 
 /**
  * Searching the record, which is not the same as searching TMDB.
@@ -28,6 +28,12 @@ export function TopBar() {
     select: (state) => {
       const search = state.location.search as { facet?: unknown };
       return state.location.pathname === '/' && isFacet(search.facet) ? search.facet : undefined;
+    },
+  });
+  const kind = useRouterState({
+    select: (state) => {
+      const search = state.location.search as { kind?: unknown };
+      return state.location.pathname === '/' && isKind(search.kind) ? search.kind : undefined;
     },
   });
   const excluded = useRouterState({
@@ -64,6 +70,7 @@ export function TopBar() {
               to: '/',
               search: {
                 ...(facet ? { facet } : {}),
+                ...(kind ? { kind } : {}),
                 ...(excluded ? { excluded: true as const } : {}),
                 ...(next === '' ? {} : { q: next }),
               },

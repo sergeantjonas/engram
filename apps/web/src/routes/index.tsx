@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, type ErrorComponentProps } from '@tanstack/react-router';
+import { createFileRoute, type ErrorComponentProps, redirect } from '@tanstack/react-router';
 import { type TitleListFilter, titlesQuery } from '../api/titles.ts';
-import { isFacet, isKind } from '../wall/facets.ts';
+import { appliesTo, isFacet, isKind } from '../wall/facets.ts';
 import { Wall, type WallSearch } from '../wall/Wall.tsx';
 
 /**
@@ -23,6 +23,19 @@ export const Route = createFileRoute('/')({
     ...(typeof search.q === 'string' && search.q.trim() !== '' ? { q: search.q.trim() } : {}),
     ...(search.excluded === true ? { excluded: true } : {}),
   }),
+  /**
+   * `?kind=movie&facet=going` is an address the wall never writes: the chip is
+   * not drawn under Movies, because a run facet can never match a film. Left
+   * alone it renders an empty wall with nothing lit to explain it, so the URL
+   * is corrected rather than obeyed — which also leaves something coherent to
+   * bookmark or go back to.
+   */
+  beforeLoad: ({ search }) => {
+    if (search.facet !== undefined && !appliesTo(search.facet, search.kind)) {
+      const { facet: _dropped, ...rest } = search;
+      throw redirect({ to: '/', search: rest, replace: true });
+    }
+  },
   loaderDeps: ({ search }): WallSearch => (search.excluded ? { excluded: true } : {}),
   loader: ({ context, deps }) => context.queryClient.ensureQueryData(titlesQuery(toFilter(deps))),
   errorComponent: WallError,

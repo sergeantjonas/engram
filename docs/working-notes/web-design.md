@@ -125,6 +125,14 @@ The movie backlog gets no chip of its own. It is Movies plus *Unwatched* — 27
 the day this landed — and a third control saying that in one word would be a
 synonym, not an answer.
 
+The title page's list pane carries the same three positions, added the same
+day and for the same reason: it sorts by state alone, so at 82 titles the run
+being worked through sits between two movies with nothing in common but a
+date. The pane's control drops the counts — 216px does not hold three labels
+and three figures, and the headings under it already say how many of what
+there are — and it keeps the title you are on, so narrowing the list is not
+also a navigation.
+
 | Chip | What it means |
 | --- | --- |
 | Still going | some episodes seen, not all |

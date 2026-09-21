@@ -11,8 +11,15 @@ import { Section } from '../title/Section.tsx';
 import { TitleHeader } from '../title/TitleHeader.tsx';
 import { TitleList } from '../title/TitleList.tsx';
 import { YearBar } from '../title/YearBar.tsx';
+import { isKind, type KindFilter } from '../wall/facets.ts';
 
 export const Route = createFileRoute('/titles/$id')({
+  /**
+   * The pane's kind filter, in the URL for the same reason the wall's is: a
+   * filter is a place, and the back button should return to it.
+   */
+  validateSearch: (search: Record<string, unknown>): { kind?: KindFilter } =>
+    isKind(search.kind) ? { kind: search.kind } : {},
   // Both, in parallel: the page is the title and the pane beside it is the
   // whole library, and waiting for one after the other would show the split
   // half-drawn.
@@ -27,6 +34,7 @@ export const Route = createFileRoute('/titles/$id')({
 
 function TitlePage() {
   const { id } = Route.useParams();
+  const { kind } = Route.useSearch();
   const { data } = useSuspenseQuery(titleQuery(id));
   const { data: library } = useSuspenseQuery(titlesQuery());
   const { title, seasons, figures } = data;
@@ -49,7 +57,7 @@ function TitlePage() {
     // and rule the full height, then back into it inside the column: the hero
     // is full-bleed within its own column, not across the split.
     <div className="-m-[18px] grid min-h-full min-w-0 md:grid-cols-[216px_1fr]">
-      <TitleList titles={inLibrary} currentId={id} />
+      <TitleList titles={inLibrary} currentId={id} kind={kind} />
 
       <div className="min-w-0 space-y-5 p-[18px]">
         <TitleHeader {...data} />

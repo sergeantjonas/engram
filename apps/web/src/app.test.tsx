@@ -149,6 +149,48 @@ const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
   ...overrides,
 });
 
+describe('the title pane', () => {
+  const library = [
+    title({ id: 'show-1', name: 'Bleach', state: 'in_progress' }),
+    title({ id: 'film-1', kind: 'movie', key: 'movie:tmdb:2', name: 'Heat', state: 'seen' }),
+  ];
+
+  it('narrows the pane to one kind without leaving the title', async () => {
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({ titles: library })
+        : url.includes('/titles/')
+          ? json({
+              title: { ...library[0], onDisk: null },
+              ids: {},
+              backdropPath: null,
+              figures: {
+                plays: 0,
+                rewatched: 0,
+                manualPlays: 0,
+                firstWatchedAt: null,
+                firstWatchedPrecision: null,
+                lastWatchedAt: null,
+                lastWatchedPrecision: null,
+              },
+              recentActivity: [],
+              seasons: [],
+            })
+          : json({ isOwner: true }),
+    );
+    await renderAt('/titles/show-1?kind=show');
+
+    const pane = await screen.findByRole('navigation', { name: 'Every title' });
+    // 82 titles sorted by state alone put the run being worked through
+    // between two films with nothing in common but a date.
+    expect(within(pane).getByRole('link', { name: /Bleach/ })).toBeDefined();
+    expect(within(pane).queryByRole('link', { name: /Heat/ })).toBeNull();
+    expect(within(pane).getByRole('link', { name: 'Series' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+  });
+});
+
 describe('the wall', () => {
   it('draws a card per title and narrows to the facet the URL names', async () => {
     const calls = stubApi((url) =>

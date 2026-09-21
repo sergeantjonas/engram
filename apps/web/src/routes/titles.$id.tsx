@@ -39,6 +39,10 @@ function TitlePage() {
   const isOwner = useIsOwner();
   const film = title.kind === 'movie';
   const unwatched = title.state !== 'seen';
+  // One clock for every cell on the page, so two of them cannot disagree about
+  // what has aired. Compared as `YYYY-MM-DD` against an air date in the same
+  // shape, the way the API does it.
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     // Out of the layout's padding so the pane can sit flush against the rail
@@ -94,7 +98,7 @@ function TitlePage() {
             {/* Seasons sit close together: the run is one object, and a
               page-worth of air between each reads as unrelated grids. */}
             {runFirst(seasons).map((season) => (
-              <SeasonGrid key={season.season} season={season} titleId={id} />
+              <SeasonGrid key={season.season} season={season} titleId={id} today={today} />
             ))}
           </Section>
         ) : null}

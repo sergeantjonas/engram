@@ -11,12 +11,13 @@ import {
 import { formatAirDate, formatWatched } from './format.ts';
 import { MarkWatched, TakeBack } from './MarkWatched.tsx';
 
-type CellStatus = 'seen' | 'skipped' | 'missing' | 'unmatched' | 'hole';
+type CellStatus = 'seen' | 'skipped' | 'missing' | 'unaired' | 'unmatched' | 'hole';
 
 /** Seen wins: a gap left on a watched episode is stale, and the grid shows the fact. */
-function statusOf(episode: Cell): CellStatus {
+function statusOf(episode: Cell, today: string): CellStatus {
   if (episode.seen) return 'seen';
   if (episode.gap) return episode.gap.reason;
+  if (episode.airDate !== null && episode.airDate > today) return 'unaired';
   if (episode.unmatched) return 'unmatched';
   return 'hole';
 }
@@ -25,6 +26,7 @@ const STATUS_LABEL: Record<CellStatus, string> = {
   seen: 'seen',
   skipped: 'not seen, skipped',
   missing: 'not seen, missing',
+  unaired: 'not out yet',
   unmatched: 'not on TMDB',
   hole: 'not seen',
 };
@@ -35,6 +37,12 @@ const STATUS_CLASS: Record<CellStatus, string> = {
   // kinds of hole have to be told apart at cell size, not in the popover.
   skipped: 'border border-gold text-gold',
   missing: 'border border-gap text-gap',
+  // Recedes into the page instead of sitting on a surface: an episode that is
+  // not out is not part of the run yet, and it must not read as a hole in it.
+  // Nothing else in the grid is unfilled, which is the point — this was
+  // indistinguishable from an unwatched episode, and marking a season claimed
+  // two of them.
+  unaired: 'border border-dotted border-line bg-bg text-faint',
   unmatched: 'border border-dashed border-faint text-faint',
   hole: 'bg-surf text-dim',
 };
@@ -49,21 +57,29 @@ export function EpisodeCell({
   season,
   titleId,
   isOwner,
+  today,
 }: {
   episode: Cell;
   /** Not on the cell itself: a mark names the episode by season and number. */
   season: number;
   titleId: string;
   isOwner: boolean;
+  /** Today as `YYYY-MM-DD`, passed in so a wall of cells shares one clock. */
+  today: string;
 }) {
   const [open, setOpen] = useState(false);
-  const status = statusOf(episode);
+  const status = statusOf(episode, today);
   const label = `Episode ${episode.number}${episode.name ? `: ${episode.name}` : ''}, ${STATUS_LABEL[status]}`;
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         aria-label={label}
+        // A native tooltip as well as the popover: in a season of 366 cells,
+        // finding out what one is should not cost a click and a dismissal.
+        title={`${episode.number}. ${episode.name ?? 'Untitled'} — ${
+          episode.unmatched ? 'not on TMDB' : formatAirDate(episode.airDate)
+        }`}
         className={`grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
       >
         {episode.number}
@@ -86,12 +102,14 @@ export function EpisodeCell({
             {episode.seen
               ? `Watched ${formatWatched(episode.lastWatchedAt, episode.lastWatchedPrecision)}` +
                 (episode.playCount > 1 ? `, ${episode.playCount} plays` : '')
-              : 'Not seen'}
+              : status === 'unaired'
+                ? 'Not out yet'
+                : 'Not seen'}
           </p>
           {/* The affirmative action first, and above the hole form: an
               unwatched cell is far more often one this record never heard
               about than one there is a story behind. */}
-          {isOwner && !episode.seen ? (
+          {isOwner && !episode.seen && status !== 'unaired' ? (
             <div className="mt-3 border-t border-line pt-3">
               <MarkWatched
                 titleId={titleId}
@@ -118,7 +136,7 @@ export function EpisodeCell({
           {/* A seen episode only gets the form when a stale reason is still on
               it to clear, and nobody but the owner gets it at all: a stranger
               reads the grid from the colours and this popover's facts. */}
-          {isOwner && (!episode.seen || episode.gap) ? (
+          {isOwner && status !== 'unaired' && (!episode.seen || episode.gap) ? (
             <GapForm episode={episode} titleId={titleId} onDone={() => setOpen(false)} />
           ) : null}
           <Popover.Arrow className="fill-line" />

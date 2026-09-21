@@ -1,11 +1,40 @@
-import type { SeasonGrid as Season } from '../api/titles.ts';
+import type { EpisodeCell as Episode, SeasonGrid as Season } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { EpisodeCell } from './EpisodeCell.tsx';
 import { MarkWatchedButton } from './MarkWatched.tsx';
 
 const HEADING = 'font-mono text-[9.5px] tracking-[.08em] text-dim';
 
-export function SeasonGrid({ season, titleId }: { season: Season; titleId: string }) {
+/** What TMDB gives no date for, gathered at the end rather than left loose. */
+const UNDATED = '—';
+
+const airYear = (episode: Episode) => episode.airDate?.slice(0, 4) ?? UNDATED;
+
+/**
+ * The years to break a season across, or nothing if it should stay one block.
+ *
+ * Counted on real years only. An episode TMDB has no date for must not be able
+ * to split a season that otherwise ran inside a single year — that would be one
+ * missing field turning a tidy grid into two labelled groups for no reason. It
+ * does get a group of its own once the season is being broken up anyway, last,
+ * because it belongs nowhere in the run.
+ */
+function airYears(episodes: Episode[]): string[] {
+  const dated = [...new Set(episodes.map(airYear))].filter((year) => year !== UNDATED);
+  if (dated.length < 2) return [];
+  return episodes.some((episode) => episode.airDate === null) ? [...dated, UNDATED] : dated;
+}
+
+export function SeasonGrid({
+  season,
+  titleId,
+  today,
+}: {
+  season: Season;
+  titleId: string;
+  /** Today as `YYYY-MM-DD`, so every cell on the page shares one clock. */
+  today: string;
+}) {
   // Asked once per season rather than once per cell: ONE PIECE is 1100
   // episodes, and that many subscriptions to the same query is a thousand
   // observers doing the same bookkeeping for one answer.
@@ -16,20 +45,43 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
   // A season is a shape to be read at a glance — where the run breaks, how far
   // it got — and cells that grow to fill the width turn that shape into a row
   // of buttons whose meaning changes with the window.
-  const grid = (
+  const cells = (episodes: Episode[]) => (
     <ul className="flex flex-wrap gap-1">
-      {season.episodes.map((episode) => (
+      {episodes.map((episode) => (
         <li key={episode.id}>
           <EpisodeCell
             episode={episode}
             season={season.season}
             titleId={titleId}
             isOwner={isOwner}
+            today={today}
           />
         </li>
       ))}
     </ul>
   );
+
+  // Broken up by the year each episode aired, but only where that tells the
+  // viewer something: a season that ran across years has those years as its
+  // landmarks, and one that did not has nothing to landmark. Bleach's season 1
+  // is 366 identical cells otherwise, and "which episode is which" has no
+  // answer short of clicking each one.
+  const years = airYears(season.episodes);
+  const grid =
+    years.length === 0 ? (
+      cells(season.episodes)
+    ) : (
+      <div className="space-y-1.5">
+        {years.map((year) => (
+          <div key={year} className="flex gap-2.5">
+            <span className="w-8 shrink-0 pt-1.5 text-right font-mono text-[9px] text-faint">
+              {year}
+            </span>
+            {cells(season.episodes.filter((episode) => airYear(episode) === year))}
+          </div>
+        ))}
+      </div>
+    );
 
   // Backfilling a decade of television one cell at a time is how a feature
   // like this quietly never gets used, so the season is the unit. The season

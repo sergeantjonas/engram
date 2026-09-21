@@ -547,6 +547,72 @@ describe('the title page', () => {
     expect(screen.getByText('Watched 2019')).toBeDefined();
   });
 
+  // Indistinguishable from an unwatched episode until now, which is how two
+  // of them ended up marked watched.
+  it('draws an episode that is not out yet as its own thing, and offers nothing', async () => {
+    const soon = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+    stubApi((url) => {
+      if (url.endsWith('/titles')) return json({ titles: [] });
+      if (url.includes('/titles/')) {
+        const body = detail();
+        const season = body.seasons[1];
+        if (season) {
+          season.episodes = [episode({ number: 9, name: 'THE BLADE', airDate: soon })];
+        }
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const cell = await screen.findByRole('button', { name: 'Episode 9: THE BLADE, not out yet' });
+    // The date is on hover, so finding out what a cell is costs no click.
+    expect(cell.getAttribute('title')).toContain('THE BLADE');
+    cell.click();
+
+    // Nothing to mark and nothing to explain about an episode that has not
+    // happened: both forms stay away.
+    await screen.findByText('Not out yet');
+    expect(screen.queryByRole('button', { name: 'Mark watched' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Never had it' })).toBeNull();
+  });
+
+  // 366 identical cells have no answer to "which episode is which" short of
+  // clicking each one; the years it ran are the landmarks.
+  it('breaks a season that ran across years into those years', async () => {
+    stubApi((url) => {
+      if (url.endsWith('/titles')) return json({ titles: [] });
+      if (url.includes('/titles/')) {
+        const body = detail();
+        const season = body.seasons[1];
+        if (season) {
+          season.episodes = [
+            episode({ number: 1, airDate: '2004-10-05' }),
+            episode({ number: 2, airDate: '2005-01-11' }),
+            episode({ number: 3, airDate: '2005-01-18' }),
+          ];
+        }
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const grid = await screen.findByRole('region', { name: 'Season 2' });
+    expect(grid.textContent).toContain('2004');
+    expect(grid.textContent).toContain('2005');
+  });
+
+  // A season that ran inside one year has nothing to landmark, and a year
+  // repeated down the side would be noise.
+  it('leaves a season that ran inside one year alone', async () => {
+    stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const grid = await screen.findByRole('region', { name: 'Season 2' });
+    expect(grid.textContent).not.toMatch(/20\d\d/);
+  });
+
   it('records why a hole is a hole and redraws the cell', async () => {
     const calls = stubTitle();
     await renderAt(`/titles/${TITLE_ID}`);

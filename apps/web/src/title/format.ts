@@ -174,7 +174,9 @@ export function formatMoment(
 
 /** An air date is a plain `YYYY-MM-DD`, with no instant to shift. */
 export function formatAirDate(airDate: string | null): string {
-  if (airDate === null) return 'unaired';
+  // Null is "TMDB gave no date", which is not the same as "not yet": episodes
+  // with real plays and no air date exist.
+  if (airDate === null) return 'no air date';
   return new Intl.DateTimeFormat(undefined, {
     year: 'numeric',
     month: 'short',

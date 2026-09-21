@@ -175,7 +175,21 @@ Around it:
   off a truncated list would be a claim the data cannot support.
 - The grid itself, grouped by season and the run before the specials, each
   season headed `SEASON 2 · ONE MISSING` with a **Mark season watched**
-  control. Season 0 arrives first from the API and is drawn last: four titles
+  control. A season that ran across more than one year is broken into those
+  years, each labelled down the left. The mockup was judged on a 16-episode
+  season; Bleach's season 1 is 366 cells, and without landmarks "which episode
+  is which" has no answer short of clicking each one. A season inside one year
+  stays a single block, and an episode TMDB has no date for cannot split one
+  on its own — it gets a trailing group only where the season is already
+  broken up.
+
+  Seven cell states, not the mockup's five. *Not out yet* is the addition: it
+  is drawn unfilled, receding into the page rather than sitting on a surface,
+  because an episode that has not aired is not part of the run and must not
+  read as a hole in it. It was indistinguishable from an unwatched episode
+  until 2026-09-21, which is how two of them came to be marked watched. Every
+  cell also carries a native tooltip with its name and air date, so reading the
+  grid does not cost a click per cell. Season 0 arrives first from the API and is drawn last: four titles
   here carry dozens of featurettes, and `Specials · 0 of 89` was the first
   thing House of the Dragon's page said about a completed run. That control is the same one
   the add screen uses.

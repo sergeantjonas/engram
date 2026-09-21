@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatAgo, formatMoment, formatSince, formatWatchedShort } from './format.ts';
+import {
+  formatAgo,
+  formatAirDate,
+  formatMoment,
+  formatSince,
+  formatWatchedShort,
+} from './format.ts';
 
 const now = new Date('2026-09-19T12:00:00.000Z');
 
@@ -132,5 +138,17 @@ describe('formatAgo', () => {
   it('says nothing at all when the record holds no date', () => {
     expect(formatAgo(null, 'exact', now)).toBeNull();
     expect(formatAgo('2019-01-01T00:00:00.000Z', 'unknown', now)).toBeNull();
+  });
+});
+
+describe('formatAirDate', () => {
+  // Null is "TMDB gave no date", not "not yet": episodes with real plays and
+  // no air date exist, and calling those unaired would be a claim about them.
+  it('says there is no date rather than that it has not aired', () => {
+    expect(formatAirDate(null)).toBe('no air date');
+  });
+
+  it('reads a date as a day, in the zone it was given in', () => {
+    expect(formatAirDate('2026-10-20')).toContain('2026');
   });
 });

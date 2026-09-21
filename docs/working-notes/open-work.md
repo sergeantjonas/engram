@@ -208,12 +208,6 @@ the viewer wants of a title. The SPA calls all four.
   five still in rotation, where 90 would have called almost everything
   drifting. Worth revisiting once the library is bigger, or once `dropped` can
   be set and says the same thing explicitly.
-- **Whether `want`, `dropped` and `onDisk` are public.** They ride along on
-  every card and a stranger sees all three. The first two read as annotations
-  rather than facts about a title, and `onDisk` discloses what the library
-  holds. Left public when the read/write split landed because the wall is the
-  library — but that was not argued, it was defaulted. See
-  [authentication.md](authentication.md) § What a stranger may read.
 - **Whether to keep Plex's `viewCount` for the rewatches it is the only record
   of.** The library walk knows an episode was played twice but only when it was
   last played, so one event per episode loses the count. A `watch_event` is one
@@ -229,6 +223,18 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-21** — Settled: what the owner meant is theirs, what they watched is
+  the record. `want`, `dropped` and `excluded` come back false to a stranger on
+  both reads; `onDisk` stays, being a fact about the record rather than an
+  opinion about a title. They fall on the line `authentication.md` already drew
+  for a gap's note, and were only public because nobody had argued it either
+  way.
+
+  `withoutGapNotes` is `asStranger` now, since it does two redactions rather
+  than one. It keeps its field-by-field list so a new field on `TitleDetail`
+  fails the build until someone has said so; the summary's `withoutIntent`
+  spreads instead, because a card is public by default and the exceptions are
+  what needs naming.
 - **2026-09-21** — Settled: an episode that has not aired is neither marked nor
   offered. It was an open question and turned out to be a defect — marking a
   season wrote plays for television that does not exist yet, and two of them

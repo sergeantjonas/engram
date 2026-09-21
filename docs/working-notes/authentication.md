@@ -190,6 +190,11 @@ Closed, and each for its own reason:
   asking for. For the same reason an excluded title answers 404 by id — hiding
   it from the wall and then handing it over to anyone holding the id would make
   the flag decorative.
+- **`want`, `dropped` and `excluded`.** Redacted to false for a stranger on the
+  wall and on a title page, decided 2026-09-21. They fall on the same line as a
+  gap's note: an annotation the owner made about a title rather than a fact
+  about it. `onDisk` stays, being a fact about the record. Left public when the
+  read/write split landed, but that was defaulted rather than argued.
 - **A gap's note.** The reason survives, because the cell is coloured by it and
   that is a fact about the run. The note is the owner writing to themselves, and
   the record being readable does not make the commentary on it readable.

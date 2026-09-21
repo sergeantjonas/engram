@@ -7,8 +7,8 @@ import {
   intent as intentTable,
   titles as titleTable,
 } from '../db/schema.js';
-import { titleDetail, withoutGapNotes } from '../titles/detail.js';
-import { listTitles } from '../titles/list.js';
+import { asStranger, titleDetail } from '../titles/detail.js';
+import { listTitles, withoutIntent } from '../titles/list.js';
 import { nextUp } from '../titles/next-up.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
 import {
@@ -112,7 +112,9 @@ export function registerTitleRoutes(
       includeExcluded: parsed.data.includeExcluded && request.isOwner,
     });
 
-    return { titles };
+    // What was meant is the owner's own note to themselves; what was watched
+    // is the record. See authentication.md § What a stranger may read.
+    return { titles: request.isOwner ? titles : titles.map(withoutIntent) };
   });
 
   /**
@@ -147,7 +149,7 @@ export function registerTitleRoutes(
         .send({ error: 'not_found', message: 'no title is stored under that id' });
     }
 
-    return request.isOwner ? detail : withoutGapNotes(detail);
+    return request.isOwner ? detail : asStranger(detail);
   });
 
   app.post('/titles', async (request, reply) => {

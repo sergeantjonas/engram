@@ -2,7 +2,7 @@ import type { WatchPrecision } from '@engram/shared';
 import { sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { MANUAL_SOURCE } from '../watch/plan.js';
-import { listTitles, type TitleSummary } from './list.js';
+import { listTitles, type TitleSummary, withoutIntent } from './list.js';
 
 /** What the viewer has said about a hole, if anything. */
 export interface EpisodeGap {
@@ -146,7 +146,11 @@ export interface TitleDetail {
 }
 
 /**
- * The same grid as a stranger may see it.
+ * The title as a stranger may see it.
+ *
+ * Two redactions, both on the same line: what the owner wrote to themselves
+ * goes, what happened stays. Intent is handled by `withoutIntent`; the rest is
+ * the grid.
  *
  * A gap's reason is a fact about the run and the cell is coloured by it, so it
  * stays. The note is the owner's own prose about why — "lent the box set out",
@@ -155,12 +159,12 @@ export interface TitleDetail {
  * query: one statement builds the grid, and a second one that differed only in
  * a column is how the two views start disagreeing about everything else.
  */
-export function withoutGapNotes(detail: TitleDetail): TitleDetail {
+export function asStranger(detail: TitleDetail): TitleDetail {
   return {
     // Listed rather than spread: this is the function that decides what a
     // stranger may see, and a new field on `TitleDetail` should fail the build
     // here until someone has said so, not arrive on the wire by default.
-    title: detail.title,
+    title: withoutIntent(detail.title),
     ids: detail.ids,
     backdropPath: detail.backdropPath,
     // Whole, `manualPlays` included. How much of the record was typed rather

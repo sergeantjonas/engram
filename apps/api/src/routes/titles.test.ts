@@ -229,6 +229,26 @@ describe('GET /titles', () => {
     expect(response.json().titles).toHaveLength(1);
   });
 
+  // What was meant is the owner writing to themselves; what was watched is the
+  // record. The same line a gap's note falls on.
+  it('keeps the owner\u2019s opinion of a title off a stranger\u2019s wall', async () => {
+    const rows = [listRow({ want: true, dropped_at: '2026-09-17' })];
+
+    expect((await list('', rows, signedIn)).json().titles[0]).toMatchObject({
+      want: true,
+      dropped: true,
+    });
+    expect((await list('', rows, stranger)).json().titles[0]).toMatchObject({
+      want: false,
+      dropped: false,
+      excluded: false,
+      // The watching itself is untouched: this is a redaction of opinion, not
+      // of the record.
+      state: 'seen',
+      episodes: { total: 8, seen: 8 },
+    });
+  });
+
   it('filters on the derived state rather than a stored one', async () => {
     const rows = [listRow(), listRow({ id: 'y', name: 'Halfway', seen_count: 3 })];
 
@@ -328,8 +348,23 @@ describe('GET /titles/:id', () => {
     expect((await detail(id, rows())).statusCode).toBe(200);
   });
 
+  it('keeps the owner’s opinion off the title page too', async () => {
+    const id = '0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701';
+    const rows = () => [[listRow({ want: true, dropped_at: '2026-09-17' })], []];
+
+    expect((await detail(id, rows(), stranger)).json().title).toMatchObject({
+      want: false,
+      dropped: false,
+    });
+    expect((await detail(id, rows())).json().title).toMatchObject({
+      want: true,
+      dropped: true,
+    });
+  });
+
   // The colour of the cell is a fact about the run; the sentence explaining it
   // is the owner talking to themselves.
+
   it('gives a stranger the reason for a hole but not the note about it', async () => {
     const rows = () => [
       [listRow()],

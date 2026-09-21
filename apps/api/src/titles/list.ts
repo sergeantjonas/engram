@@ -39,6 +39,24 @@ export interface TitleSummary {
   manualOnly: boolean;
 }
 
+/**
+ * A card as a stranger may see it.
+ *
+ * `want`, `dropped` and `excluded` are the owner writing to themselves about a
+ * title rather than facts about it, which is the line a gap's note already
+ * falls on: what was watched is the record and stays readable, what was meant
+ * is not. `excluded` is always false to a stranger anyway — those titles never
+ * reach the listing — and it is set here so the three travel together rather
+ * than two being a rule and the third an accident of filtering.
+ *
+ * Spread rather than listed field by field, unlike `withoutGapNotes`: a card
+ * is public by default and the exceptions are what needs naming. `onDisk`
+ * stays, being a fact about the record rather than an opinion about a title.
+ */
+export function withoutIntent(title: TitleSummary): TitleSummary {
+  return { ...title, want: false, dropped: false, excluded: false };
+}
+
 export interface TitleListFilter {
   /** One title by id, for the detail route. Everything else is ignored. */
   titleId?: string | undefined;

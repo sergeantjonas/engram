@@ -12,6 +12,7 @@ import {
   type KindFilter,
   matchesFacet,
 } from './facets.ts';
+import { rememberKind } from './kindMemory.ts';
 import { NextUp } from './NextUp.tsx';
 import { TitleCard } from './TitleCard.tsx';
 
@@ -118,6 +119,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
           <Link
             to="/"
             search={keepForKind(undefined)}
+            onClick={() => rememberKind(undefined)}
             activeOptions={{ exact: true, includeSearch: true }}
             className={SEG}
             activeProps={{ className: ACTIVE_SEG }}
@@ -129,6 +131,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
               key={option}
               to="/"
               search={{ kind: option, ...keepForKind(option) }}
+              onClick={() => rememberKind(option)}
               activeOptions={{ exact: true, includeSearch: true }}
               className={`${SEG} -ml-px`}
               activeProps={{ className: ACTIVE_SEG }}

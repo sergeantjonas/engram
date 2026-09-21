@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, type ErrorComponentProps, Link } from '@tanstack/react-router';
+import { createFileRoute, type ErrorComponentProps, Link, redirect } from '@tanstack/react-router';
 import { ApiError } from '../api/client.ts';
 import { type TitleDetail, titleQuery, titlesQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
@@ -12,6 +12,7 @@ import { TitleHeader } from '../title/TitleHeader.tsx';
 import { TitleList } from '../title/TitleList.tsx';
 import { YearBar } from '../title/YearBar.tsx';
 import { isKind, type KindFilter } from '../wall/facets.ts';
+import { preferredKind } from '../wall/kindMemory.ts';
 
 export const Route = createFileRoute('/titles/$id')({
   /**
@@ -20,6 +21,19 @@ export const Route = createFileRoute('/titles/$id')({
    */
   validateSearch: (search: Record<string, unknown>): { kind?: KindFilter } =>
     isKind(search.kind) ? { kind: search.kind } : {},
+  /** The pane opens on the same kind the wall was left on. */
+  beforeLoad: ({ params, search }) => {
+    if (search.kind !== undefined) return;
+    const remembered = preferredKind();
+    if (remembered !== undefined) {
+      throw redirect({
+        to: '/titles/$id',
+        params,
+        search: { kind: remembered },
+        replace: true,
+      });
+    }
+  },
   // Both, in parallel: the page is the title and the pane beside it is the
   // whole library, and waiting for one after the other would show the split
   // half-drawn.

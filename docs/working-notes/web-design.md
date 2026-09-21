@@ -133,6 +133,18 @@ and three figures, and the headings under it already say how many of what
 there are — and it keeps the title you are on, so narrowing the list is not
 also a navigation.
 
+**The choice is remembered, the URL still decides.** An address that names a
+kind is obeyed, because a filter is a place and the back button has to return
+to it. An address that names none opens on the last kind chosen, which is
+what arriving from the rail does, and what every link written before the
+control existed does. Without that, picking Movies and opening a title
+dropped you back into the whole library.
+
+`all` is stored rather than cleared, and that distinction is the mechanism:
+"not chosen" has to differ from "chosen everything", or choosing All would be
+undone by the default it just overrode and the two would redirect at each
+other.
+
 | Chip | What it means |
 | --- | --- |
 | Still going | some episodes seen, not all |

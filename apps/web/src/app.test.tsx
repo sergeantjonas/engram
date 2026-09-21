@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EpisodeCell, TitleDetail, TitleSummary, TmdbCandidate } from './api/titles.ts';
 import { createAppRouter } from './router.tsx';
@@ -51,6 +51,9 @@ async function renderAt(path: string) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // The kind control remembers across screens, so it would also remember
+  // across tests and make the order they run in matter.
+  localStorage.clear();
 });
 
 describe('the shell', () => {
@@ -147,6 +150,48 @@ const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
   lastWatchedPrecision: null,
   hasGap: false,
   ...overrides,
+});
+
+describe('remembering the kind', () => {
+  const library = [
+    title({ id: 'show-1', name: 'Bleach' }),
+    title({ id: 'film-1', kind: 'movie', key: 'movie:tmdb:2', name: 'Heat' }),
+  ];
+
+  it('opens an address that names no kind on the last one chosen', async () => {
+    stubApi((url) =>
+      url.endsWith('/titles') ? json({ titles: library }) : json({ isOwner: true }),
+    );
+    const first = await renderAt('/');
+    await screen.findByRole('heading', { name: 'Bleach' });
+
+    screen.getByRole('link', { name: /Movies/ }).click();
+    await waitFor(() => expect(first.state.location.search).toMatchObject({ kind: 'movie' }));
+
+    // A second arrival with nothing in the address — the rail, a bookmark, a
+    // link written before the choice existed.
+    cleanup();
+    const second = await renderAt('/');
+    await waitFor(() => expect(second.state.location.search).toMatchObject({ kind: 'movie' }));
+  });
+
+  it('treats choosing All as a choice rather than as no choice', async () => {
+    // Stored rather than cleared, or All would be undone by the default it
+    // just overrode and the two would redirect at each other.
+    stubApi((url) =>
+      url.endsWith('/titles') ? json({ titles: library }) : json({ isOwner: true }),
+    );
+    const first = await renderAt('/?kind=movie');
+    await screen.findByRole('heading', { name: 'Heat' });
+
+    screen.getByRole('link', { name: /All/ }).click();
+    await waitFor(() => expect(first.state.location.search).toEqual({}));
+
+    cleanup();
+    const second = await renderAt('/');
+    await screen.findByRole('heading', { name: 'Bleach' });
+    expect(second.state.location.search).toEqual({});
+  });
 });
 
 describe('the title pane', () => {

@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { posterUrl, type TitleSummary } from '../api/titles.ts';
 import { KIND_LABEL, KINDS, type KindFilter, matchesFacet } from '../wall/facets.ts';
+import { rememberKind } from '../wall/kindMemory.ts';
 import { formatSince } from './format.ts';
 import { groupedTitles } from './order.ts';
 
@@ -66,6 +67,7 @@ export function TitleList({
             to="/titles/$id"
             params={{ id: currentId }}
             search={{}}
+            onClick={() => rememberKind(undefined)}
             activeOptions={{ exact: true, includeSearch: true }}
             className={PANE_SEG}
             activeProps={{ className: PANE_ACTIVE }}
@@ -78,6 +80,7 @@ export function TitleList({
               to="/titles/$id"
               params={{ id: currentId }}
               search={{ kind: option }}
+              onClick={() => rememberKind(option)}
               activeOptions={{ exact: true, includeSearch: true }}
               className={`${PANE_SEG} -ml-px`}
               activeProps={{ className: PANE_ACTIVE }}

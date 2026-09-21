@@ -2,6 +2,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, redirect } from '@tanstack/react-router';
 import { type TitleListFilter, titlesQuery } from '../api/titles.ts';
 import { appliesTo, isFacet, isKind } from '../wall/facets.ts';
+import { preferredKind } from '../wall/kindMemory.ts';
 import { Wall, type WallSearch } from '../wall/Wall.tsx';
 
 /**
@@ -31,6 +32,14 @@ export const Route = createFileRoute('/')({
    * bookmark or go back to.
    */
   beforeLoad: ({ search }) => {
+    // An address that names no kind opens on the last one chosen, so arriving
+    // from the rail or from a link written before the choice does not quietly
+    // undo it. Replace rather than push: this is the same place, reached with
+    // the filter the viewer already set.
+    const remembered = search.kind === undefined ? preferredKind() : undefined;
+    if (remembered !== undefined) {
+      throw redirect({ to: '/', search: { ...search, kind: remembered }, replace: true });
+    }
     if (search.facet !== undefined && !appliesTo(search.facet, search.kind)) {
       const { facet: _dropped, ...rest } = search;
       throw redirect({ to: '/', search: rest, replace: true });

@@ -1,6 +1,9 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Config } from '../config.js';
+import type { Database } from '../db/client.js';
+import { planTautulliPlay } from '../ingest/tautulli.js';
+import { storeTautulliPlay } from '../ingest/tautulli-store.js';
 
 /**
  * Constant time, and length-guarded because `timingSafeEqual` throws on a
@@ -16,22 +19,15 @@ function secretMatches(offered: string | undefined, want: string): boolean {
 }
 
 /**
- * Tautulli's webhook, in its recording phase.
+ * Tautulli's webhook: the freshness half of ingest.
  *
- * It does not parse, and that is the point rather than an omission.
- * Per-media-type coverage of Tautulli's external-id parameters is unverified
- * — the note in `plex-api-findings.md` says coverage differs between movies
- * and episodes and depends on which agent scanned the library, and Tautulli
- * substitutes an empty string for a parameter that does not apply, so a body
- * arrives looking complete with `"themoviedb_id": ""`. Writing a parser
- * against the documented list and finding out in production is the failure
- * this endpoint exists to avoid.
- *
- * So: authenticate, record, answer. Once a real episode and a real film have
- * been through it, the parser is written against what they actually carried
- * and this comment goes away with it.
+ * Authenticate, check whose play it is, plan, write, answer. Correctness is
+ * the nightly library walk's job — this is idempotent on
+ * `(source, source_event_id)` precisely so the two can overlap freely — which
+ * is why nothing here refuses a body it cannot use. A play this drops is a
+ * play the walk still finds.
  */
-export function registerWebhookRoutes(app: FastifyInstance, config: Config): void {
+export function registerWebhookRoutes(app: FastifyInstance, config: Config, db: Database): void {
   app.post('/webhooks/tautulli', async (request, reply) => {
     const body = request.body;
     const fields =
@@ -111,16 +107,34 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config): voi
     // of the query string is lost if the handler writes it to the log itself.
     const { token: _secret, ...rest } = fields;
 
-    // Logged rather than stored: this phase answers "which fields arrive
-    // filled", and a table would outlive the question. `empty` is the half
-    // that matters — a parameter Tautulli could not resolve comes through as
-    // an empty string, not as an absent key.
-    const filled = Object.keys(rest).filter((k) => rest[k] !== '' && rest[k] != null);
-    const empty = Object.keys(rest).filter((k) => rest[k] === '' || rest[k] == null);
+    const plan = planTautulliPlay(rest);
+    if (!plan.ok) {
+      // Warned, not refused. Tautulli logs a non-2xx as a failed notification
+      // and retries nothing, so a 4xx would put a red mark in its log without
+      // getting the play back. Field names and never values: a body this
+      // could not read is still a record of what somebody watched.
+      request.log.warn(
+        { reason: plan.reason, keys: Object.keys(rest) },
+        'tautulli webhook not planned',
+      );
+      return reply.code(204).send();
+    }
 
+    const stored = await storeTautulliPlay(db, plan);
+
+    // The key rather than the name, and the numbers that decided it: enough
+    // to follow a play from Tautulli to a row without keeping a second copy
+    // of the record in the log. `raw` on the row itself is the full payload.
     request.log.info(
-      { tautulli: rest, filled, empty, contentType: request.headers['content-type'] },
-      'tautulli webhook received',
+      {
+        title: plan.title.key,
+        season: plan.play.season,
+        episode: plan.play.number,
+        percentComplete: plan.play.percentComplete,
+        completed: plan.play.completed,
+        written: stored.written,
+      },
+      'tautulli play recorded',
     );
 
     // 204 rather than a body: Tautulli logs a non-2xx as a failed

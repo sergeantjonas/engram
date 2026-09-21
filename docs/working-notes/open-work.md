@@ -220,17 +220,18 @@ the viewer wants of a title. The SPA calls all four.
    changed — all 86 history rows are account 1 — which is the point: it is
    there for the webhooks below, which fire for every viewer on the server.
    Reasoning in [ingest-architecture.md](ingest-architecture.md).
-4. **Webhook receivers** — Tautulli in progress, Sonarr after it, per
-   [ingest-architecture.md](ingest-architecture.md). The receiver is live and
-   has been recording real payloads since 2026-09-21: it authenticates on
-   `WEBHOOK_SECRET`, filters on `TAUTULLI_USER_IDS` before it writes anything
-   to a log, and sits on the guard's open list as `POST /webhooks/tautulli` —
-   the list is keyed on method and route pattern together, so nothing else
-   about the path is opened with it. The parser is written and tested against
-   the captured bodies, and `watch_state.play_count` now counts completed plays
-   rather than rows, so storing a partial stop inflates nothing and the
-   activity feed still counts the set the play total is printed beside. What
-   is left is the route writing what the parser plans.
+4. **Webhook receivers** — Tautulli done 2026-09-21, Sonarr still to come,
+   per [ingest-architecture.md](ingest-architecture.md). Tautulli
+   authenticates on `WEBHOOK_SECRET`, filters on `TAUTULLI_USER_IDS` before it
+   writes anything to a log, sits on the guard's open list as `POST
+   /webhooks/tautulli` — the list is keyed on method and route pattern
+   together, so nothing else about the path is opened with it — and turns a
+   Playback Stop into a title, an episode and a play. Idempotent on the
+   instant, so a redelivery collapses and a rewatch does not; a stop that did
+   not finish is stored too, and `watch_state` counts only the ones that did.
+   It refuses nothing: a body it cannot plan is logged and answered 204,
+   because the nightly walk is what recovers the play and a non-2xx only marks
+   the delivery bad in Tautulli's own log.
 5. ~~**Go live**~~ — live 2026-09-21 at <https://engram.vyoh.gg>, second
    tenant on the netcup box. The full record restored rather than started
    empty: 82 titles, 1109 events, 2467 episodes, reaching back to 2019, every

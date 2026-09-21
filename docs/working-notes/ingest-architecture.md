@@ -2,7 +2,7 @@
 
 **Status:** Design — agreed 2026-09-16, extended 2026-09-21 with the library
 walk, the claim-grain rule, owner-only ingest and the measured Tautulli
-payload. Owner-only ingest and the Tautulli parser are built rather than
+payload. Owner-only ingest and the whole Tautulli path are built rather than
 planned. Read before chunk 4.
 
 ## Sources
@@ -155,7 +155,7 @@ give, none of which are about being authoritative:
   Plex's binary watched flag.
 - **Who and where.** `{user_id}` is what the owner allowlist filters on for a
   source that is not owner-scoped by construction, and `player` / `platform`
-  are columns that exist and nothing has ever filled.
+  are columns this is the first source to fill.
 
 It also needs no key from us: Tautulli posts to Engram and `WEBHOOK_SECRET`
 authenticates it, so nothing of ours travels over 8181 at all.

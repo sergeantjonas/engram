@@ -74,9 +74,15 @@ export interface PlannedPlay {
   raw: TautulliPayload;
 }
 
-export type TautulliPlan =
-  | { ok: true; title: PlannedPlayTitle; episode: PlannedPlayEpisode | null; play: PlannedPlay }
-  | { ok: false; reason: string };
+/** Everything one play implies, named so the writer can take it whole. */
+export interface PlannedRows {
+  title: PlannedPlayTitle;
+  /** Null for a film, which hangs off no episode. */
+  episode: PlannedPlayEpisode | null;
+  play: PlannedPlay;
+}
+
+export type TautulliPlan = ({ ok: true } & PlannedRows) | { ok: false; reason: string };
 
 /**
  * How much of a thing counts as having watched it.

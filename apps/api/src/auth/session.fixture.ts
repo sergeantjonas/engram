@@ -114,8 +114,16 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
             const answer = state.returns.shift() ?? [];
             return Object.assign(Promise.resolve(answer), { returning: async () => answer });
           },
-          onConflictDoNothing: async () => {
+          // Chainable to `.returning()` like the upsert, because that is how
+          // a caller learns whether the row was new: an insert that conflicted
+          // returns nothing. The queued rows are taken by `returning()` rather
+          // than here, so an insert that never asks for them does not eat the
+          // set a later query queued.
+          onConflictDoNothing: () => {
             state.inserted.push({ values, onConflict: 'nothing' });
+            return Object.assign(Promise.resolve([]), {
+              returning: async () => state.returns.shift() ?? [],
+            });
           },
         }),
       }),
@@ -140,6 +148,10 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
           },
         }),
       }),
+      // Runs the callback against this same stub. The rows a transaction
+      // writes are the thing under test; that they were written inside one is
+      // drizzle's business, and verified against the real database instead.
+      transaction: async <T>(fn: (tx: Database) => Promise<T>): Promise<T> => fn(state.db),
     } as unknown as Database,
   };
 

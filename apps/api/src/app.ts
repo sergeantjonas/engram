@@ -90,7 +90,7 @@ export function buildApp({ config, db, tmdb, github }: AppDeps): FastifyInstance
   registerSearchRoutes(app, tmdb);
   registerTitleRoutes(app, db, tmdb);
   registerWatchEventRoutes(app, db);
-  registerWebhookRoutes(app, config);
+  registerWebhookRoutes(app, config, db);
 
   return app;
 }

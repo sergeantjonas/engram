@@ -11,8 +11,11 @@ afterEach(async () => {
   app = undefined;
 });
 
-const post = async (headers: Record<string, string>, payload: unknown) => {
-  const stub = sessionDb();
+const post = async (
+  headers: Record<string, string>,
+  payload: unknown,
+  stub: ReturnType<typeof sessionDb> = sessionDb(),
+) => {
   app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
   return app.inject({
     method: 'POST',
@@ -24,8 +27,35 @@ const post = async (headers: Record<string, string>, payload: unknown) => {
 
 const good = { 'x-engram-token': testConfig.WEBHOOK_SECRET };
 
+/** The title's row and the event's, the two inserts that ask for one back. */
+const storing = () => {
+  const stub = sessionDb();
+  stub.returns = [[{ id: 'title-1' }], [{ id: 'event-1' }]];
+  stub.selects = [[{ id: 'episode-1' }]];
+  return stub;
+};
+
 describe('POST /webhooks/tautulli', () => {
   const owner = testConfig.TAUTULLI_USER_IDS[0];
+
+  /** A payload complete enough to plan, shaped like the measured one. */
+  const play = (over: Record<string, unknown> = {}) => ({
+    media_type: 'episode',
+    show_name: 'House of the Dragon',
+    episode_name: 'The Heirs of the Dragon',
+    season_num: '1',
+    episode_num: '1',
+    themoviedb_id: '94997',
+    thetvdb_id: '371572',
+    imdb_id: 'tt11198330',
+    duration_sec: '3938',
+    view_offset: '18000',
+    user_id: owner,
+    player: 'Firefox',
+    platform: 'Firefox',
+    unixtime: '1790018788',
+    ...over,
+  });
 
   it('accepts a payload carrying the shared secret in a header', async () => {
     const response = await post(good, {
@@ -83,11 +113,27 @@ describe('POST /webhooks/tautulli', () => {
     expect(JSON.stringify(logged)).not.toContain('short');
   });
 
-  // The whole reason it is in the body rather than the query string is to
-  // keep it out of logs, which this handler would undo by logging the body.
+  it('stores the play it planned', async () => {
+    const stub = storing();
+    const response = await post(good, play(), stub);
+
+    expect(response.statusCode).toBe(204);
+    const event = stub.inserted.at(-1)?.values as Record<string, unknown>;
+    expect(event).toMatchObject({
+      source: 'tautulli',
+      sourceEventId: 'show:tvdb:371572/s01e0001@7597797@1790018788',
+      episodeId: 'episode-1',
+      completed: false,
+      accountId: '7597797',
+    });
+  });
+
+  // The whole reason the secret is in the body rather than the query string
+  // is to keep it out of logs, which this handler would undo by writing the
+  // body to one.
   it('keeps the token out of what it logs', async () => {
     const logged: unknown[] = [];
-    const stub = sessionDb();
+    const stub = storing();
     app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
     app.addHook('onRequest', (request, _reply, done) => {
       request.log.info = ((obj: unknown) => {
@@ -100,20 +146,61 @@ describe('POST /webhooks/tautulli', () => {
       method: 'POST',
       url: '/webhooks/tautulli',
       headers: { 'content-type': 'application/json' },
-      payload: { token: testConfig.WEBHOOK_SECRET, media_type: 'movie', user_id: owner },
+      payload: { ...play(), token: testConfig.WEBHOOK_SECRET },
     });
 
-    // The handler's own line. Fastify's request and response lines go
-    // through its serialisers, which emit a status code and a method and
-    // never a body — this asserts the one place a body is deliberately
-    // written, which is the place that could leak the token.
+    // The handler's own line, and only it. Replacing `log.info` wholesale
+    // bypasses Fastify's serialisers, so its response line hands the test the
+    // raw request object with the body still on it — an artefact of the stub
+    // rather than anything the running server writes.
     const mine = logged.filter(
-      (entry): entry is { tautulli: unknown } =>
-        typeof entry === 'object' && entry !== null && 'tautulli' in entry,
+      (entry): entry is Record<string, unknown> =>
+        typeof entry === 'object' && entry !== null && 'title' in entry,
     );
     expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ title: 'show:tvdb:371572', completed: false, written: true });
     expect(JSON.stringify(mine)).not.toContain(testConfig.WEBHOOK_SECRET);
-    expect(JSON.stringify(mine)).toContain('movie');
+    // `raw` keeps the whole body, so the strip is the only thing between the
+    // secret and a column that outlives every log file.
+    expect(JSON.stringify(stub.inserted.map((i) => i.values))).not.toContain(
+      testConfig.WEBHOOK_SECRET,
+    );
+  });
+
+  // Accepted rather than refused: Tautulli logs a non-2xx as a failed
+  // notification and retries nothing, so a 4xx would mark the delivery bad
+  // without getting the play back. The nightly walk is what recovers it.
+  it('accepts a body it cannot plan, and says why without saying what', async () => {
+    const logged: unknown[] = [];
+    const stub = sessionDb();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.warn = ((obj: unknown) => {
+        logged.push(obj);
+      }) as typeof request.log.warn;
+      done();
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/tautulli',
+      headers: { 'content-type': 'application/json', ...good },
+      payload: play({ thetvdb_id: '', show_name: 'Something Private' }),
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(logged).toEqual([
+      expect.objectContaining({ reason: 'no tvdb id', keys: expect.any(Array) }),
+    ]);
+    // Field names, never values: a body this could not read is still a
+    // record of what somebody watched.
+    expect(JSON.stringify(logged)).not.toContain('Something Private');
+  });
+
+  it('writes nothing for a body it cannot plan', async () => {
+    const stub = sessionDb();
+    await post(good, play({ thetvdb_id: '' }), stub);
+    expect(stub.inserted).toEqual([]);
   });
 
   // It has no cookie jar, so the secret is the whole of its authentication.
@@ -162,8 +249,10 @@ describe('POST /webhooks/tautulli', () => {
       method: 'POST',
       url: '/webhooks/tautulli',
       headers: { 'content-type': 'application/json', ...good },
-      // A real id from the same server, and not the owner's.
-      payload: { media_type: 'episode', show_name: 'Something Private', user_id: '49291007' },
+      // A real id from the same server, and not the owner's. Complete enough
+      // to plan, or the parser would refuse it first and this would pass with
+      // the viewer check deleted.
+      payload: play({ user_id: '49291007', show_name: 'Something Private' }),
     });
 
     // Accepted rather than refused: Tautulli logs a non-2xx as a failed
@@ -180,11 +269,15 @@ describe('POST /webhooks/tautulli', () => {
     expect(mine).toHaveLength(1);
     expect(JSON.stringify(mine)).not.toContain('Something Private');
     expect(mine[0]).toMatchObject({ viewer: '49291007', mediaType: 'episode' });
+    // The part that matters: not a row, not just not a log line.
+    expect(stub.inserted).toEqual([]);
   });
 
   it('keeps out a payload with no viewer at all', async () => {
-    const response = await post(good, { media_type: 'episode', show_name: 'Bleach' });
+    const stub = sessionDb();
+    const response = await post(good, play({ user_id: undefined }), stub);
     expect(response.statusCode).toBe(204);
+    expect(stub.inserted).toEqual([]);
   });
 
   // An unconfigured allowlist allows nobody. A write path opened by omission
@@ -201,9 +294,10 @@ describe('POST /webhooks/tautulli', () => {
       method: 'POST',
       url: '/webhooks/tautulli',
       headers: { 'content-type': 'application/json', ...good },
-      payload: { media_type: 'episode', user_id: owner },
+      payload: play(),
     });
     expect(response.statusCode).toBe(204);
+    expect(stub.inserted).toEqual([]);
   });
 
   it('is not reachable without the secret even though the guard opens it', async () => {

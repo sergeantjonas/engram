@@ -566,8 +566,11 @@ describe('the title page', () => {
     await renderAt(`/titles/${TITLE_ID}`);
 
     const cell = await screen.findByRole('button', { name: 'Episode 9: THE BLADE, not out yet' });
-    // The date is on hover, so finding out what a cell is costs no click.
-    expect(cell.getAttribute('title')).toContain('THE BLADE');
+    // A real tip, not the browser's `title`: focus reaches it, so the grid is
+    // readable from the keyboard as well as under a pointer.
+    fireEvent.focus(cell);
+    expect((await screen.findAllByRole('tooltip'))[0]?.textContent).toContain('THE BLADE');
+
     cell.click();
 
     // Nothing to mark and nothing to explain about an episode that has not

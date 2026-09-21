@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { posterUrl, type TitleState, type TitleSummary } from '../api/titles.ts';
+import { Tip } from '../shell/Tooltip.tsx';
 import { formatSince } from '../title/format.ts';
 
 export const STATE_LABEL: Record<TitleState, string> = {
@@ -65,9 +66,15 @@ export function TitleCard({ title }: { title: TitleSummary }) {
       {/* Two lines' worth of height whether the name needs it or not, so a row
           of one-line names does not sit ragged against its two-line neighbour. */}
       <div className="mt-1.5 flex min-h-[30px] items-start justify-between gap-2">
-        <h2 className="line-clamp-2 text-xs leading-tight font-medium" title={title.name}>
-          {shortTitle(title.name)}
-        </h2>
+        {/* Mouse-only, and deliberately: the heading is not focusable and
+            three hundred cards must not add three hundred tab stops. Anything
+            reading the page rather than looking at it gets the whole name off
+            the link above, which carries it in full. */}
+        <Tip label={title.name}>
+          <h2 className="line-clamp-2 text-xs leading-tight font-medium">
+            {shortTitle(title.name)}
+          </h2>
+        </Tip>
         {since ? <span className="shrink-0 font-mono text-[10px] text-dim">{since}</span> : null}
       </div>
       {flags.length > 0 ? (

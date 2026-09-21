@@ -32,6 +32,7 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
   backfills run locally first: the hand-made marks exist nowhere else. Read
   before the first deploy, alongside the `shared-vps` skill.
 - `web-design.md` — design. The settled three screens, the palette and the type
-  system, with the mockup they were approved from in `docs/design/`. Read
-  before building or changing anything in `apps/web`.
+  system, with the mockup they were approved from in `docs/design/`, plus the
+  conventions the build has settled since — tooltips and notices among them.
+  Read before building or changing anything in `apps/web`.
 - `integration-ideas.md` — idea pool. Nothing here is committed to.

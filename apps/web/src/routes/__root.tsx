@@ -3,6 +3,7 @@ import { meQuery } from '../api/auth.ts';
 import type { RouterContext } from '../router.tsx';
 import { Rail } from '../shell/Rail.tsx';
 import { ToastHost } from '../shell/Toasts.tsx';
+import { TooltipHost } from '../shell/Tooltip.tsx';
 import { TopBar } from '../shell/TopBar.tsx';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -38,15 +39,17 @@ function Shell() {
     // not about the screen that happened to be open when it was written, and it
     // has to outlive a navigation away from that screen.
     <ToastHost>
-      <div className="flex min-h-dvh">
-        <Rail />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar />
-          <main className="flex-1 p-[18px]">
-            <Outlet />
-          </main>
+      <TooltipHost>
+        <div className="flex min-h-dvh">
+          <Rail />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <TopBar />
+            <main className="flex-1 p-[18px]">
+              <Outlet />
+            </main>
+          </div>
         </div>
-      </div>
+      </TooltipHost>
     </ToastHost>
   );
 }

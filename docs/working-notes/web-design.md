@@ -242,6 +242,38 @@ This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 have pushed the null handling into `watch_state` and every sort. See
 [data-model.md](data-model.md).
 
+## Tooltips
+
+**Never the `title` attribute.** It cannot be styled or placed, waits about a
+second before appearing, vanishes on a timer while you are still reading it,
+does not wrap, and on a touch screen does not exist at all. It is not a
+tooltip; it is a fallback that happens to look like one on one kind of device.
+
+Use `Tip` from `apps/web/src/shell/Tooltip.tsx`, which wraps Radix Tooltip:
+
+```tsx
+<Tip label="49. THE BLADE — 20 Oct 2026">
+  <button type="button">49</button>
+</Tip>
+```
+
+Three rules that come with it:
+
+- **The child should be focusable.** Radix opens the tip on focus as well as on
+  hover, which is the whole keyboard story. Where the child genuinely cannot be
+  focusable — the wall's card heading, because three hundred cards must not add
+  three hundred tab stops — the same text has to reach a reader some other way,
+  and the call site says how. The card's link carries the full name.
+- **A tip labels; it does not explain.** It says what a thing is where the
+  screen had no room to say it. Anything a viewer has to read before deciding
+  belongs on the page, or in the popover that opens on click.
+- **Hide it while the thing it labels is open.** A cell that opens a popover
+  passes `hidden`, or the tip hangs over the panel repeating itself.
+
+One `TooltipHost` sits in the root route and holds the timing: 250ms to open,
+and none at all when moving between neighbours, because reading along a row of
+episode cells should not cost a quarter-second each.
+
 ## Notices
 
 Not in the mockup, which has no state after a button is pressed. Writes here

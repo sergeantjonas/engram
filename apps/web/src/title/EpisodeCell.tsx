@@ -8,6 +8,7 @@ import {
   setGap,
   titleQuery,
 } from '../api/titles.ts';
+import { Tip } from '../shell/Tooltip.tsx';
 import { formatAirDate, formatWatched } from './format.ts';
 import { MarkWatched, TakeBack } from './MarkWatched.tsx';
 
@@ -73,17 +74,22 @@ export function EpisodeCell({
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger
-        aria-label={label}
-        // A native tooltip as well as the popover: in a season of 366 cells,
-        // finding out what one is should not cost a click and a dismissal.
-        title={`${episode.number}. ${episode.name ?? 'Untitled'} — ${
+      {/* A tip as well as the popover: in a season of 366 cells, finding out
+          what one is should not cost a click and a dismissal. Hidden while the
+          popover is open, which says all of this and more. */}
+      <Tip
+        hidden={open}
+        label={`${episode.number}. ${episode.name ?? 'Untitled'} — ${
           episode.unmatched ? 'not on TMDB' : formatAirDate(episode.airDate)
         }`}
-        className={`grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
       >
-        {episode.number}
-      </Popover.Trigger>
+        <Popover.Trigger
+          aria-label={label}
+          className={`grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
+        >
+          {episode.number}
+        </Popover.Trigger>
+      </Tip>
       <Popover.Portal>
         <Popover.Content
           side="top"

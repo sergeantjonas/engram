@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dump:history": "pnpm run build && node --env-file-if-exists=.env tools/dump-plex-history.mjs",
+    "dump:library": "pnpm run build && node --env-file-if-exists=.env tools/dump-library.mjs",
     "resolve:ids": "pnpm run build && node --env-file-if-exists=.env tools/resolve-ids.mjs",
     "build": "tsc -b",
     "dev": "pnpm run build && pnpm --parallel --filter \"./apps/*\" run dev",

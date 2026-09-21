@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fetchAllHistory } from './plex-client.mjs';
+import {
+  fetchAllHistory,
+  fetchSectionItems,
+  fetchSections,
+  fetchShowLeaves,
+} from './plex-client.mjs';
 
 const rows = (n, offset = 0) =>
   Array.from({ length: n }, (_, i) => ({ historyKey: `/h/${offset + i}`, viewedAt: offset + i }));
@@ -48,4 +53,70 @@ test('stops on an empty page when the server reports no total', async () => {
 test('handles a history shorter than one page', async () => {
   const got = await fetchAllHistory('http://x', 't', { get: stubServer({ total: 86 }) });
   assert.equal(got.length, 86);
+});
+
+test('asks for history oldest first', async () => {
+  // Ascending order is what keeps fetched pages stable as new plays land, and
+  // the paging tests above would pass just as well without it.
+  const asked = [];
+  const serve = stubServer({ total: 86 });
+  await fetchAllHistory('http://x', 't', {
+    get: (url, token, timeout) => {
+      asked.push(url);
+      return serve(url, token, timeout);
+    },
+  });
+  assert.ok(asked.every((url) => new URL(url).searchParams.get('sort') === 'viewedAt:asc'));
+});
+
+// Library items are identified by ratingKey rather than historyKey, so the
+// paging guard needs its own identity or every page reads as already seen.
+const items = (n, offset = 0) =>
+  Array.from({ length: n }, (_, i) => ({ ratingKey: String(offset + i), title: `t${offset + i}` }));
+
+function stubLibrary({ total, clamp = 500 }) {
+  return async (url) => {
+    const params = new URL(url).searchParams;
+    const start = Number(params.get('X-Plex-Container-Start'));
+    const size = Math.min(clamp, Number(params.get('X-Plex-Container-Size')));
+    return {
+      MediaContainer: {
+        totalSize: total,
+        Metadata: items(Math.max(0, Math.min(size, total - start)), start),
+      },
+    };
+  };
+}
+
+test('pages a section by ratingKey and asks for guids inline', async () => {
+  const asked = [];
+  const get = async (url, token, timeout) => {
+    asked.push(url);
+    return stubLibrary({ total: 52, clamp: 20 })(url, token, timeout);
+  };
+  const got = await fetchSectionItems('http://x', 't', '1', { get });
+  assert.equal(got.length, 52);
+  assert.ok(asked.every((url) => new URL(url).searchParams.get('includeGuids') === '1'));
+});
+
+test('pages a show with more episodes than one page holds', async () => {
+  const got = await fetchShowLeaves('http://x', 't', '748', {
+    get: stubLibrary({ total: 424, clamp: 100 }),
+  });
+  assert.equal(got.length, 424);
+});
+
+test('reads sections down to key, type and title', async () => {
+  const get = async () => ({
+    MediaContainer: {
+      Directory: [
+        { key: 2, type: 'movie', title: 'Movies' },
+        { key: 1, type: 'show', title: 'TV Shows' },
+      ],
+    },
+  });
+  assert.deepEqual(await fetchSections('http://x', 't', { get }), [
+    { key: '2', type: 'movie', title: 'Movies' },
+    { key: '1', type: 'show', title: 'TV Shows' },
+  ]);
 });

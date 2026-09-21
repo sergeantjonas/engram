@@ -59,14 +59,15 @@ export async function pickConnection(server, accountToken) {
 }
 
 const rowId = (r) => r.historyKey ?? `${r.ratingKey}:${r.viewedAt}`;
+const itemId = (r) => r.ratingKey ?? r.key;
 
-// An incomplete archive that reports success is the worst outcome this tool can
-// produce, so every exit is either "the server said that was everything" or a
-// thrown error. Ascending order keeps fetched pages stable as new plays land.
+// An incomplete archive that reports success is the worst outcome these tools
+// can produce, so every exit is either "the server said that was everything" or
+// a thrown error.
 //
 // `get` is injectable so the pagination edge cases can be tested without a server.
-export async function fetchAllHistory(uri, token, options = {}) {
-  const { get = getJson, pageSize = 500, maxPages = 1000, onProgress } = options;
+async function fetchAllPages(buildUrl, token, options = {}) {
+  const { get = getJson, pageSize = 500, maxPages = 1000, onProgress, idOf = itemId } = options;
   const rows = [];
   const seen = new Set();
   let start = 0;
@@ -79,9 +80,7 @@ export async function fetchAllHistory(uri, token, options = {}) {
       );
     }
 
-    const url =
-      `${uri}/status/sessions/history/all` +
-      `?sort=viewedAt:asc&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${pageSize}`;
+    const url = buildUrl(start, pageSize);
     const body = await get(url, token, 30000);
     const container = body.MediaContainer ?? {};
     const page = container.Metadata ?? [];
@@ -94,12 +93,12 @@ export async function fetchAllHistory(uri, token, options = {}) {
     if (page.length === 0) break;
 
     // A server that ignores X-Plex-Container-Start would otherwise loop forever.
-    const fresh = page.filter((r) => !seen.has(rowId(r)));
+    const fresh = page.filter((r) => !seen.has(idOf(r)));
     if (fresh.length === 0) {
       throw new Error('server returned only rows already seen — pagination is not advancing');
     }
     for (const r of fresh) {
-      seen.add(rowId(r));
+      seen.add(idOf(r));
       rows.push(r);
     }
 
@@ -115,4 +114,53 @@ export async function fetchAllHistory(uri, token, options = {}) {
     throw new Error(`incomplete archive: captured ${rows.length} of ${total} rows`);
   }
   return rows;
+}
+
+// Ascending order keeps fetched pages stable as new plays land.
+export async function fetchAllHistory(uri, token, options = {}) {
+  return fetchAllPages(
+    (start, size) =>
+      `${uri}/status/sessions/history/all` +
+      `?sort=viewedAt:asc&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${size}`,
+    token,
+    { ...options, idOf: rowId },
+  );
+}
+
+export async function fetchSections(uri, token, options = {}) {
+  const { get = getJson } = options;
+  const body = await get(`${uri}/library/sections`, token, 20000);
+  return (body.MediaContainer?.Directory ?? []).map((d) => ({
+    key: String(d.key),
+    type: d.type,
+    title: d.title,
+  }));
+}
+
+// `includeGuids=1` is what makes a walk cheap: every item arrives carrying its
+// imdb / tmdb / tvdb ids, so there is no second call per title the way history
+// rows need. Sorted by id rather than by title so paging cannot reshuffle
+// under a rename.
+export async function fetchSectionItems(uri, token, sectionKey, options = {}) {
+  return fetchAllPages(
+    (start, size) =>
+      `${uri}/library/sections/${sectionKey}/all` +
+      `?includeGuids=1&sort=id:asc&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${size}`,
+    token,
+    options,
+  );
+}
+
+// Every episode of one show, across all its seasons. Watched state lives here
+// rather than on the show: 11 of this server's 22 watched shows report a null
+// `lastViewedAt` at show level while every watched episode under them carries
+// one, so a walk that reads the show row records those as undated.
+export async function fetchShowLeaves(uri, token, ratingKey, options = {}) {
+  return fetchAllPages(
+    (start, size) =>
+      `${uri}/library/metadata/${ratingKey}/allLeaves` +
+      `?sort=id:asc&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${size}`,
+    token,
+    options,
+  );
 }

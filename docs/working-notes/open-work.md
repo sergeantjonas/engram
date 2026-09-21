@@ -111,7 +111,14 @@ the viewer wants of a title. The SPA calls all four.
       2026-09-21, with `watch_event.plays` for the count an episode-grained
       source gives instead of enumerating. Stranger Things went from 50 claims
       to 42 viewings; Bleach's two real rewatches still read as two.
-   2. The walk itself: a `plex-library` source over
+   2. The walk itself, in two halves. The dump landed 2026-09-21:
+      `pnpm dump:library` writes every section's items and every watched
+      show's watched episodes to `tools/out/`, the same split the history dump
+      uses so a normalizer bug stays recoverable. Measured against the live
+      server on the day: 81 items, 24 of them watched, 373 watched episodes,
+      none undated, 2019-06-11 to 2026-09-13. The importer is the other half.
+
+      A `plex-library` source over
       `/library/sections/{key}/all?includeGuids=1`, writing watch events for
       what is watched and `library_presence` for everything it sees. **Both
       sections, not just the shows one.** A show needs a second call to
@@ -123,9 +130,11 @@ the viewer wants of a title. The SPA calls all four.
    3. Wire it into the nightly reconcile, so it stays a reconciliation rather
       than a one-time import.
 
-   Idempotency needs deciding rather than copying: `onConflictDoNothing` is
-   right for a history row, which never changes, and wrong for this source,
-   where a rescan of the same episode is the same claim with a later date.
+   Idempotency is not copied from the history importer. Settled 2026-09-21:
+   `onConflictDoNothing` is right for a history row, which never changes, and
+   wrong for this source, where a rescan of the same episode is the same claim
+   with a later date. The walk uses `onConflictDoUpdate` on `watched_at`,
+   `plays` and `raw`, scoped to `plex-library` alone.
 
 2. **A wall that survives the walk, and where films live in it.** The walk
    takes the library from 12 titles to 81 — 52 shows and 29 films — and the
@@ -202,18 +211,19 @@ the viewer wants of a title. The SPA calls all four.
   Revisit when enough is in progress for the answer to be observable; `dropped`
   is settable now and says the same thing explicitly, which may make the facet
   redundant rather than mistuned.
-- **Whether legacy-agent libraries exist here.** If they do, the season and
-  episode in a legacy GUID are the only carrier of that information and
-  `parseGuid` currently discards it. See
-  [ingest-architecture.md](ingest-architecture.md).
+- ~~**Whether legacy-agent libraries exist here.**~~ Answered 2026-09-21, by
+  the library dump the same day — it keeps the raw `Guid` arrays, which is what
+  nothing captured before it. **No legacy agents on this server.** All 81 items
+  carry `plex://` and a modern `imdb` / `tmdb` / `tvdb` trio, and no guid
+  anywhere in the dump matches `com.plexapp.agents`. `parseGuid` still handles
+  the legacy form ([packages/shared/src/guid.ts](../../packages/shared/src/guid.ts)),
+  so a library that arrives with one is parsed; the season and episode it
+  carries stay discarded, which costs nothing while no such library exists.
 
-  Not answerable from anything captured, checked 2026-09-21. History rows carry
-  no ids at all, and `tools/out/resolved-ids.json` stores the *parsed* ids
-  rather than the raw `Guid` array, so a grep of it for `com.plexapp.agents`
-  finds nothing whether or not a legacy library exists. It needs one live call
-  to `/library/sections/{key}/all?includeGuids=1` and a look at the raw array —
-  the same call the library walk makes, so building the walk answers it for
-  free.
+  One thing the raw arrays did show: *Demon Slayer: Kimetsu no Yaiba Infinity
+  Castle* carries **two** `tvdb` guids, 357928 and 357931. It is a film, keyed
+  on tmdb, so identity is untouched — which is the argument for keying on the
+  canonical source alone, arriving unprompted.
 
 ## Done
 

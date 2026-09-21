@@ -1,0 +1,14 @@
+[Unit]
+Description=Dump the Engram database nightly
+
+[Timer]
+OnCalendar=daily
+# Spread away from midnight and from the other tenant's timer: two pg_dumps
+# and whatever else fires at 00:00 on a 4-core box is a needless pile-up.
+RandomizedDelaySec=45m
+# A box that was off at the scheduled time still gets its dump, rather than
+# silently skipping a day.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

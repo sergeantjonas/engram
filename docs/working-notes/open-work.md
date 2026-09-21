@@ -228,15 +228,13 @@ the viewer wants of a title. The SPA calls all four.
    jar, so the secret is their authentication rather than a session. The list
    is keyed on method and route pattern together, so the entry is `POST
    /webhooks/...` and nothing else about the path is opened with it.
-5. **Go live** — second tenant on the netcup box, planned in
-   [go-live.md](go-live.md), and half built as of 2026-09-21: images, CI, the
-   production compose file, the vhosts and the deploy script are in, and CI
-   has published its first pair. What is left is the box itself — the vhosts
-   installed, certbot, the GHCR packages made public, the first deploy, and
-   the restore. The ordering constraint that matters is on data rather than
-   on deployment: the hand-made marks exist only in the development
-   database, so production starts from a restore of that database, never
-   from an empty schema.
+5. ~~**Go live**~~ — live 2026-09-21 at <https://engram.vyoh.gg>, second
+   tenant on the netcup box. The full record restored rather than started
+   empty: 82 titles, 1109 events, 2467 episodes, reaching back to 2019, every
+   count matching the development database it came from. Nightly backup
+   installed and its restore drilled against that real data. Account in
+   [go-live.md](go-live.md), which also holds the one thing still open — no
+   copy of the dumps leaves the box.
 
 ## Blocked
 

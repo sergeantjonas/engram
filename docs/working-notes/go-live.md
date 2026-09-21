@@ -1,10 +1,10 @@
 # Go live
 
-**Status:** In progress, 2026-09-21. Images, CI, the production compose file,
-the vhosts and the deploy script are built; DNS, the OAuth app, the box's
-`.env`, the first deploy and the backup unit are not. Read before the first
-deploy. The machine's own conventions are the `shared-vps` skill; this note
-holds only what is true of Engram.
+**Status:** Done, 2026-09-21 — Engram is live at <https://engram.vyoh.gg>
+with the full record restored and a nightly backup running. Kept as the
+account of how it got there, and for the one gap still open at the bottom.
+The machine's own conventions are the `shared-vps` skill; this note holds
+only what is true of Engram.
 
 ## What makes this deploy unusual
 
@@ -101,13 +101,34 @@ flag on.
 
 ## Backups, before anything is entrusted to it
 
-`ops/backup.sh` exists and is meant for cron; on this box it becomes
-`engram-backup.service` plus a `.timer` writing to `/var/backups/engram`, mode
-700. Two details the unit has to get right, both found by reading rather than
-by running it: the deploy lands the script flat at `/srv/engram/backup.sh`,
-not under `ops/`, and the stack is `compose.prod.yaml`, which Compose does not
-look for on its own — the script now resolves it relative to itself, so the
-unit's `WorkingDirectory` is what makes that work. The history is the product, so this lands with the first deploy, not after
+`engram-backup.service` plus a `.timer`, installed 2026-09-21, writing to
+`/var/backups/engram` at mode 700. Two details the unit had to get right,
+both found by reading rather than by running it: the deploy lands the script
+flat at `/srv/engram/backup.sh`, not under `ops/`, and the stack is
+`compose.prod.yaml`, which Compose does not look for on its own — the script
+resolves it relative to itself, and the unit's `WorkingDirectory` is what
+makes that work.
+
+`/var/backups/engram` is outside `/srv` deliberately. The deploy rsyncs into
+`/srv/engram`, and a backup living inside the directory a deploy writes to is
+one flag away from being destroyed by the thing it exists to survive. The
+timer carries a 45-minute random delay so two tenants' dumps do not collide
+at midnight on four shared cores, and `Persistent=true` so a box that was off
+at the scheduled time still gets one.
+
+**The drill passed against the real record**, which is the only version of it
+worth running: `ops/restore-drill.sh` restores the newest dump into a scratch
+database, compares every table's row count against the live one, and drops
+the copy. All six matched — 82 titles, 2467 episodes, 1109 events, 81
+presence rows, 2 intents, 0 gaps. A drill against an empty schema proves the
+script runs and nothing else.
+
+**Still open: nothing leaves the box.** The dumps sit on the same disk as the
+database they came from, so they survive a bad migration, a wrong delete or a
+botched restore, and not the disk dying or the VPS going away. For a project
+whose whole argument is that the record should outlive the thing holding it,
+that is the last real gap. The owner intends an off-box copy when the next
+machine is set up; vyoh has the same gap and the same answer. The history is the product, so this lands with the first deploy, not after
 it. Drill the restore against the real dump from step 3 above — a drill on an
 empty schema proves only that the script runs, and the dump being drilled is
 the irreplaceable one.

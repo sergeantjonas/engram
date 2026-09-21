@@ -44,7 +44,7 @@ done
 # on the top level for the same reason — .env lives in that directory.
 echo "==> copying the ops surface to $HOST:$REMOTE_DIR"
 ssh "$HOST" "mkdir -p '$REMOTE_DIR'"
-rsync -az compose.prod.yaml ops/backup.sh "$HOST:$REMOTE_DIR/"
+rsync -az compose.prod.yaml ops/backup.sh ops/restore-drill.sh "$HOST:$REMOTE_DIR/"
 rsync -az --delete deploy/ "$HOST:$REMOTE_DIR/deploy/"
 
 # --wait-timeout, because `restart: unless-stopped` means a container that

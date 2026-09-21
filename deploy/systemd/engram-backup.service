@@ -1,0 +1,30 @@
+[Unit]
+Description=Dump the Engram database
+# The dump runs through `docker compose exec`, so the daemon has to be up
+# before this is worth attempting.
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+
+# The script finds compose.prod.yaml relative to itself, and the deploy lands
+# it flat in this directory rather than under ops/. Both facts are load
+# bearing: a timer runs with no meaningful working directory of its own.
+WorkingDirectory=/srv/engram
+ExecStart=/srv/engram/backup.sh
+
+Environment=BACKUP_DIR=/var/backups/engram
+# Thirty dumps of a few hundred KB each. The history is the product, and the
+# cost of keeping a month of it is nothing next to the cost of not.
+Environment=KEEP_DAYS=30
+
+# Outside /srv on purpose: the deploy rsyncs into /srv/engram, and a backup
+# living inside the directory a deploy writes to is one flag away from being
+# deleted by the thing it exists to survive.
+ReadWritePaths=/var/backups/engram
+
+[Install]
+WantedBy=multi-user.target

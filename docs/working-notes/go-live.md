@@ -1,15 +1,18 @@
 # Go live
 
-**Status:** Plan — not started, written 2026-09-21. Read before the first
+**Status:** In progress, 2026-09-21. Images, CI, the production compose file,
+the vhosts and the deploy script are built; DNS, the OAuth app, the box's
+`.env`, the first deploy and the backup unit are not. Read before the first
 deploy. The machine's own conventions are the `shared-vps` skill; this note
 holds only what is true of Engram.
 
 ## What makes this deploy unusual
 
 Most first deploys start from an empty database. This one cannot. The
-development database already holds the only copy of 655 hand-made marks —
+development database already holds the only copy of the hand-made marks —
 Bleach's 424 episodes, Dexter's 96, every season the viewer claimed before
-learning Plex still had the dates. They came from a person sitting at a
+learning Plex still had the dates, some 650 of them and the count moving as
+the record is used. They came from a person sitting at a
 keyboard, not from a source that can be replayed. **A production database that
 starts empty loses them permanently**, and no ingest run brings them back.
 
@@ -64,7 +67,7 @@ flag on.
 
 - **A second GitHub OAuth app**, or at minimum a second callback URL. The
   development app points at localhost; production needs
-  `https://api.engram.vyoh.gg/auth/callback`. Separate apps are better: one
+  `https://api.engram.vyoh.gg/auth/github/callback`. Separate apps are better: one
   client secret leaking from a laptop should not authorise production.
 - **`/srv/engram/.env` by hand.** `DATABASE_URL`, the Postgres vars it must
   agree with, both OAuth values, `OWNER_GITHUB_USER_ID`, `WEBHOOK_SECRET`,
@@ -72,9 +75,18 @@ flag on.
   Production secrets have no local counterpart, so nothing rsyncs them.
 - **`VITE_API_ORIGIN` is baked in at build time**, so DNS and the decision
   above must be settled before CI builds the image, not after.
-- **A compose file for the box.** The existing `docker-compose.yml` is the
-  development database alone; production needs api, web and Postgres with
-  memory limits and log caps.
+- ~~**A compose file for the box.**~~ `compose.prod.yaml`, committed: api, web
+  and Postgres, every port on loopback, memory limits, capped logs, and every
+  required secret as `${VAR:?}` so a missing one fails at `up` with its own
+  name rather than crash-looping later.
+- **DNS, before CI builds the web image.** Neither name resolved as of
+  2026-09-21. `engram.vyoh.gg` and `api.engram.vyoh.gg`, A and AAAA, copied
+  from what `vyoh.gg` already answers — the panel lists a gateway beside the
+  server address, and a wrong A with a right AAAA still issues a certificate
+  while serving nothing over IPv4.
+- **The `VITE_API_ORIGIN` repository variable** on GitHub, since the image is
+  built in CI rather than on a laptop. CI fails the run if it is unset rather
+  than shipping a bundle that calls localhost.
 
 ## Backups, before anything is entrusted to it
 
@@ -87,18 +99,22 @@ the irreplaceable one.
 
 ## Ingest after go-live
 
-Being reachable is what unblocks the rest of
-[ingest-architecture.md](ingest-architecture.md). Tautulli and Sonarr cannot
-post to a laptop, which is half of why webhooks are deferred; the other half is
-that Tautulli is still not installed. Once Engram is on 443 behind a
+Being reachable is the last thing the rest of
+[ingest-architecture.md](ingest-architecture.md) is waiting on. Tautulli went
+up 2026-09-21 and Sonarr is there; neither can post to a laptop, which is now
+the only reason webhooks are deferred. Once Engram is on 443 behind a
 certificate:
 
 - The webhook routes become verifiable against the real senders.
+- The first real payloads can be read off this box's own logs, which is what
+  the capture was waiting for — no tunnel and no third party, decided
+  2026-09-21.
 - The nightly reconcile has somewhere to run — a timer on the box, alongside
-  the backup, rather than a script someone remembers to invoke.
-- The Plex library walk moves from a one-time backfill to that same nightly
-  job, which is what keeps it a reconciliation rather than an import.
+  the backup, rather than a script someone remembers to invoke. That
+  reconcile is the Plex library walk, not a Tautulli pull; the walk moves from
+  a one-time backfill to that timer, which is what keeps it a reconciliation
+  rather than an import.
 
-Owner-only ingest filtering must land before any of that, per
-[open-work.md](open-work.md) — the server is shared, and a webhook fires for
+Owner-only ingest filtering landed 2026-09-21 and is a precondition met
+rather than one outstanding — the server is shared, and a webhook fires for
 every viewer on it.

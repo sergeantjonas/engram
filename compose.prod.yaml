@@ -1,0 +1,109 @@
+# Production only. Never loaded implicitly — it is passed with -f and carries
+# its own project name, so a stray `docker compose up` in this directory
+# cannot start it and a stray one on the box cannot mix it with anything else.
+#
+#   docker compose -f compose.prod.yaml pull
+#   docker compose -f compose.prod.yaml up -d --no-build --wait
+#
+# `scripts/deploy.sh` is the way in; it always passes ENGRAM_IMAGE_TAG. A bare
+# `up -d` here with the variable unset reverts a pinned stack to :main.
+name: engram-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-engram}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in /srv/engram/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-engram}
+      TZ: ${TZ:-Europe/Brussels}
+    ports:
+      # Loopback, like everything here: nginx on the host is the only ingress,
+      # and a non-default port because the other tenant already has 5432.
+      - '127.0.0.1:${POSTGRES_PORT:-55432}:5432'
+    volumes:
+      # 18+ images keep data in a major-version subdirectory, so the volume
+      # mounts one level above where older images put it.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-engram} -d ${POSTGRES_DB:-engram}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  api:
+    image: ghcr.io/sergeantjonas/engram-api:${ENGRAM_IMAGE_TAG:-main}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Built from the parts Compose already has, so the URL and the server it
+      # points at cannot disagree — the one failure the README calls out.
+      DATABASE_URL: postgres://${POSTGRES_USER:-engram}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-engram}
+      # Inside the container this must not be loopback, or nothing outside it
+      # can reach the port that is published.
+      HOST: 0.0.0.0
+      PORT: 2012
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Containers default to UTC while the record is kept in the owner's own
+      # day boundaries. Left implicit, a watch just before midnight lands on
+      # the wrong date.
+      TZ: ${TZ:-Europe/Brussels}
+
+      WEB_ORIGIN: ${WEB_ORIGIN:?set WEB_ORIGIN, the SPA origin with no trailing slash}
+      # Optional to the schema because local development does not need it, and
+      # required here: the SPA and the API are different hosts in production,
+      # so a host-only cookie is dropped on every credentialed call and the
+      # sign-in appears to work and then behaves as signed out.
+      SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN:?set SESSION_COOKIE_DOMAIN, e.g. .engram.vyoh.gg}
+
+      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:?}
+      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:?}
+      OWNER_GITHUB_USER_ID: ${OWNER_GITHUB_USER_ID:?}
+      OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET:?}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?}
+
+      # Genuinely optional, and checked against what the code does with an
+      # empty value rather than against how the name reads: the API boots
+      # without a TMDB key and only the routes that need one complain, and
+      # the account allowlist defaults to the server owner.
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      PLEX_ACCOUNT_IDS: ${PLEX_ACCOUNT_IDS:-1}
+    ports:
+      - '127.0.0.1:${API_PORT:-2012}:2012'
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+  web:
+    image: ghcr.io/sergeantjonas/engram-web:${ENGRAM_IMAGE_TAG:-main}
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      TZ: ${TZ:-Europe/Brussels}
+    ports:
+      - '127.0.0.1:${WEB_PORT:-2011}:2011'
+    deploy:
+      resources:
+        limits:
+          # nginx serving a static bundle. Generous at this, and it would have
+          # to be leaking to notice.
+          memory: 128m
+
+volumes:
+  postgres-data:

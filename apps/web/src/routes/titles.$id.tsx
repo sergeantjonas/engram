@@ -4,6 +4,7 @@ import { ApiError } from '../api/client.ts';
 import { titleQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { Activity } from '../title/Activity.tsx';
+import { IntentControls } from '../title/Intent.tsx';
 import { MarkWatchedButton, TakeBack } from '../title/MarkWatched.tsx';
 import { SeasonGrid } from '../title/SeasonGrid.tsx';
 import { Section } from '../title/Section.tsx';
@@ -23,17 +24,16 @@ function TitlePage() {
   const isOwner = useIsOwner();
   const film = title.kind === 'movie';
   const unwatched = title.state !== 'seen';
-  const retractable = figures.manualPlays > 0;
 
   return (
     <div className="space-y-5">
       <TitleHeader {...data} />
 
-      {/* The whole title in one press, which is what a decade-old memory of
-          having watched something actually amounts to — and, beside it, the
-          way back out of one. The row is gone when neither has anything to
-          offer, rather than sitting there as an empty band. */}
-      {isOwner && (unwatched || retractable) ? (
+      {/* What was watched and what was meant, on one row. The marking half
+          disappears when it has nothing to offer; the intent half is always
+          there, because having no opinion is a state you change by saying so
+          rather than one the page can infer. */}
+      {isOwner ? (
         <div className="flex flex-wrap items-center gap-3">
           <MarkWatchedButton
             titleId={id}
@@ -47,6 +47,14 @@ function TitlePage() {
               : { hint: 'Specials are left out — mark those season by season.' })}
           />
           <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
+          {/* A rule rather than a gap: the two halves answer different
+              questions and the row would otherwise read as one list. Gone when
+              the marking half is, or it is a rule at the left edge dividing
+              nothing from the intent controls. */}
+          {unwatched || figures.manualPlays > 0 ? (
+            <span aria-hidden="true" className="h-5 w-px bg-line" />
+          ) : null}
+          <IntentControls titleId={id} intent={title} />
         </div>
       ) : null}
 

@@ -624,9 +624,9 @@ describe('the title page', () => {
     );
   });
 
-  // Nothing to mark and nothing to take back: the row goes rather than sitting
-  // there as an empty band under the header.
-  it('drops the action row when neither half of it has anything to offer', async () => {
+  // Nothing to mark and nothing to take back, though the row itself stays for
+  // the intent controls beside them.
+  it('drops the marking half of the row when it has nothing to offer', async () => {
     stubApi((url) => {
       if (url.includes('/titles/')) {
         const body = detail();
@@ -640,6 +640,10 @@ describe('the title page', () => {
     await screen.findByRole('heading', { name: 'ONE PIECE' });
     expect(screen.queryByRole('button', { name: /Mark the whole run/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Take back/ })).toBeNull();
+    // The rule between the two halves goes with them, rather than standing at
+    // the left edge dividing nothing from the intent controls.
+    expect(document.querySelectorAll('span[aria-hidden="true"].w-px')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Want to watch' })).toBeDefined();
   });
 
   // The notice that offered the way back is gone by the time it fails, so the
@@ -681,6 +685,68 @@ describe('the title page', () => {
     await screen.findByText('Marked S2E5 watched.');
   });
 
+  // What Plex cannot express at all: it knows what was played and nothing
+  // about what was meant.
+  it('records an opinion about a title and draws it as taken', async () => {
+    let want = false;
+    const calls = stubApi((url, init) => {
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        want = (JSON.parse(String(init.body)) as { want: boolean }).want;
+        return json({ intent: { want, dropped: false, excluded: false } });
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.want = want;
+        return json(body);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const button = await screen.findByRole('button', { name: 'Want to watch' });
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    button.click();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Want to watch' }).getAttribute('aria-pressed'),
+      ).toBe('true'),
+    );
+    // A patch: the two it did not name are left alone, or dropping a show
+    // would quietly un-exclude it.
+    const put = calls.find((call) => call.init?.method === 'PUT');
+    expect(put?.url).toBe(`http://localhost:2012/titles/${TITLE_ID}/intent`);
+    expect(JSON.parse(String(put?.init?.body))).toEqual({ want: true });
+
+    // And back off again, which is the half a toggle usually gets wrong.
+    screen.getByRole('button', { name: 'Want to watch' }).click();
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Want to watch' }).getAttribute('aria-pressed'),
+      ).toBe('false'),
+    );
+    expect(
+      JSON.parse(String(calls.filter((call) => call.init?.method === 'PUT').at(-1)?.init?.body)),
+    ).toEqual({ want: false });
+  });
+
+  // The toggle springs back on the refetch, so without this the viewer is
+  // shown a control that undoes itself and never told why.
+  it('says so when an opinion will not save', async () => {
+    stubApi((url, init) => {
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        return json({ error: 'unauthorized', message: 'sign in to change that' }, 401);
+      }
+      if (url.includes('/titles/')) return json(detail());
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Dropped' })).click();
+
+    await screen.findByText('Could not save that: sign in to change that');
+  });
+
   it('clears a reason, which is saying nothing again', async () => {
     const calls = stubTitle();
     await renderAt(`/titles/${TITLE_ID}`);
@@ -713,6 +779,8 @@ describe('the title page', () => {
     expect(screen.queryByRole('button', { name: 'Mark watched' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Mark season 2 watched' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Mark the whole run watched' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Want to watch' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Excluded' })).toBeNull();
   });
 
   it('says when no title is stored under the id', async () => {

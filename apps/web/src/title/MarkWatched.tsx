@@ -1,14 +1,9 @@
 import * as Popover from '@radix-ui/react-popover';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import {
-  type MarkedWatched,
-  markUnwatched,
-  markWatched,
-  titleQuery,
-  type WatchScope,
-} from '../api/titles.ts';
+import { type MarkedWatched, markUnwatched, markWatched, type WatchScope } from '../api/titles.ts';
 import { useToast } from '../shell/Toasts.tsx';
+import { useSettle } from './settle.ts';
 
 /** What the API counts in a given scope: episodes for a show, plays for a film. */
 type Unit = 'episode' | 'play';
@@ -26,21 +21,6 @@ const count = (n: number, unit: Unit) => `${n} ${n === 1 ? unit : `${unit}s`}`;
 const plays = (n: number) => count(n, 'play');
 
 const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
-
-/**
- * Refetches what a write to this title changed.
- *
- * The wall as well as the page: a mark moves a card's fraction, and can move it
- * from still going to finished.
- */
-function useSettle(titleId: string) {
-  const queryClient = useQueryClient();
-  return () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: titleQuery(titleId).queryKey }),
-      queryClient.invalidateQueries({ queryKey: ['titles'] }),
-    ]);
-}
 
 /**
  * Recording something watched long before this record existed, which is the

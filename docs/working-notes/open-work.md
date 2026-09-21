@@ -23,8 +23,10 @@ each:
    reason.~~ Landed 2026-09-19.
 3. ~~Adding a title by hand over `GET /search` and `POST /titles`.~~ Landed
    2026-09-19.
-4. The `intent` write route on the API, and the wall's want / dropped / excluded
-   controls that need it.
+4. ~~The `intent` write route on the API, and the want / dropped / excluded
+   controls that need it.~~ Landed 2026-09-21. The controls went on the title
+   page rather than the wall, which is where the design puts them: a 118px tile
+   is a poor place to put a toggle that hides the tile.
 
 The three screens above were built on Tailwind's defaults — slate greys and
 system-ui — because the design had never been written down. The palette and the
@@ -45,11 +47,9 @@ owe the design, all checked against the running app rather than guessed:
   backfill is two screens instead of one. The marking half exists on the title
   page now, which is what makes this a shortcut rather than a gap.
 
-The chip row landed 2026-09-20 with the facets the design names,
-`PUT /titles/:id/intent` 2026-09-21, and the marking controls the same day.
-What is left of item 4 above is the intent controls themselves: nothing in the
-SPA calls that route yet, so want, dropped and excluded are still read-only on
-every card.
+The chip row landed 2026-09-20 with the facets the design names, and
+`PUT /titles/:id/intent`, the marking controls and the intent controls all on
+2026-09-21.
 
 Two things had to land on the API side first, and the second was a surprise:
 
@@ -78,7 +78,7 @@ Two things had to land on the API side first, and the second was a surprise:
 
 The API now covers the reads the SPA needs and all four of its write paths:
 adding a title, marking things watched, explaining a hole, and recording what
-the viewer wants of a title. The SPA calls three of the four.
+the viewer wants of a title. The SPA calls all four.
 
 ## Next
 
@@ -143,6 +143,28 @@ the viewer wants of a title. The SPA calls three of the four.
 
 ## Done
 
+- **2026-09-21** — The intent controls, which is the last of the four numbered
+  screens. Three toggles on the title page's action row — want to watch,
+  dropped, excluded — over `PUT /titles/:id/intent`, which had been sitting
+  unused since it landed that morning.
+
+  On the title page rather than the wall, although the chunk plan said wall.
+  The design puts them there, and the design is right: `excluded` takes the
+  card off the wall, and a toggle that makes its own tile vanish under a
+  mis-aimed click at 118px is a trap. The wall keeps printing the three as an
+  annotation under the tile, which is all the mockup ever had it do.
+
+  Three independent flags rather than one state, matching the table. They look
+  mutually exclusive and are not: a show can be one you meant to get to and
+  then gave up on, and collapsing that into a single value would make the
+  record forget the first half of it.
+
+  Labelled `Excluded` rather than anything clearer. The tile already prints
+  that word and the chip row offers to show or hide by it, so a third name for
+  one flag would cost more than the jargon does. No notice on success — the
+  button's own pressed state is the answer — but a failure gets one, because
+  the toggle springs back on the refetch and would otherwise undo itself with
+  no account of why.
 - **2026-09-21** — `DELETE /watch-events`, which takes a mark back. A mark is a
   claim, a claim typed into a box can be the wrong one, and a record you cannot
   correct is one you stop trusting.

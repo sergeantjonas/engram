@@ -10,7 +10,7 @@ export type TitleState = 'unwatched' | 'in_progress' | 'seen';
  * is the contract; this is its browser-side reading, and the two are kept the
  * same shape by hand until a wire-types package exists to hold them once.
  */
-export interface TitleSummary {
+export interface TitleSummary extends Intent {
   id: string;
   key: string;
   kind: 'show' | 'movie';
@@ -20,9 +20,6 @@ export interface TitleSummary {
   state: TitleState;
   /** Always `0 / 0` for a movie, which is "not applicable", not "0 of 0". */
   episodes: { total: number; seen: number };
-  want: boolean;
-  dropped: boolean;
-  excluded: boolean;
   /** Null when nothing has ever reported on it, which is not the same as absent. */
   onDisk: boolean | null;
   lastWatchedAt: string | null;
@@ -31,6 +28,13 @@ export interface TitleSummary {
   hasGap: boolean;
   /** Nothing from Plex has ever been recorded against it, so it is here by hand. */
   manualOnly: boolean;
+}
+
+/** What the viewer wants of a title, as against what they have watched. */
+export interface Intent {
+  want: boolean;
+  dropped: boolean;
+  excluded: boolean;
 }
 
 export type GapReason = 'skipped' | 'missing';
@@ -242,6 +246,21 @@ export function markUnwatched(mark: {
     `/watch-events?titleId=${encodeURIComponent(mark.titleId)}${scoped}`,
     { method: 'DELETE' },
   );
+}
+
+/**
+ * Records an opinion about a title.
+ *
+ * A patch: naming one field leaves the other two alone, so dropping a show
+ * cannot quietly un-exclude it. When a title was dropped is the server's to
+ * decide, which is why only booleans go over the wire.
+ */
+export function setIntent(titleId: string, patch: Partial<Intent>): Promise<{ intent: Intent }> {
+  return apiFetch<{ intent: Intent }>(`/titles/${encodeURIComponent(titleId)}/intent`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
 }
 
 /** A TMDB search hit, as `GET /search` answers it. Not stored until it is added. */

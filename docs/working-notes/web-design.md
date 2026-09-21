@@ -177,6 +177,12 @@ Around it:
   that offer it appear only where this record was told something by hand.
 - Activity, last 5 of 19, with rewatches marked.
 - Intent controls: still watching, dropped after S2.
+
+  Built as three independent toggles — want to watch, dropped, excluded — on
+  the action row beside the marking controls, rather than as the mockup's pair
+  of sentences. They are three flags in the table and they do not exclude one
+  another, so a control that reads as a choice between them would be lying
+  about what it writes.
 - A hole is declarable in place: "S2E5 — I skipped it", plus "add an episode by
   hand".
 

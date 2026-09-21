@@ -1,6 +1,6 @@
 # Web design
 
-**Status:** Settled 2026-09-16; amended 2026-09-20 where the build departs from
+**Status:** Settled 2026-09-16; amended 2026-09-21 where the build departs from
 the mockup, each departure marked as such in place. The mockup is the reference,
 not this note: [../design/engram-app.html](../design/engram-app.html), or
 <https://claude.ai/artifact/8Tu2NYg7EXNS8kDw3LanJ5> for the hosted copy. Read
@@ -164,6 +164,14 @@ Around it:
 - The grid itself, grouped by season, each season headed `SEASON 2 · ONE
   MISSING` with a **Mark season watched** control. That control is the same one
   the add screen uses.
+
+  Built as a popover holding one free-text date field, and in three places
+  rather than one: the season heading the design names, the episode popover,
+  and a whole-run control under the header — the beginning of the CTA row,
+  which is otherwise still missing. The date is free text because what a viewer
+  backfilling a decade has is "2019" and almost never a day, and the API reads
+  the precision off the shape of what was typed. Each control is gone once its
+  scope is complete, so none of them offers a write that would do nothing.
 - Activity, last 5 of 19, with rewatches marked.
 - Intent controls: still watching, dropped after S2.
 - A hole is declarable in place: "S2E5 — I skipped it", plus "add an episode by
@@ -180,6 +188,10 @@ quietly never gets used.
 
 The commit bar states what the write will do before it happens: `writes 54
 episodes · source manual · precision year · presence not on disk`.
+
+Built as half of that: the screen adds the title and navigates to it, and the
+marking happens on the title page. The season checkboxes and the commit bar are
+not built, so a backfill is two screens rather than one.
 
 This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 2019" has no timestamp, and the alternative — a nullable `watched_at` — would

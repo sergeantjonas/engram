@@ -1,6 +1,9 @@
 import type { SeasonGrid as Season } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { EpisodeCell } from './EpisodeCell.tsx';
+import { MarkWatchedButton } from './MarkWatched.tsx';
+
+const HEADING = 'font-mono text-[9.5px] tracking-[.08em] text-dim';
 
 export function SeasonGrid({ season, titleId }: { season: Season; titleId: string }) {
   // Asked once per season rather than once per cell: ONE PIECE is 1100
@@ -17,20 +20,44 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
     <ul className="flex flex-wrap gap-1">
       {season.episodes.map((episode) => (
         <li key={episode.id}>
-          <EpisodeCell episode={episode} titleId={titleId} isOwner={isOwner} />
+          <EpisodeCell
+            episode={episode}
+            season={season.season}
+            titleId={titleId}
+            isOwner={isOwner}
+          />
         </li>
       ))}
     </ul>
   );
+
+  // Backfilling a decade of television one cell at a time is how a feature
+  // like this quietly never gets used, so the season is the unit. The season
+  // is named in the label rather than left to the heading beside it: a page of
+  // seasons is otherwise a page of identical buttons to anything not reading
+  // in two dimensions.
+  const markSeason = isOwner ? (
+    <MarkWatchedButton
+      titleId={titleId}
+      scope={{ season: season.season }}
+      label={`mark ${heading.toLowerCase()} watched`}
+      name={`Mark ${heading.toLowerCase()} watched`}
+      complete={seen === season.episodes.length}
+      className="font-mono text-[9.5px] tracking-[.08em] text-faint underline-offset-4 hover:text-jade hover:underline"
+    />
+  ) : null;
 
   // Specials are outside the fraction on the wall, so they are folded here
   // too: an OVA that was never played should not read as a hole in the run.
   if (season.season === 0) {
     return (
       <details className="space-y-1.5">
-        <summary className="cursor-pointer font-mono text-[9.5px] tracking-[.08em] text-dim">
+        <summary className={`cursor-pointer ${HEADING}`}>
           {heading} · {seen} of {season.episodes.length}
         </summary>
+        {/* Under the summary rather than beside it: a button inside a
+            `summary` is a control that also toggles the disclosure. */}
+        {markSeason}
         {grid}
       </details>
     );
@@ -38,10 +65,13 @@ export function SeasonGrid({ season, titleId }: { season: Season; titleId: strin
 
   return (
     <section aria-label={heading} className="space-y-1.5">
-      {/* Under the page's Episodes heading, not beside it. */}
-      <h3 className="font-mono text-[9.5px] tracking-[.08em] text-dim">
-        {heading} · {seen} of {season.episodes.length}
-      </h3>
+      <div className="flex items-baseline gap-3">
+        {/* Under the page's Episodes heading, not beside it. */}
+        <h3 className={HEADING}>
+          {heading} · {seen} of {season.episodes.length}
+        </h3>
+        {markSeason}
+      </div>
       {grid}
     </section>
   );

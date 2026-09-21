@@ -267,6 +267,8 @@ const episode = (overrides: Partial<EpisodeCell>): EpisodeCell => ({
 });
 
 describe('the title page', () => {
+  /** In the URL and in the body of every mark, so it is named once. */
+  const TITLE_ID = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
   const daysBeforeNow = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
   const hole = episode({ number: 5, name: 'WAX ON, WAX OFF', airDate: '2026-03-10' });
   const detail = (): TitleDetail => ({
@@ -322,7 +324,9 @@ describe('the title page', () => {
             lastWatchedAt: '2026-03-01T20:00:00.000Z',
             lastWatchedPrecision: 'exact',
           }),
-          hole,
+          // A copy: `hole` is shared for its id, and a stub that records what
+          // the viewer did writes onto the cell it hands back.
+          { ...hole },
           episode({
             number: 6,
             seen: true,
@@ -336,10 +340,15 @@ describe('the title page', () => {
     ],
   });
 
-  /** A stub API whose one title remembers the gap the viewer declares. */
+  /** A stub API whose one title remembers the gap and the mark the viewer leaves. */
   function stubTitle(isOwner = true) {
     let gap: EpisodeCell['gap'] = null;
+    let marked = false;
     const calls = stubApi((url, init) => {
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        marked = true;
+        return json({ written: 1, skipped: 0 }, 201);
+      }
       if (url.endsWith('/gap') && init?.method === 'PUT') {
         gap = { note: null, ...(JSON.parse(String(init.body)) as object) } as EpisodeCell['gap'];
         return json({ gap });
@@ -351,7 +360,10 @@ describe('the title page', () => {
       if (url.includes('/titles/')) {
         const body = detail();
         const cell = body.seasons[1]?.episodes[1];
-        if (cell) cell.gap = gap;
+        if (cell) {
+          cell.gap = gap;
+          cell.seen = marked;
+        }
         return json(body);
       }
       return json({ isOwner });
@@ -361,7 +373,7 @@ describe('the title page', () => {
 
   it('draws the grid with specials folded away and every hole labelled', async () => {
     stubTitle();
-    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+    await renderAt(`/titles/${TITLE_ID}`);
 
     // Read off the header rather than matched as one string: every figure sits
     // in its own mono span beside its own Archivo label.
@@ -411,7 +423,7 @@ describe('the title page', () => {
 
   it('records why a hole is a hole and redraws the cell', async () => {
     const calls = stubTitle();
-    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+    await renderAt(`/titles/${TITLE_ID}`);
 
     (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
     (await screen.findByRole('radio', { name: 'Never had it' })).click();
@@ -429,9 +441,104 @@ describe('the title page', () => {
     });
   });
 
+  it('marks an unwatched episode watched, years after the fact', async () => {
+    const calls = stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    fireEvent.change(await screen.findByRole('textbox', { name: /When\?/ }), {
+      target: { value: '2019' },
+    });
+    screen.getByRole('button', { name: 'Mark watched' }).click();
+
+    await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, seen' });
+    const post = calls.find((call) => call.init?.method === 'POST');
+    expect(post?.url).toBe('http://localhost:2012/watch-events');
+    // The date as written, so the API reads a year off its shape rather than
+    // being handed the first of January.
+    expect(JSON.parse(String(post?.init?.body))).toEqual({
+      titleId: TITLE_ID,
+      scope: { season: 2, episode: 5 },
+      watchedAt: '2019',
+    });
+  });
+
+  // Blank is the ordinary answer, and it has to reach the API as no date at
+  // all: an empty string would be a claim about when rather than an absence.
+  it('leaves the date out entirely when the viewer does not remember one', async () => {
+    const calls = stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+
+    await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, seen' });
+    const post = calls.find((call) => call.init?.method === 'POST');
+    expect(JSON.parse(String(post?.init?.body))).toEqual({
+      titleId: TITLE_ID,
+      scope: { season: 2, episode: 5 },
+    });
+  });
+
+  // The unit that makes backfilling a decade of television survivable, and the
+  // one the API answers with a count for, because the write is idempotent.
+  it('marks a whole season watched and says how much of it was new', async () => {
+    let marked = false;
+    const calls = stubApi((url, init) => {
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        marked = true;
+        return json({ written: 2, skipped: 1 }, 201);
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        // The mark finishes the season, which is the case that used to take
+        // the answer away: the control's own gate would drop it mid-sentence.
+        for (const cell of body.seasons[1]?.episodes ?? []) cell.seen ||= marked;
+        return json(body);
+      }
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Mark season 2 watched' })).click();
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+
+    // Asserted after the refetch has landed, not before: the answer appears
+    // either way, and the hazard is the completed season taking it away again
+    // a render later.
+    await screen.findByRole('heading', { name: /Season 2\s*·\s*3 of 3/ });
+    expect(screen.getByText('Marked 2 episodes; 1 already on record.')).toBeDefined();
+    const post = calls.find((call) => call.init?.method === 'POST');
+    expect(JSON.parse(String(post?.init?.body))).toEqual({
+      titleId: TITLE_ID,
+      scope: { season: 2 },
+    });
+  });
+
+  // Specials are outside a whole-run mark, so the button that covers the run
+  // has to say so rather than leaving the viewer to find out from the grid.
+  it('marks the whole run watched, warning that specials are left out', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        return json({ written: 3, skipped: 0 }, 201);
+      }
+      if (url.includes('/titles/')) return json(detail());
+      return json({ isOwner: true });
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Mark the whole run watched' })).click();
+    await screen.findByText('Specials are left out — mark those season by season.');
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+
+    await screen.findByText('Marked 3 episodes.');
+    const post = calls.find((call) => call.init?.method === 'POST');
+    expect(JSON.parse(String(post?.init?.body))).toEqual({ titleId: TITLE_ID, scope: 'all' });
+  });
+
   it('clears a reason, which is saying nothing again', async () => {
     const calls = stubTitle();
-    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+    await renderAt(`/titles/${TITLE_ID}`);
     (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
     (await screen.findByRole('button', { name: 'Save' })).click();
     const cell = await screen.findByRole('button', {
@@ -448,7 +555,7 @@ describe('the title page', () => {
   // The grid is the record; the form under it is the only part that writes.
   it('gives a stranger the grid and its facts but no form', async () => {
     stubTitle(false);
-    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+    await renderAt(`/titles/${TITLE_ID}`);
 
     await screen.findByRole('heading', { name: 'ONE PIECE' });
     (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
@@ -458,6 +565,9 @@ describe('the title page', () => {
     expect(screen.getByText('Not seen')).toBeDefined();
     expect(screen.queryByRole('radio', { name: 'Never had it' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Mark watched' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Mark season 2 watched' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Mark the whole run watched' })).toBeNull();
   });
 
   it('says when no title is stored under the id', async () => {
@@ -466,7 +576,7 @@ describe('the title page', () => {
         ? json({ error: 'not_found', message: 'no title is stored under that id' }, 404)
         : json({ isOwner: true }),
     );
-    await renderAt('/titles/6d2a1f0e-1b2c-4d3e-8f90-1234567890ab');
+    await renderAt(`/titles/${TITLE_ID}`);
 
     await screen.findByText(/No title is stored under that id/);
     expect(screen.getByRole('link', { name: 'Back to the wall' }).getAttribute('href')).toBe('/');

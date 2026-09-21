@@ -36,14 +36,20 @@ owe the design, all checked against the running app rather than guessed:
   216px list of every title down the left, and a row of actions under
   everything. The hero, the stat box, the twelve-month strip and the activity
   feed all landed.
-- Missing entirely: the next-up strip, the list view behind the rail's LIST,
-  and the title page's mark-season-watched control. The rail carries only HOME
-  and ADD until the screens behind LIST and YEAR exist.
+- Missing entirely: the next-up strip and the list view behind the rail's LIST.
+  The rail carries only HOME and ADD until the screens behind LIST and YEAR
+  exist.
+- **The add screen still only adds.** The design has it marking whole seasons
+  in the same action, over season-level checkboxes and a commit bar that states
+  the write before it happens. It writes the title and navigates away, so a
+  backfill is two screens instead of one. The marking half exists on the title
+  page now, which is what makes this a shortcut rather than a gap.
 
-The chip row landed 2026-09-20 with the facets the design names, and
-`PUT /titles/:id/intent` 2026-09-21. What is left of item 4 above is the
-controls themselves: nothing in the SPA calls that route yet, so want, dropped
-and excluded are still read-only on every card.
+The chip row landed 2026-09-20 with the facets the design names,
+`PUT /titles/:id/intent` 2026-09-21, and the marking controls the same day.
+What is left of item 4 above is the intent controls themselves: nothing in the
+SPA calls that route yet, so want, dropped and excluded are still read-only on
+every card.
 
 Two things had to land on the API side first, and the second was a surprise:
 
@@ -70,12 +76,9 @@ Two things had to land on the API side first, and the second was a surprise:
    reasoning, including why `library_presence` is not the answer, is in
    [data-model.md](data-model.md).
 
-The API covers the reads the SPA needs and two of its three write paths —
-adding a title, marking episodes watched, and explaining a hole. **One is
-missing:** nothing writes `intent`, so the wall cannot set want, dropped or
-excluded, which the settled design treats as part of filtering by state. That is
-a small route over a table that already exists, and it can land alongside the
-screen that needs it rather than ahead of it.
+The API now covers the reads the SPA needs and all four of its write paths:
+adding a title, marking things watched, explaining a hole, and recording what
+the viewer wants of a title. The SPA calls three of the four.
 
 ## Next
 
@@ -104,6 +107,15 @@ screen that needs it rather than ahead of it.
 
 ## Decisions still open
 
+- **Whether marking a season watched should step over a declared hole.** It
+  does not today: `planWatchEvents` expands a season mark over every episode in
+  it, so a season holding an episode the viewer declared `missing` — never had
+  it — gets a watch event written over that episode too, and the reason is left
+  behind as stale. The grid already treats seen as winning over a stale reason,
+  so nothing displays wrongly, but the record now says something the viewer had
+  explicitly denied. Options: exclude declared holes from a bulk mark, clear
+  the reason as part of the mark, or leave it and treat the bulk mark as the
+  later and better-informed claim.
 - **What to do with a season 0 that is mostly featurettes.** House of the
   Dragon's title page opens with `Specials · 0 of 89`: TMDB's season 0 for it
   is 89 behind-the-scenes clips, and `backfill:episodes` pulled every one. The
@@ -131,6 +143,34 @@ screen that needs it rather than ahead of it.
 
 ## Done
 
+- **2026-09-21** — Marking something watched from the title page, which is the
+  half of the record Plex cannot supply. `POST /watch-events` had taken an
+  episode, a season or a whole title since chunk 4; nothing in the SPA had ever
+  called it, so the grid could say a hole was deliberate but not that it was
+  filled. Three controls now do: one in the episode popover above the hole
+  form, one beside each season heading, and one under the header for the whole
+  run.
+
+  The date is a free-text field rather than a picker, and blank is the expected
+  answer. What a viewer backfilling a decade has is "2019", occasionally "June
+  2019" and almost never a day; a picker would make them fill in the parts they
+  do not remember, and `parseWatchedAt` already reads the precision off the
+  shape of what was typed. Blank is sent as no field at all rather than as an
+  empty string, so it stores as `unknown` precision instead of a claim.
+
+  Each control disappears once its scope is complete, so no button offers a
+  write that would do nothing — but not while its own panel is open, because
+  the mark that finishes a season is exactly the one whose answer is worth
+  reading. The panel reports `written` against `skipped`: the write is
+  idempotent on `(source, source_event_id)`, so pressing it twice is safe and
+  "that was already true" is a different answer from "that did nothing".
+
+  A bulk mark still writes over an episode the viewer declared they never had;
+  see the open decision below.
+
+  Unmarking is not here. There is no `DELETE /watch-events`, and an event is a
+  fact rather than a flag, so undoing one is a design question rather than a
+  missing route.
 - **2026-09-21** — `PUT /titles/:id/intent`, the write path that was missing.
   Booleans on the wire — want, dropped, excluded — against a flag and two
   timestamps in the table: when a title was dropped is worth keeping, but a

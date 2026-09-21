@@ -174,6 +174,40 @@ export function clearGap(episodeId: string) {
   return apiFetch<void>(`/episodes/${encodeURIComponent(episodeId)}/gap`, { method: 'DELETE' });
 }
 
+/**
+ * How much of a title one mark covers, as `POST /watch-events` names it.
+ *
+ * `all` steps over season 0, so specials have to be named to be marked.
+ */
+export type WatchScope = 'all' | { season: number; episode?: number };
+
+/** What `POST /watch-events` answers: the same mark twice writes nothing the second time. */
+export interface MarkedWatched {
+  written: number;
+  skipped: number;
+}
+
+/**
+ * Records that something was watched, which for history older than this Plex
+ * server is the only way it gets on the record at all.
+ *
+ * `watchedAt` is the date as it was written — a year, a month, a day, or blank
+ * — and the API reads the precision off its shape rather than being told. A
+ * blank one is stored as no date, not as today.
+ */
+export function markWatched(mark: {
+  titleId: string;
+  scope: WatchScope;
+  watchedAt: string;
+}): Promise<MarkedWatched> {
+  const watchedAt = mark.watchedAt.trim();
+  return postJson<MarkedWatched>('/watch-events', {
+    titleId: mark.titleId,
+    scope: mark.scope,
+    ...(watchedAt === '' ? {} : { watchedAt }),
+  });
+}
+
 /** A TMDB search hit, as `GET /search` answers it. Not stored until it is added. */
 export interface TmdbCandidate {
   kind: 'show' | 'movie';

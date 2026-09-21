@@ -2,7 +2,9 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, Link } from '@tanstack/react-router';
 import { ApiError } from '../api/client.ts';
 import { titleQuery } from '../api/titles.ts';
+import { useIsOwner } from '../auth/useIsOwner.ts';
 import { Activity } from '../title/Activity.tsx';
+import { MarkWatchedButton } from '../title/MarkWatched.tsx';
 import { SeasonGrid } from '../title/SeasonGrid.tsx';
 import { Section } from '../title/Section.tsx';
 import { TitleHeader } from '../title/TitleHeader.tsx';
@@ -18,10 +20,27 @@ function TitlePage() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(titleQuery(id));
   const { title, seasons, figures } = data;
+  const isOwner = useIsOwner();
+  const film = title.kind === 'movie';
 
   return (
     <div className="space-y-5">
       <TitleHeader {...data} />
+
+      {/* The whole title in one press, which is what a decade-old memory of
+          having watched something actually amounts to. */}
+      {isOwner ? (
+        <MarkWatchedButton
+          titleId={id}
+          scope="all"
+          complete={title.state === 'seen'}
+          label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
+          className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
+          {...(film
+            ? { unit: 'play' }
+            : { hint: 'Specials are left out — mark those season by season.' })}
+        />
+      ) : null}
 
       <YearBar
         moments={data.recentActivity}

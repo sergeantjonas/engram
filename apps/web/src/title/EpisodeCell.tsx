@@ -9,6 +9,7 @@ import {
   titleQuery,
 } from '../api/titles.ts';
 import { formatAirDate, formatWatched } from './format.ts';
+import { MarkWatched } from './MarkWatched.tsx';
 
 type CellStatus = 'seen' | 'skipped' | 'missing' | 'unmatched' | 'hole';
 
@@ -45,10 +46,13 @@ const REASON_LABEL: Record<GapReason, string> = {
 
 export function EpisodeCell({
   episode,
+  season,
   titleId,
   isOwner,
 }: {
   episode: Cell;
+  /** Not on the cell itself: a mark names the episode by season and number. */
+  season: number;
   titleId: string;
   isOwner: boolean;
 }) {
@@ -84,6 +88,18 @@ export function EpisodeCell({
                 (episode.playCount > 1 ? `, ${episode.playCount} plays` : '')
               : 'Not seen'}
           </p>
+          {/* The affirmative action first, and above the hole form: an
+              unwatched cell is far more often one this record never heard
+              about than one there is a story behind. */}
+          {isOwner && !episode.seen ? (
+            <div className="mt-3 border-t border-line pt-3">
+              <MarkWatched
+                titleId={titleId}
+                scope={{ season, episode: episode.number }}
+                onDone={() => setOpen(false)}
+              />
+            </div>
+          ) : null}
           {/* A seen episode only gets the form when a stale reason is still on
               it to clear, and nobody but the owner gets it at all: a stranger
               reads the grid from the colours and this popover's facts. */}

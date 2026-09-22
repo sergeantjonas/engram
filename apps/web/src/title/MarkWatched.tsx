@@ -66,7 +66,9 @@ export function MarkWatched({
         message: describe(result, unit, what, oneEpisode(scope)),
         // Only where something was actually written. Nothing to take back is
         // not an undo, it is a second way to remove the marks already there.
-        ...(result.written === 0
+        // Nor after a range: the retraction has no range, and taking back the
+        // season would remove hand-entered plays the mark never touched.
+        ...(result.written === 0 || isRange(scope)
           ? {}
           : {
               action: {
@@ -144,7 +146,10 @@ function describe(
   return skipped === 0 ? `${marked}.` : `${marked}; ${skipped} already on record.`;
 }
 
-const oneEpisode = (scope: WatchScope) => scope !== 'all' && scope.episode !== undefined;
+const oneEpisode = (scope: WatchScope) =>
+  scope !== 'all' && 'episode' in scope && scope.episode !== undefined;
+
+const isRange = (scope: WatchScope) => scope !== 'all' && 'through' in scope;
 
 /**
  * Taking a mark back, for the misclick that is found later rather than while

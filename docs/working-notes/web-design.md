@@ -299,6 +299,9 @@ Around it:
   backfilling a decade has is "2019" and almost never a day, and the API reads
   the precision off the shape of what was typed. Each control is gone once its
   scope is complete, so none of them offers a write that would do nothing.
+  Since 2026-09-22 a shift-click on an unwatched cell opens the same popover
+  for the range from the cell after the last seen one through it, the form
+  reading `S2E5–E7` — [web-depth.md](web-depth.md) arc 3 chunk 1.
 
   Beside each is the way back out: a mark can be taken back, and the controls
   that offer it appear only where this record was told something by hand.

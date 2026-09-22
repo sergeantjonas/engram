@@ -60,6 +60,7 @@ export function EpisodeCell({
   titleId,
   isOwner,
   today,
+  rangeFrom,
 }: {
   episode: Cell;
   /** Not on the cell itself: a mark names the episode by season and number. */
@@ -68,9 +69,18 @@ export function EpisodeCell({
   isOwner: boolean;
   /** Today as `YYYY-MM-DD`, passed in so a wall of cells shares one clock. */
   today: string;
+  /** Where a shift-click's range starts: the cell after the last seen one before this. */
+  rangeFrom: number;
 }) {
   const [open, setOpen] = useState(false);
+  // A shift-click asks for everything from the last seen cell through this
+  // one, the shape a backfill actually has — "season 4 up to episode 7" —
+  // rather than one cell at a time. Forgotten when the popover closes, so the
+  // next plain click is one cell again.
+  const [range, setRange] = useState(false);
   const status = statusOf(episode, today);
+  const markable = isOwner && !episode.seen && status !== 'unaired';
+  const ranged = range && markable && rangeFrom < episode.number;
   const label = `Episode ${episode.number}${episode.name ? `: ${episode.name}` : ''}, ${STATUS_LABEL[status]}`;
   const still = stillUrl(episode.stillPath);
   // Figures only on the mono line; the sentence about a missing date or an
@@ -87,7 +97,13 @@ export function EpisodeCell({
       : null;
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setRange(false);
+      }}
+    >
       {/* A tip as well as the popover: in a season of 366 cells, finding out
           what one is should not cost a click and a dismissal. Hidden while the
           popover is open, which says all of this and more. */}
@@ -99,6 +115,7 @@ export function EpisodeCell({
       >
         <Popover.Trigger
           aria-label={label}
+          onClick={(event) => setRange(event.shiftKey)}
           className={`grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
         >
           {episode.number}
@@ -143,12 +160,26 @@ export function EpisodeCell({
           {/* The affirmative action first, and above the hole form: an
               unwatched cell is far more often one this record never heard
               about than one there is a story behind. */}
-          {isOwner && !episode.seen && status !== 'unaired' ? (
+          {markable ? (
             <div className="mt-3 border-t border-line pt-3">
+              {ranged ? (
+                <p className="mb-2 text-xs text-dim">
+                  Everything from <span className="font-mono text-[10px]">E{rangeFrom}</span>{' '}
+                  through this one.
+                </p>
+              ) : null}
               <MarkWatched
                 titleId={titleId}
-                scope={{ season, episode: episode.number }}
-                what={`S${season}E${episode.number}`}
+                scope={
+                  ranged
+                    ? { season, from: rangeFrom, through: episode.number }
+                    : { season, episode: episode.number }
+                }
+                what={
+                  ranged
+                    ? `S${season}E${rangeFrom}–E${episode.number}`
+                    : `S${season}E${episode.number}`
+                }
                 onDone={() => setOpen(false)}
               />
             </div>

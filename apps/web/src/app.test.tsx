@@ -1072,6 +1072,66 @@ describe('the title page', () => {
 
   // The unit that makes backfilling a decade of television survivable, and the
   // one the API answers with a count for, because the write is idempotent.
+  // "Season 2 up to episode 7" in one mark: a shift-click runs from the cell
+  // after the last seen one through the one clicked, and the popover says so.
+  it('marks a range through the shift-clicked cell, from after the last seen one', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        return json({ written: 3, skipped: 0 }, 201);
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        // E4 seen, then E5, E6 and E7 not: the range runs from E5.
+        const six = body.seasons[1]?.episodes[2];
+        if (six) six.seen = false;
+        body.seasons[1]?.episodes.push(episode({ number: 7, name: 'SEVEN' }));
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Episode 7: SEVEN, not seen' }), {
+      shiftKey: true,
+    });
+    expect(await screen.findByText(/through this one/)).toBeDefined();
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+
+    await screen.findByText('Marked 3 episodes in S2E5–E7.');
+    // No undo: the retraction has no range, and taking back the season would
+    // remove plays the mark never touched.
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
+    const post = calls.find((call) => call.init?.method === 'POST');
+    expect(JSON.parse(String(post?.init?.body))).toEqual({
+      titleId: TITLE_ID,
+      scope: { season: 2, from: 5, through: 7 },
+    });
+  });
+
+  it('starts a range at the season’s first cell when nothing before it is seen', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        return json({ written: 3, skipped: 0 }, 201);
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        for (const cell of body.seasons[1]?.episodes ?? []) cell.seen = false;
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Episode 6\b/ }), {
+      shiftKey: true,
+    });
+    (await screen.findByRole('button', { name: 'Mark watched' })).click();
+
+    await screen.findByText('Marked 3 episodes in S2E4–E6.');
+    const post = calls.find((call) => call.init?.method === 'POST');
+    expect(JSON.parse(String(post?.init?.body))?.scope).toEqual({ season: 2, from: 4, through: 6 });
+  });
+
   it('marks a whole season watched and says how much of it was new', async () => {
     let marked = false;
     const calls = stubApi((url, init) => {

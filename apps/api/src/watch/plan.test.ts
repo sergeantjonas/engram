@@ -109,6 +109,31 @@ describe('planWatchEvents', () => {
     expect(rowsOf(plan)[0]?.sourceEventId).toBe('manual:show:tvdb:392276:S1E2');
   });
 
+  // "Season 1 up to episode 2": both ends included, and the unaired stepped
+  // over like a season mark, since the range is a claim about what was seen.
+  it('marks a range of one season, both ends included', () => {
+    const plan = planWatchEvents(
+      mark({
+        episodes: [
+          ...episodes,
+          { id: 's1e3', season: 1, number: 3, airDate: '2024-01-04' },
+          { id: 's1e4', season: 1, number: 4, airDate: '2099-01-01' },
+        ],
+        scope: { kind: 'range', season: 1, from: 2, through: 4 },
+      }),
+    );
+
+    expect(rowsOf(plan).map((row) => row.episodeId)).toEqual(['s1e2', 's1e3']);
+  });
+
+  it('refuses a range whose far end the title does not have', () => {
+    const plan = planWatchEvents(
+      mark({ scope: { kind: 'range', season: 1, from: 1, through: 9 } }),
+    );
+
+    expect(plan).toEqual({ ok: false, reason: 'S1E9 is not on record here' });
+  });
+
   it('carries no episode for a movie, which has none', () => {
     const plan = planWatchEvents(mark({ target: movie, episodes: [] }));
 

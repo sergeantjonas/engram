@@ -18,10 +18,27 @@ import { episodesInScope, MANUAL_SOURCE, planWatchEvents, type WatchScope } from
  */
 const scopeSchema = z.union([
   z.literal('all'),
-  z.object({
-    season: z.int().min(0, 'season must be 0 or more'),
-    episode: z.int().min(1, 'episode must be 1 or more').optional(),
-  }),
+  z
+    .object({
+      season: z.int().min(0, 'season must be 0 or more'),
+      episode: z.int().min(1, 'episode must be 1 or more').optional(),
+      /** A range within the season: `from` defaults to the first episode. */
+      from: z.int().min(1, 'from must be 1 or more').optional(),
+      through: z.int().min(1, 'through must be 1 or more').optional(),
+    })
+    .refine((scope) => scope.episode === undefined || scope.through === undefined, {
+      message: 'name one episode or a range through one, not both',
+    })
+    .refine((scope) => scope.from === undefined || scope.through !== undefined, {
+      message: 'from needs a through',
+    })
+    .refine(
+      (scope) =>
+        scope.from === undefined || scope.through === undefined || scope.from <= scope.through,
+      {
+        message: 'from must not be past through',
+      },
+    ),
 ]);
 
 const bodySchema = z.object({
@@ -38,6 +55,9 @@ const bodySchema = z.object({
 
 export const toScope = (scope: z.infer<typeof scopeSchema>): WatchScope => {
   if (scope === 'all') return { kind: 'title' };
+  if (scope.through !== undefined) {
+    return { kind: 'range', season: scope.season, from: scope.from ?? 1, through: scope.through };
+  }
   if (scope.episode === undefined) return { kind: 'season', season: scope.season };
   return { kind: 'episode', season: scope.season, episode: scope.episode };
 };

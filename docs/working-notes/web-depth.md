@@ -1,15 +1,11 @@
 # Web depth
 
 **Status:** In progress — scoped 2026-09-21 from a review of the three built
-screens against [web-design.md](web-design.md). Arc 1 is complete: chunks 1
-and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
-2026-09-22 in two commits with migration 0012, deployed and refreshed on the
-box the same day; chunks 2 and 3 landed 2026-09-22, chunk 3 in two commits
-with migration 0013, and both were deployed and refreshed on the box the same
-day; chunk 3 was then amended so the watched cell is shows-only and a film's
-runtime sits on the meta line. Chunk 4 landed 2026-09-22 in two commits with
-migration 0014, deployed and refreshed on the box the same day. Arc 2 is
-complete; arc 3 is next. Arcs are ordered; chunks inside an arc are one commit each, and each
+screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
+and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
+with migrations 0012 to 0014, each refreshed on the box the day it shipped.
+Arc 3 chunk 1 landed 2026-09-22, not yet deployed; chunk 2 is next. Arcs are
+ordered; chunks inside an arc are one commit each, and each
 one deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -333,8 +329,9 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
 
 ## Arc 3 · Manual entry as a first-class verb
 
-1. **Range marks.** The two grains today are a whole season and one cell;
-   the real shape is "seasons 1 to 3, and season 4 up to episode 7". A new
+1. ~~**Range marks.**~~ Landed 2026-09-22. The two grains today are a whole
+   season and one cell; the real shape is "seasons 1 to 3, and season 4 up to
+   episode 7". A new
    scope for `planWatchEvents`, `{ season, through: episode }`, expanding to
    every episode of that season up to and including it, specials excluded
    like every other scope. In the grid: shift-click a cell marks from the last
@@ -342,6 +339,20 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    with `what` reading `S4E1–E7`. Unit-test the expansion; the route is the
    same `POST` as the other scopes. Drag-select is the polished form and
    waits until the shift-click has been used for a fortnight.
+
+   Landed as planned with one addition: the scope is `{ season, from?,
+   through }`, `from` defaulting to the season's first episode, so the grid
+   can send the range it shows rather than the whole season up to the cell —
+   re-marking the seen cells before it would write nothing on the same date
+   and a rewatch on a different one. `episodesInScope` steps over the unaired
+   like a season mark and refuses a `through` the season does not have. In
+   the grid a shift-click on an unwatched cell opens its popover with a line
+   saying where the range starts and the mark form reading `S2E5–E7`; a
+   shift-click with nothing seen before the cell starts at the season's
+   first, and one where the range would be a single cell is a plain click.
+   The retraction has no range, so the notice after a range mark offers no
+   undo: taking back the season would remove hand-entered plays the mark
+   never touched. A misjudged range is taken back cell by cell.
 2. **The date field remembers.** Every popover opens blank, so a season
    entered cell by cell means retyping `2019` each time. Keep the last date
    typed on the page for the session, in module state or a context above the

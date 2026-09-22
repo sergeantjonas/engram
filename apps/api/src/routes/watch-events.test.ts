@@ -61,6 +61,16 @@ describe('POST /watch-events', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it('rejects a range that also names one episode, or runs backwards', async () => {
+    expect((await post({ titleId, scope: { season: 2, episode: 3, through: 5 } })).statusCode).toBe(
+      400,
+    );
+    expect((await post({ titleId, scope: { season: 2, from: 6, through: 5 } })).statusCode).toBe(
+      400,
+    );
+    expect((await post({ titleId, scope: { season: 2, from: 3 } })).statusCode).toBe(400);
+  });
+
   it('rejects a negative season', async () => {
     const response = await post({ titleId, scope: { season: -1 } });
 
@@ -237,6 +247,21 @@ describe('toScope', () => {
       kind: 'episode',
       season: 2,
       episode: 5,
+    });
+  });
+
+  it('reads a range, from the first episode unless told otherwise', () => {
+    expect(toScope({ season: 4, through: 7 })).toEqual({
+      kind: 'range',
+      season: 4,
+      from: 1,
+      through: 7,
+    });
+    expect(toScope({ season: 4, from: 3, through: 7 })).toEqual({
+      kind: 'range',
+      season: 4,
+      from: 3,
+      through: 7,
     });
   });
 

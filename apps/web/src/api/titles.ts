@@ -237,7 +237,11 @@ export function clearGap(episodeId: string) {
  *
  * `all` steps over season 0, so specials have to be named to be marked.
  */
-export type WatchScope = 'all' | { season: number; episode?: number };
+export type WatchScope =
+  | 'all'
+  | { season: number; episode?: number }
+  /** Episodes `from` through `through` of one season, both included. */
+  | { season: number; from: number; through: number };
 
 /** What `POST /watch-events` answers: the same mark twice writes nothing the second time. */
 export interface MarkedWatched {
@@ -286,7 +290,9 @@ export function markUnwatched(mark: {
     mark.scope === 'all'
       ? ''
       : `&season=${mark.scope.season}${
-          mark.scope.episode === undefined ? '' : `&episode=${mark.scope.episode}`
+          'episode' in mark.scope && mark.scope.episode !== undefined
+            ? `&episode=${mark.scope.episode}`
+            : ''
         }`;
 
   return apiFetch<RetractedMarks>(

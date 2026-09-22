@@ -270,7 +270,10 @@ the viewer wants of a title. The SPA calls all four.
    0014: director, top cast, collection and its parts, the first new TMDB
    call, one per collection; a credits line under the synopsis and the
    collection as tiles where a show's grid sits); deployed and refreshed on
-   the box 2026-09-22. Arc 2 is complete. Arc 3, manual entry as a first-class verb, is next.
+   the box 2026-09-22. Arc 2 is complete. Arc 3, manual entry as a
+   first-class verb: chunk 1 landed 2026-09-22 — a range scope for marks,
+   shift-click in the grid — not yet deployed; chunk 2, the date field that
+   remembers, is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

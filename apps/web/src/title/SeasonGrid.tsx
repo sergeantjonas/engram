@@ -47,6 +47,15 @@ export function SeasonGrid({
   // A season is a shape to be read at a glance — where the run breaks, how far
   // it got — and cells that grow to fill the width turn that shape into a row
   // of buttons whose meaning changes with the window.
+  // Where a shift-click's range would start: after the last seen cell before
+  // this one, or at the season's first. Computed over the whole season, not
+  // the year row a cell is drawn in.
+  const rangeStart = (episode: Episode): number => {
+    const before = season.episodes.filter((e) => e.seen && e.number < episode.number);
+    return before.length === 0
+      ? (season.episodes[0]?.number ?? episode.number)
+      : Math.max(...before.map((e) => e.number)) + 1;
+  };
   const cells = (episodes: Episode[]) => (
     <ul className="flex flex-wrap gap-1">
       {episodes.map((episode) => (
@@ -57,6 +66,7 @@ export function SeasonGrid({
             titleId={titleId}
             isOwner={isOwner}
             today={today}
+            rangeFrom={rangeStart(episode)}
           />
         </li>
       ))}

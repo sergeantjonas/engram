@@ -30,7 +30,9 @@ export interface EpisodeSlot {
 export type WatchScope =
   | { kind: 'title' }
   | { kind: 'season'; season: number }
-  | { kind: 'episode'; season: number; episode: number };
+  | { kind: 'episode'; season: number; episode: number }
+  /** Episodes `from` through `through` of one season, both included: "season 4 up to episode 7". */
+  | { kind: 'range'; season: number; from: number; through: number };
 
 /** A `watch_event` row, ready to write. */
 export interface PlannedWatchEventRow {
@@ -125,10 +127,23 @@ export function episodesInScope(
     return { ok: true, slots: [slot] };
   }
 
+  if (scope.kind === 'range') {
+    // The far end has to exist: "through episode 99" of a ten-episode season
+    // would otherwise quietly mark the ten and claim the ninety.
+    const end = episodes.find((e) => e.season === scope.season && e.number === scope.through);
+    if (!end) {
+      return { ok: false, reason: `S${scope.season}E${scope.through} is not on record here` };
+    }
+  }
+
   const inScope =
     scope.kind === 'season'
       ? episodes.filter((e) => e.season === scope.season)
-      : episodes.filter((e) => e.season !== SPECIALS);
+      : scope.kind === 'range'
+        ? episodes.filter(
+            (e) => e.season === scope.season && e.number >= scope.from && e.number <= scope.through,
+          )
+        : episodes.filter((e) => e.season !== SPECIALS);
   // Dropped after the scope is taken, not before: a season made entirely of
   // episodes still to come is a season that exists, and "nothing of it has
   // aired" is a different answer from "there is no such season".

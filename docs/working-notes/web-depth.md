@@ -4,7 +4,7 @@
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
-Arc 3 chunks 1 to 3 landed 2026-09-22, not yet deployed; chunk 4 is next.
+Arc 3 chunks 1 to 4 landed 2026-09-22, not yet deployed; chunk 5 is next.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -380,10 +380,16 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    `onOpenAutoFocus` did not cover: the closing panel returns focus to its
    cell a tick later, which the panel just opened reads as focus leaving it,
    so the season prevents `onCloseAutoFocus` while handing a panel on.
-4. **Rewatches in the grid.** A cell is binary and Bleach's two real rewatches
-   are visible only in the feed. A corner tick, or `2×` in the cell's top
-   right at 7px, on `playCount > 1`. Not a colour: jade is "seen" and a second
-   green would fork it.
+4. ~~**Rewatches in the grid.**~~ Landed 2026-09-22. A cell is binary and
+   Bleach's two real rewatches are visible only in the feed. A corner tick, or
+   `2×` in the cell's top right at 7px, on `playCount > 1`. Not a colour: jade
+   is "seen" and a second green would fork it.
+
+   The tick, not the `2×`: a 7px figure would be a third mono size on a page
+   arc 4 means to bring down to two, and the cell's one number is the
+   episode's. A 7px triangle in the cell's top right, in the on-jade ink the
+   number is set in, and the cell's label carries the count — `seen, 2 plays`
+   — so it is said as well as drawn.
 5. **Activity does not dead-end.** "last 5 of 19" with no way to the other
    fourteen. A "show all" that lifts the API's cap for that request, paged in
    fifties. The feed is the raw evidence and the only view that names each

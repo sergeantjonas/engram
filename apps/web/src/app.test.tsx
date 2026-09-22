@@ -739,6 +739,7 @@ describe('the title page', () => {
           episode({
             number: 6,
             seen: true,
+            playCount: 1,
             lastWatchedAt: '2019-01-01T00:00:00.000Z',
             lastWatchedPrecision: 'year',
             // Stale, not wrong: it was watched after the reason was given.
@@ -815,7 +816,7 @@ describe('the title page', () => {
     expect(header).toMatch(/4\s*rewatched/);
     // Year precision, so the period itself rather than a day within it.
     expect(header).toMatch(/2019\s*first watched/);
-    expect(screen.getByRole('button', { name: 'Episode 4, seen' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Episode 4, seen, 2 plays' })).toBeDefined();
     expect(
       screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' }),
     ).toBeDefined();
@@ -1051,6 +1052,19 @@ describe('the title page', () => {
       scope: { season: 2, episode: 5 },
       watchedAt: '2019',
     });
+  });
+
+  // A cell is otherwise binary. A second play is a corner tick, not a colour,
+  // and the label says the count.
+  it('ticks the corner of a cell played more than once', async () => {
+    stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const four = await screen.findByRole('button', { name: /^Episode 4\b.*, seen, 2 plays$/ });
+    expect(four.querySelector('[data-rewatched]')).not.toBeNull();
+    const six = screen.getByRole('button', { name: /^Episode 6\b/ });
+    expect(six.getAttribute('aria-label')).not.toContain('plays');
+    expect(six.querySelector('[data-rewatched]')).toBeNull();
   });
 
   // One tab stop per season: ONE PIECE must not be 1100 of them. The arrows
@@ -1315,7 +1329,7 @@ describe('the title page', () => {
     });
     await renderAt(`/titles/${TITLE_ID}`);
 
-    (await screen.findByRole('button', { name: 'Episode 4, seen' })).click();
+    (await screen.findByRole('button', { name: 'Episode 4, seen, 2 plays' })).click();
     (await screen.findByRole('button', { name: 'Take back 1 play entered by hand' })).click();
 
     await screen.findByText('Took back 1 play.');
@@ -1330,7 +1344,7 @@ describe('the title page', () => {
     stubTitle();
     await renderAt(`/titles/${TITLE_ID}`);
 
-    (await screen.findByRole('button', { name: 'Episode 4, seen' })).click();
+    (await screen.findByRole('button', { name: 'Episode 4, seen, 2 plays' })).click();
 
     await screen.findByText('Untitled');
     expect(screen.queryByRole('button', { name: /Take back/ })).toBeNull();

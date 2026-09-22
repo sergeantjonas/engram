@@ -275,7 +275,8 @@ the viewer wants of a title. The SPA calls all four.
    shift-click in the grid — and chunk 2 the same day — the mark form opens
    with the date the last mark on the page was written with; chunk 3 the
    same day — one tab stop per season, the arrows walk the cells and carry an
-   open popover along. None yet deployed. Chunk 4, rewatches in the grid, is
+   open popover along; chunk 4 the same day — a corner tick on a cell played
+   more than once. None yet deployed. Chunk 5, the activity feed in full, is
    next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live

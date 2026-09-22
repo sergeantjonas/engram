@@ -95,7 +95,10 @@ export function EpisodeCell({
   const status = statusOf(episode, today);
   const markable = isOwner && !episode.seen && status !== 'unaired';
   const ranged = range && markable && rangeFrom < episode.number;
-  const label = `Episode ${episode.number}${episode.name ? `: ${episode.name}` : ''}, ${STATUS_LABEL[status]}`;
+  const rewatched = episode.playCount > 1;
+  const label = `Episode ${episode.number}${episode.name ? `: ${episode.name}` : ''}, ${STATUS_LABEL[status]}${
+    rewatched ? `, ${episode.playCount} plays` : ''
+  }`;
   const still = stillUrl(episode.stillPath);
   // Figures only on the mono line; the sentence about a missing date or an
   // episode TMDB has never heard of is prose, and prose is set in Archivo.
@@ -133,9 +136,19 @@ export function EpisodeCell({
           tabIndex={tabStop ? 0 : -1}
           onClick={(event) => setRange(event.shiftKey)}
           onKeyDown={onWalk}
-          className={`grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
+          className={`relative grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
         >
           {episode.number}
+          {/* A corner tick for a second play, not a colour and not a figure:
+              jade is "seen" and a second green would fork it, and the cell's
+              one number is the episode's. The label carries the count. */}
+          {rewatched ? (
+            <span
+              aria-hidden="true"
+              data-rewatched
+              className="absolute top-0 right-0 size-0 border-t-[7px] border-l-[7px] border-t-on-jade border-l-transparent"
+            />
+          ) : null}
         </Popover.Trigger>
       </Tip>
       <Popover.Portal>
@@ -178,7 +191,7 @@ export function EpisodeCell({
           <p className="mt-2 text-xs text-tx">
             {episode.seen
               ? `Watched ${formatWatched(episode.lastWatchedAt, episode.lastWatchedPrecision)}` +
-                (episode.playCount > 1 ? `, ${episode.playCount} plays` : '')
+                (rewatched ? `, ${episode.playCount} plays` : '')
               : status === 'unaired'
                 ? 'Not out yet'
                 : 'Not seen'}

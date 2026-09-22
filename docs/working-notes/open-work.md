@@ -344,6 +344,24 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-22** — Bulk add on `/add`, and search results that know what the
+  record already holds. Adding a trilogy was three searches, three adds, three
+  backfill screens and three navigations back, because every add landed on the
+  title it had just created. Every unheld candidate now carries a checkbox; a
+  selection posts one `POST /titles` at a time — a personal TMDB key is not for
+  twenty parallel title-and-season fetches — and lands on one batch screen: a
+  whole-title tick each against a single shared date, with the same commit bar
+  naming both units when the selection mixes films and series. Per-season
+  precision stays on the single-title path, which is untouched.
+
+  `GET /search` now answers a `storedTitleId` per candidate, matched on kind
+  and TMDB id together because TMDB numbers films and series separately. The
+  browser could not work this out for itself: a show is keyed by its tvdb id,
+  so the wall's key and a candidate's id never meet. Held-back results are
+  counted out loud rather than dropped quietly, and the results cache is
+  patched in place after an add rather than invalidated — a refetch there is
+  another call against the owner's key to learn what is already known.
+
 - **2026-09-22** — `/settings`, the owner's page about the record, with the
   excluded titles as its first block. Excluding a title took it off the wall,
   and the wall's own *Show excluded* link was the only way back — mixed in

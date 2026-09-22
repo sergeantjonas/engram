@@ -317,6 +317,14 @@ export interface TmdbCandidate {
   year: number | null;
   posterPath: string | null;
   overview: string | null;
+  /**
+   * The title already holding this candidate, when the record has one.
+   *
+   * Answered by the API rather than worked out here: a show is keyed by its
+   * tvdb id, so the wall's `key` and a TMDB candidate's id never meet, and only
+   * the server holds both.
+   */
+  storedTitleId: string | null;
 }
 
 export function searchQuery(q: string) {

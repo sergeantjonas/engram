@@ -1572,6 +1572,7 @@ const candidate = (overrides: Partial<TmdbCandidate>): TmdbCandidate => ({
   year: 1995,
   posterPath: null,
   overview: null,
+  storedTitleId: null,
   ...overrides,
 });
 
@@ -1887,6 +1888,159 @@ describe('adding a title', () => {
       expect(screen.getByRole('alert').textContent).toContain('TMDB did not answer'),
     );
     expect(screen.getByRole('button', { name: 'Add Heat' })).toBeDefined();
+  });
+
+  // A search that answers four of twenty hits and explains none of it looks
+  // broken rather than tidy, so the ones held back are counted out loud.
+  it('holds back what is already on the record, behind a count that opens it', async () => {
+    stubApi((url) =>
+      url.includes('/search')
+        ? json({
+            results: [
+              candidate({ storedTitleId: 'title-1' }),
+              candidate({ tmdbId: '1396', name: 'Breaking Bad' }),
+            ],
+          })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=heat');
+
+    await screen.findByRole('heading', { name: /Breaking Bad/ });
+    expect(screen.queryByRole('heading', { name: /^Heat/ })).toBeNull();
+    expect(screen.getByText(/1 result already on the record/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show them' }));
+
+    // Shown, it points at the title it is already held under rather than
+    // offering to add it a second time.
+    expect((await screen.findByRole('link', { name: /On the record/ })).getAttribute('href')).toBe(
+      '/titles/title-1',
+    );
+    expect(screen.queryByRole('button', { name: 'Add Heat' })).toBeNull();
+  });
+
+  // The reason the screen exists: a trilogy is three adds, three backfills and
+  // three navigations away from the search, or it is one pass.
+  it('adds a selection in one pass and marks the whole batch from one screen', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [candidate({}), candidate({ tmdbId: '10138', name: 'Iron Man 2' })],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { tmdbId: string };
+        const name = body.tmdbId === '949' ? 'Heat' : 'Iron Man 2';
+        return json({ title: { id: `title-${body.tmdbId}`, name }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        return json({ written: 1, skipped: 0 }, 201);
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=iron');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Iron Man 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add 2' }));
+
+    await screen.findByRole('heading', { name: '2 titles on the record. Seen any of them?' });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'All of them' }));
+    fireEvent.change(screen.getByRole('textbox', { name: /When\?/ }), {
+      target: { value: '2019' },
+    });
+
+    // One date for the batch, and the bar states the write before it happens.
+    await screen.findByText(
+      'writes 2 plays · source manual · precision year · presence not on disk',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Write it' }));
+
+    await screen.findByText('Marked 2 titles.');
+    const marks = calls
+      .filter((call) => call.url.endsWith('/watch-events'))
+      .map((call) => JSON.parse(String(call.init?.body)));
+    // One whole-title mark each, sequentially: the API orders an expansion to
+    // keep concurrent writes off each other's row locks.
+    expect(marks).toEqual([
+      { titleId: 'title-949', scope: 'all', watchedAt: '2019' },
+      { titleId: 'title-10138', scope: 'all', watchedAt: '2019' },
+    ]);
+
+    // Back on the results with both now held back, and TMDB asked once in all.
+    await screen.findByText(/2 results already on the record/);
+    expect(calls.filter((call) => call.url.includes('/search'))).toHaveLength(1);
+  });
+
+  // The titles that landed are on the record whether or not the rest are, and
+  // dropping them here would leave them unmarked with nothing saying so.
+  it('hands over what landed when an add fails partway through the batch', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [candidate({}), candidate({ tmdbId: '10138', name: 'Iron Man 2' })],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { tmdbId: string };
+        return body.tmdbId === '949'
+          ? json({ title: { id: 'title-949', name: 'Heat' }, seasons: [] }, 201)
+          : json({ error: 'upstream_failed', message: 'TMDB did not answer' }, 502);
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=iron');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Iron Man 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add 2' }));
+
+    await screen.findByText('Added 1 title of 2, then stopped: TMDB did not answer. Try again.');
+    // The one that landed still gets its backfill; the other never existed.
+    await screen.findByRole('heading', { name: '1 title on the record. Seen any of them?' });
+    expect(screen.getByText('Heat')).toBeDefined();
+    expect(screen.queryByText('Iron Man 2')).toBeNull();
+  });
+
+  // Believing nothing landed, the owner ticks again with a different date —
+  // and a manual event id carries the date as written, so that writes a second
+  // set of plays over what the first pass already claimed.
+  it('says which title a batch mark stopped at, and keeps the ticks for a retry', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [candidate({}), candidate({ tmdbId: '10138', name: 'Iron Man 2' })],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { tmdbId: string };
+        const name = body.tmdbId === '949' ? 'Heat' : 'Iron Man 2';
+        return json({ title: { id: `title-${body.tmdbId}`, name }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/watch-events') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { titleId: string };
+        return body.titleId === 'title-949'
+          ? json({ written: 1, skipped: 0 }, 201)
+          : json({ error: 'unmarkable', message: 'that title has nothing to mark' }, 422);
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=iron');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Iron Man 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add 2' }));
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'All of them' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Write it' }));
+
+    await screen.findByText(
+      'Wrote 1 title, then stopped at Iron Man 2: that title has nothing to mark',
+    );
+    // Still on the screen with the ticks intact, so the retry is one click and
+    // not a re-entered date.
+    expect(screen.getByRole('heading', { name: /Seen any of them\?/ })).toBeDefined();
+    expect(screen.getByRole('checkbox', { name: 'All of them' })).toHaveProperty('checked', true);
   });
 });
 

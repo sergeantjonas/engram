@@ -325,6 +325,20 @@ to save a click.
 unreadable date disables the commit rather than being sent to be refused, so
 the bar never states a precision the write will not have.
 
+A search can also be worked through in bulk, which is the trilogy case: three
+films, each one add, one backfill and one navigation away from the results.
+Every candidate the record does not already hold carries a checkbox, and a
+selection is added in one pass and marked from one screen — a whole-title tick
+each against a single shared date, no seasons. Finer than that is what the
+title's own page is for, and asking for it over a batch would make the batch
+worse than adding one at a time.
+
+Results the record already holds are held back rather than listed, behind a
+line counting them that opens them again; shown, each points at the title it is
+held under instead of offering to add it twice. `GET /search` answers which
+those are, because a show is keyed by its tvdb id and the browser never sees
+both ids for the same title.
+
 This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 2019" has no timestamp, and the alternative — a nullable `watched_at` — would
 have pushed the null handling into `watch_state` and every sort. See

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { AddedSeason } from '../api/titles.ts';
-import { describePlan, planFilm, planSeasons } from './plan.ts';
+import {
+  type BatchEntry,
+  describeBatch,
+  describePlan,
+  markable,
+  planBatch,
+  planFilm,
+  planSeasons,
+} from './plan.ts';
 
 const seasons: AddedSeason[] = [
   { season: 0, episodeCount: 12 },
@@ -86,5 +94,69 @@ describe('describePlan', () => {
 
   it('counts a film in plays, which is the only thing it can write', () => {
     expect(describePlan(planFilm(true, ''), 'play')).toContain('writes 1 play ·');
+  });
+});
+
+const film = (id: string, name = id): BatchEntry => ({
+  added: { title: { id, name }, seasons: [] },
+  kind: 'movie',
+});
+
+const show = (id: string, seasons: AddedSeason[]): BatchEntry => ({
+  added: { title: { id, name: id }, seasons },
+  kind: 'show',
+});
+
+const batch = (entries: BatchEntry[], chosen: string[], when = '') =>
+  planBatch(entries, new Set(chosen), when);
+
+describe('planBatch', () => {
+  it('asks for one whole-title mark per ticked title, in the order listed', () => {
+    const entries = [film('a'), film('b'), film('c')];
+
+    expect(batch(entries, ['c', 'a']).marks).toEqual([
+      { titleId: 'a', name: 'a' },
+      { titleId: 'c', name: 'c' },
+    ]);
+  });
+
+  it('counts a film as a play and a show as its regular episodes', () => {
+    const plan = batch([film('a'), show('b', seasons)], ['a', 'b']);
+
+    expect(plan.plays).toBe(1);
+    // The specials are left out, because a whole-title mark steps over them.
+    expect(plan.episodes).toBe(18);
+  });
+
+  // A whole-title mark over a title holding only specials is one the API
+  // refuses outright, so it must never be what this asks for.
+  it('leaves out a show that has nothing but specials', () => {
+    const only = show('a', [{ season: 0, episodeCount: 3 }]);
+
+    expect(markable(only)).toBe(false);
+    expect(batch([only], ['a']).marks).toEqual([]);
+  });
+
+  it('reads the precision off the shape of the shared date', () => {
+    expect(batch([film('a')], ['a'], '2019').precision).toBe('year');
+    expect(batch([film('a')], ['a'], 'summer 2019').precision).toBeNull();
+  });
+});
+
+describe('describeBatch', () => {
+  it('names both kinds of row when the selection holds both', () => {
+    expect(describeBatch(batch([film('a'), show('b', seasons)], ['a', 'b'], '2019'))).toBe(
+      'writes 18 episodes and 1 play · source manual · precision year · presence not on disk',
+    );
+  });
+
+  it('reads like the single-title bar when only one kind is ticked', () => {
+    expect(describeBatch(batch([film('a'), film('b')], ['a', 'b'], ''))).toBe(
+      'writes 2 plays · source manual · precision unknown · presence not on disk',
+    );
+  });
+
+  it('says nothing is written when nothing is ticked', () => {
+    expect(describeBatch(batch([film('a')], []))).toContain('writes nothing ·');
   });
 });

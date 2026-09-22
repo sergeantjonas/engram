@@ -253,8 +253,7 @@ the viewer wants of a title. The SPA calls all four.
    progress bar). Arc 1 first; its first three chunks spend no TMDB calls.
    Arc 1 chunks 1 and 2 landed 2026-09-21: the header says what the title is,
    the episode popover is a card with a still and a synopsis. Chunk 2 carried
-   migration 0011 and needs the episode backfill run on the box after the
-   deploy before any popover shows more than it did.
+   migration 0011; deployed and backfilled on the box 2026-09-22.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

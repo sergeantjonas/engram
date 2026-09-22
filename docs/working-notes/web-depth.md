@@ -137,10 +137,10 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    2467 episode rows, all null before; after one run 2376 carry both a
    synopsis and a still, 0 rows added, 8 stored rows TMDB does not list. The 91
    left null are those 8 plus episodes TMDB itself has no text or frame for.
-   **Not yet run on the box** — the production steps are under Shipping
-   against production: backup, deploy, then `backfill-cli.js` in the api
-   container. Until that has run every popover in production reads as it did
-   before this chunk.
+   Run on the box 2026-09-22 in the order Shipping against production gives —
+   backup, deploy, `backfill-cli.js` in the api container — and it answered
+   line for line as the rehearsal had: 53 shows, 0 rows added, the same 8
+   unlisted rows, all on Bleach.
 3. **Season facts on the heading.** A `season` table does not exist and one
    row per season is not worth one yet. Instead the heading derives what it
    can: `SEASON 2 · 2019–2020 · 10 EP · ONE MISSING`, the year range from the

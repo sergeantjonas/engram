@@ -32,8 +32,9 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
 - `go-live.md` — plan. Engram as the netcup box's second tenant, and why the
   backfills run locally first: the hand-made marks exist nowhere else. Read
   before the first deploy, alongside the `shared-vps` skill.
-- `web-design.md` — design. The settled three screens, the palette and the type
-  system, with the mockup they were approved from in `docs/design/`, plus the
+- `web-design.md` — design. The settled three screens and the YEAR screen
+  built past them, the palette and the type system, with the mockup they were
+  approved from in `docs/design/`, plus the
   conventions the build has settled since — tooltips and notices among them.
   Read before building or changing anything in `apps/web`.
 - `web-depth.md` — plan. What the three built screens show about the record

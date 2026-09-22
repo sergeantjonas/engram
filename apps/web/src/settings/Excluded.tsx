@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import { historyQuery } from '../api/history.ts';
 import {
   nextUpQuery,
   posterUrl,
@@ -36,11 +37,12 @@ export function Excluded() {
       // where it went.
       toast({ message: `${title.name} is back on the wall.` });
       // The same set `useSettle` refetches: a restored show is back in the
-      // running for the next-up band as well as the wall.
+      // running for the next-up band and the calendar as well as the wall.
       return Promise.all([
         queryClient.invalidateQueries({ queryKey: ['titles'] }),
         queryClient.invalidateQueries({ queryKey: titleQuery(title.id).queryKey }),
         queryClient.invalidateQueries({ queryKey: nextUpQuery().queryKey }),
+        queryClient.invalidateQueries({ queryKey: historyQuery.queryKey }),
       ]);
     },
     onError: (error) => toast({ message: `Could not restore that: ${error.message}` }),

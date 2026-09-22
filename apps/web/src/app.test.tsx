@@ -2552,3 +2552,96 @@ describe('settings', () => {
     expect(screen.getByText('Nothing is excluded.')).toBeDefined();
   });
 });
+
+describe('the year', () => {
+  // Midday UTC, so the day is the same in whatever zone the suite runs.
+  const played = (id: string, number: number, watchedAt: string, source = 'plex-history') => ({
+    id,
+    titleId: 'a1',
+    season: 1,
+    number,
+    name: `Episode ${number}`,
+    runtimeMin: 60,
+    watchedAt,
+    precision: 'exact',
+    source,
+  });
+  const history = {
+    titles: [{ id: 'a1', kind: 'show', name: 'The Witcher', posterPath: null, state: 'seen' }],
+    plays: [
+      played('p1', 1, '2025-06-14T12:00:00+00:00'),
+      // The library walk's view of the same watching.
+      played('p2', 1, '2025-06-14T12:30:00+00:00', 'plex-library'),
+      played('p3', 2, '2025-06-20T12:00:00+00:00'),
+    ],
+  };
+  const answer = (url: string) =>
+    url.endsWith('/history') ? json(history) : elsewhere(url, false);
+  const cell = (day: string) => document.querySelector<HTMLElement>(`[data-day="${day}"]`);
+
+  it('reads a year and opens on its latest day with plays, for anyone', async () => {
+    stubApi(answer);
+    await renderAt('/year?year=2025');
+
+    const figures = await screen.findByRole('region', { name: '2025' });
+    // Two rows on the 14th are one viewing, so two plays in the year.
+    expect(figures.textContent).toContain('2plays');
+    // Finished on the 20th, with its last episode.
+    expect(figures.textContent).toContain('1finished');
+    expect(cell('2025-06-20')?.getAttribute('aria-pressed')).toBe('true');
+    expect(cell('2025-06-20')?.getAttribute('tabindex')).toBe('0');
+    expect(screen.getByRole('link', { name: 'YEAR' }).getAttribute('href')).toBe('/year');
+  });
+
+  it('lists what a picked day holds, every source behind it named', async () => {
+    stubApi(answer);
+    const router = await renderAt('/year?year=2025');
+
+    fireEvent.click((await waitFor(() => cell('2025-06-14'))) as HTMLElement);
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ day: '2025-06-14' }));
+    const row = screen.getByRole('link', { name: 'The Witcher' }).closest('li');
+    expect(row?.textContent).toContain('S1E1 Episode 1');
+    expect(row?.textContent).toContain('plex-history · plex-library');
+  });
+
+  // Picking is a place to go back to; holding an arrow across a month is not
+  // thirty of them.
+  it('walks the days with the arrows, carrying the selection without piling up history', async () => {
+    stubApi(answer);
+    const router = await renderAt('/year?day=2025-06-14');
+    const entries = router.history.length;
+
+    const from = (await waitFor(() => cell('2025-06-14'))) as HTMLElement;
+    fireEvent.keyDown(from, { key: 'ArrowRight' });
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ day: '2025-06-21' }));
+    expect(document.activeElement).toBe(cell('2025-06-21'));
+    expect(screen.getByText('Nothing watched on this day.')).toBeDefined();
+    expect(router.history.length).toBe(entries);
+
+    fireEvent.click(cell('2025-06-20') as HTMLElement);
+    await waitFor(() => expect(router.state.location.search).toEqual({ day: '2025-06-20' }));
+    expect(router.history.length).toBe(entries + 1);
+  });
+
+  it('reads another year from its label', async () => {
+    stubApi(answer);
+    const router = await renderAt('/year?year=2025');
+
+    const now = new Date().getFullYear();
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${now}, `) }));
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ year: now }));
+    expect(screen.getByText(`Nothing on record is dated ${now}.`)).toBeDefined();
+  });
+
+  // One that does not exist, and one that has not happened yet.
+  it.each(['2025-02-30', '2999-01-01'])('reads ?day=%s as no day picked', async (day) => {
+    stubApi(answer);
+    await renderAt(`/year?day=${day}`);
+    // The year opened on is the latest, and the calendar still has a stop.
+    await screen.findByText(`Nothing on record is dated ${new Date().getFullYear()}.`);
+    expect(document.querySelectorAll('[data-day][tabindex="0"]').length).toBeGreaterThan(0);
+  });
+});

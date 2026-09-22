@@ -65,11 +65,7 @@ export function Rail() {
       {/* LIST is a mode of the title page rather than a screen of its own —
           the pane down its left is the list — so it leads to the top of that
           pane and lights up anywhere inside it. Gone when the library is
-          empty, because then it leads nowhere.
-
-          YEAR is still not offered: the design's rail carries it with no
-          screen behind it, and an item that goes nowhere is worse than a
-          shorter rail. */}
+          empty, because then it leads nowhere. */}
       {first ? (
         <Link
           to="/titles/$id"
@@ -85,6 +81,11 @@ export function Rail() {
           ADD
         </Link>
       ) : null}
+      {/* Last, where the design has it, and for everyone: the calendar is the
+          record, which the wall already shows a stranger. */}
+      <Link to="/year" className={ITEM} activeProps={{ className: ACTIVE_ITEM }}>
+        YEAR
+      </Link>
     </nav>
   );
 }

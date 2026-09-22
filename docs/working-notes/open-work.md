@@ -36,10 +36,8 @@ owe the design, all checked against the running app rather than guessed:
 
 - ~~The title page has no second pane and no CTA row.~~ Both landed
   2026-09-21. Everything the design names for the three screens is now built.
-- The rail carries HOME, LIST and ADD. `YEAR` is still not offered: the
-  mockup's rail has it with no screen behind it, and an item that goes nowhere
-  is worse than a shorter rail. See "Still open" in
-  [web-design.md](web-design.md).
+- ~~The rail carries HOME, LIST and ADD.~~ `YEAR` joined it 2026-09-22 with
+  its screen, [web-depth.md](web-depth.md) arc 4 chunk 3.
 - ~~The add screen still only adds.~~ Landed 2026-09-21: season checkboxes and
   the commit bar, so a backfill is one screen again.
 
@@ -280,10 +278,10 @@ the viewer wants of a title. The SPA calls all four.
    new activity route. Arc 3 is complete, none of it yet deployed. Arc 4,
    the screens the rail owes: chunk 1 landed 2026-09-22 — next up is a strip
    of cards, as many as the row's width holds, `Not now` on each — and
-   chunk 2 the same day — *Want* is a chip beside *Unwatched* — and chunk 3,
-   YEAR, begun the same day with `GET /history`, every dated play in one
-   answer, and the counting of it into days and yearly figures in the
-   browser; not yet deployed.
+   chunk 2 the same day — *Want* is a chip beside *Unwatched* — and chunk 3
+   the same day in three commits — YEAR, the whole dated record as one
+   calendar per year over a new `GET /history`, with the year's figures and
+   a picked day's plays beside it; not yet deployed.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

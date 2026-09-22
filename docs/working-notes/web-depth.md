@@ -5,8 +5,7 @@ screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
 Arc 3 landed 2026-09-22 in five commits, not yet deployed. Arc 4 is in
-progress: chunks 1 and 2 landed 2026-09-22, and chunk 3's route and its
-counting in the browser the same day; none of it yet deployed.
+progress: chunks 1 to 3 landed 2026-09-22, none of it yet deployed.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -456,8 +455,9 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    `appliesTo` drops it for them as it drops the run chips under Movies, and
    a stranger arriving on `?facet=want` is redirected to the wall like
    `?kind=movie&facet=going` is.
-3. **YEAR.** The rail's unbuilt fourth item gets its screen: the whole record
-   as a calendar heatmap, one row per year from the first dated event, a cell
+3. ~~**YEAR.**~~ Landed 2026-09-22 in three commits. The rail's unbuilt
+   fourth item gets its screen: the whole record as a calendar heatmap, one
+   row per year from the first dated event, a cell
    per day shaded by plays, click a day to list what was watched. It reuses
    `marksIn` from `YearBar.tsx` generalised past the twelve-month window, and
    it is the only place the entire history is visible at once, which is the
@@ -510,6 +510,33 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    the local record 461 rows are 382 viewings on 132 days. One day holds 78,
    which is what a Plex bulk *mark as watched* leaves: the library walk
    stamps every episode with the same last view.
+
+   The screen followed at `/year`, and YEAR joined the rail after ADD, where
+   the mockup has it, for everyone: the calendar is the record the wall
+   already shows a stranger. One calendar per year, newest first, from the
+   first dated play to today. Each is a column per week and a row per weekday,
+   Monday first, with 11px cells at a fixed size so eight years fit one
+   screen. The running year stops at today, since a day not yet lived is not a
+   day nothing was watched on. Shading is jade in four fixed steps — 1, 2–3,
+   4–7, 8 and more — so the 78-play day cannot wash every real evening out
+   to the palest. A pane beside the calendar, sticky, holds the year being
+   read in the title page's stat box (plays, episodes, watched, finished, a
+   zero left out as it is there) and the day being read, its viewings oldest
+   first with poster, episode, time and every source behind each row. The
+   plays dated only to a month or a year are said in a sentence under the
+   figures, since they are counted there and drawn on no day. Below 1280px
+   the pane goes above the calendar. The selection is in the URL as `?day=`
+   or `?year=`, and opens on the year's latest day with plays; a day that
+   does not exist or has not happened reads as none picked. One tab stop for
+   a year's days, as a season has. The arrows walk days down a column and weeks
+   along a row, Home and End go to the year's ends, and the selection comes
+   along with them, the way the grid's arrows carry an open popover. Walking
+   replaces the history entry and picking pushes one. Each year is memoised
+   and handed the selection only when it is inside it, so a step redraws one
+   year of eight. Departures: the figures sit in the pane rather than above
+   the calendar, which puts the day's list beside the day it lists, and the
+   year's label beside its calendar carries the year's play count and picks
+   the year when pressed.
 4. **Export.** [web-design.md](web-design.md) says the "does this rest only on
    my word" question matters most to the export, and there is no export. A
    block on `/settings` — the route exists since 2026-09-22, the excluded

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
+import { historyQuery } from '../api/history.ts';
 import { markWatched, nextUpQuery, posterUrl, type TmdbCandidate } from '../api/titles.ts';
 import { useToast } from '../shell/Toasts.tsx';
 import { type BatchEntry, type BatchPlan, describeBatch, markable, planBatch } from './plan.ts';
@@ -71,6 +72,7 @@ export function Batch({ items, onDone }: { items: BatchItem[]; onDone: () => voi
         // naming each would be the same call with a longer argument.
         queryClient.invalidateQueries({ queryKey: ['title'] }),
         queryClient.invalidateQueries({ queryKey: nextUpQuery().queryKey }),
+        queryClient.invalidateQueries({ queryKey: historyQuery.queryKey }),
       ]),
     onSuccess: (written) => {
       // Titles, not rows: a batch mixes episodes and plays, and the count the

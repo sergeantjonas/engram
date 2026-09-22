@@ -77,6 +77,18 @@ describe('viewingsOf', () => {
     ).toBe(false);
   });
 
+  it('keeps the time of a play over the midnight of a day entered by hand', () => {
+    const [viewing] = viewingsOf(
+      [
+        play({ watchedAt: '2025-06-14T00:00:00+00:00', precision: 'day', source: 'manual' }),
+        play({ watchedAt: '2025-06-14T19:30:00+00:00' }),
+      ],
+      ZONE,
+    );
+
+    expect(viewing).toMatchObject({ at: '2025-06-14T19:30:00+00:00', timed: true });
+  });
+
   it('counts a per-play source’s rows on one day as that many plays', () => {
     const [viewing] = viewingsOf(
       [

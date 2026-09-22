@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AddRouteImport } from './routes/add'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as YearRouteImport } from './routes/year'
 import { Route as TitlesIdRouteImport } from './routes/titles.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const YearRoute = YearRouteImport.update({
+  id: '/year',
+  path: '/year',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TitlesIdRoute = TitlesIdRouteImport.update({
   id: '/titles/$id',
   path: '/titles/$id',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/add': typeof AddRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/year': typeof YearRoute
   '/titles/$id': typeof TitlesIdRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/add': typeof AddRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/year': typeof YearRoute
   '/titles/$id': typeof TitlesIdRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,16 @@ export interface FileRoutesById {
   '/add': typeof AddRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/year': typeof YearRoute
   '/titles/$id': typeof TitlesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/add' | '/login' | '/settings' | '/titles/$id'
+  fullPaths: '/' | '/add' | '/login' | '/settings' | '/year' | '/titles/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/add' | '/login' | '/settings' | '/titles/$id'
-  id: '__root__' | '/' | '/add' | '/login' | '/settings' | '/titles/$id'
+  to: '/' | '/add' | '/login' | '/settings' | '/year' | '/titles/$id'
+  id:
+    '__root__' | '/' | '/add' | '/login' | '/settings' | '/year' | '/titles/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +86,7 @@ export interface RootRouteChildren {
   AddRoute: typeof AddRoute
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
+  YearRoute: typeof YearRoute
   TitlesIdRoute: typeof TitlesIdRoute
 }
 
@@ -109,6 +120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/year': {
+      id: '/year'
+      path: '/year'
+      fullPath: '/year'
+      preLoaderRoute: typeof YearRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/titles/$id': {
       id: '/titles/$id'
       path: '/titles/$id'
@@ -124,6 +142,7 @@ const rootRouteChildren: RootRouteChildren = {
   AddRoute: AddRoute,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
+  YearRoute: YearRoute,
   TitlesIdRoute: TitlesIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -20,7 +20,7 @@ import {
  * The cells grow from a 104px basis, so a narrow window wraps them into rows
  * instead of shrinking the numbers.
  */
-function Figure({ value, label }: { value: string; label: string }) {
+export function Figure({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex-[1_1_104px] border-r border-line px-3.5 py-2.5 last:border-r-0">
       <b className="block font-mono text-[17px] font-medium tracking-[-.02em] whitespace-nowrap tabular-nums">

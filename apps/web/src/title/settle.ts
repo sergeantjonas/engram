@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { historyQuery } from '../api/history.ts';
 import { nextUpQuery, titleQuery } from '../api/titles.ts';
 
 /**
@@ -18,5 +19,8 @@ export function useSettle(titleId: string): () => Promise<unknown> {
       // Marking an episode is the one thing that moves what comes next, and
       // the band lives on a screen this write never navigates through.
       queryClient.invalidateQueries({ queryKey: nextUpQuery().queryKey }),
+      // Likewise the calendar: a dated mark is a day on it, and excluding a
+      // title takes its days off.
+      queryClient.invalidateQueries({ queryKey: historyQuery.queryKey }),
     ]);
 }

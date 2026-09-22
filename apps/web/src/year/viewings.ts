@@ -73,7 +73,10 @@ export interface Viewing {
    */
   period: string;
   year: number;
-  /** The earliest instant among the rows behind it. */
+  /**
+   * The earliest instant among the rows behind it that know the time of day,
+   * or among all of them when none does.
+   */
   at: string;
   /** Whether any row behind it knows the time of day. */
   timed: boolean;
@@ -127,8 +130,15 @@ export function viewingsOf(plays: HistoryPlay[], timeZone: string): Viewing[] {
     if (PER_PLAY.has(play.source)) perPlay.set(key, (perPlay.get(key) ?? 0) + 1);
     const seen = byDay.get(key);
     if (seen) {
-      if (Date.parse(play.watchedAt) < Date.parse(seen.at)) seen.at = play.watchedAt;
-      seen.timed ||= play.precision === 'exact';
+      // A row that knows the time wins over one that does not, whatever the
+      // instants say: a day entered by hand holds that day's midnight, which
+      // is no one's viewing time.
+      const exact = play.precision === 'exact';
+      if (exact && !seen.timed) seen.at = play.watchedAt;
+      else if (exact === seen.timed && Date.parse(play.watchedAt) < Date.parse(seen.at)) {
+        seen.at = play.watchedAt;
+      }
+      seen.timed ||= exact;
       if (!seen.sources.includes(play.source)) seen.sources.push(play.source);
       continue;
     }

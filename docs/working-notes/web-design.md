@@ -377,6 +377,32 @@ This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 have pushed the null handling into `watch_state` and every sort. See
 [data-model.md](data-model.md).
 
+## 04 · Year
+
+Not in the mockup, which put `YEAR` on the rail and nothing behind it. Built
+2026-09-22 as the one place the whole dated record is visible at once, which
+is the product; the reasoning is in [web-depth.md](web-depth.md) arc 4
+chunk 3.
+
+One calendar per year, newest first, a column per week and a row per weekday,
+Monday first. Cells are 11px and fixed rather than stretched to the width,
+since eight years have to fit one screen. A day is shaded in jade — the colour
+already meaning *seen* — in four fixed steps rather than scaled to the busiest
+day, because a Plex bulk mark leaves one day with dozens of plays that would
+wash every real evening out to the palest. Month labels and the year's count
+are 9px mono, the year 10px.
+
+The year and the day being read sit in a sticky pane beside it: the year in
+the title page's stat box, the day as a list naming every source behind each
+row, since this is where a day's record is checked against where it came from.
+What is dated only to a month or a year is counted in the figures and said in
+a sentence, because it is on no day. A mark with no date at all is not here,
+and the page does not pretend otherwise: it is on its title.
+
+One tab stop per year's days, the arrows walking the selection with them, as
+the grid's do with an open popover. The day is in the URL, `?day=`, like the
+wall's filters.
+
 ## Tooltips
 
 **Never the `title` attribute.** It cannot be styled or placed, waits about a
@@ -428,10 +454,9 @@ the record and has to outlive a navigation.
 
 ## Still open
 
-What the built screens still owe past the mockup — synopsis and stills, a
-progress bar in place of the state bar, the YEAR screen — is scoped in
-[web-depth.md](web-depth.md), which is where the fourth rail item below now
-has an answer.
+What the built screens still owe past the mockup — a progress bar in place
+of the state bar among them — is scoped in [web-depth.md](web-depth.md),
+which is also where the fourth rail item below got its answer.
 
 - **Light mode.** The mockup is dark only. No decision was made about whether a
   light theme exists at all.
@@ -451,8 +476,8 @@ has an answer.
   dropped from Next up because Engram keeps no `ratingKey` on purpose and
   there is nothing to build a deep link out of — but a live session response
   carries one, and it never has to be stored to be used.
-- **The rail's fourth item.** `YEAR` appears in the mockup's nav with no screen
-  behind it. `LIST`, the other one that looked unexplained, turned out not to
-  be a screen at all: the mockup lights it up on the title page, because the
-  216px pane down that page's left *is* the list. `YEAR` has no such answer
-  anywhere in the mockup, so it stays unbuilt.
+- ~~**The rail's fourth item.**~~ Answered 2026-09-22 by § 04 · Year. `YEAR`
+  appeared in the mockup's nav with no screen behind it. `LIST`, the other one
+  that looked unexplained, turned out not to be a screen at all: the mockup
+  lights it up on the title page, because the 216px pane down that page's
+  left *is* the list.

@@ -42,6 +42,10 @@ const ACTIVE_CHIP = 'border-tx text-tx';
  * Sharing an edge means whichever segment paints last owns it, so the lit one
  * has to be lifted or its neighbour draws a dim border straight over the side
  * they share and the current position reads as a broken box.
+ *
+ * That lift is only ever about the segment beside it, so the group isolates:
+ * the top bar is sticky at the same layer, and a chip competing with it there
+ * wins on document order and paints over the chrome it scrolled under.
  */
 const SEG = `${CHIP} relative hover:z-10`;
 const ACTIVE_SEG = `${ACTIVE_CHIP} z-10`;
@@ -115,7 +119,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
             into one control, because it is a choice between three rather than
             three things that can each be on.
  */}
-        <span className="flex items-center">
+        <span className="isolate flex items-center">
           <Link
             to="/"
             search={keepForKind(undefined)}

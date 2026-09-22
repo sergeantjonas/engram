@@ -44,7 +44,13 @@ function Shell() {
           <Rail />
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar />
-            <main className="flex-1 p-[18px]">
+            {/* Isolated, so the chrome is out of reach: the bar is sticky at a
+                layer of its own, and anything on the page that lifts itself —
+                a segmented control closing its borders, a hero — would
+                otherwise tie with it and win on document order, painting over
+                the bar it had just scrolled under. Overlays that must cover
+                the chrome portal out of here rather than out-stacking it. */}
+            <main className="isolate flex-1 p-[18px]">
               <Outlet />
             </main>
           </div>

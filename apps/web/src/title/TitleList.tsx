@@ -67,7 +67,9 @@ export function TitleList({
             the run being worked through sits between two films with nothing
             in common but a date. The same three positions the wall offers,
             because the two panes are the same library. */}
-        <div className="flex px-3.5 pb-1.5">
+        {/* Isolated for the same reason the wall's group is: the lit segment's
+            lift is about its neighbour, not about the sticky chrome above. */}
+        <div className="isolate flex px-3.5 pb-1.5">
           <Link
             to="/titles/$id"
             params={{ id: currentId }}

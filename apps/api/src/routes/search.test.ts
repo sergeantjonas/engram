@@ -2,7 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { githubStub, testConfig } from '../app.fixture.js';
 import { buildApp } from '../app.js';
-import { sessionDb, signedIn } from '../auth/session.fixture.js';
+import {
+  OWNER_GITHUB_USER_ID,
+  type SessionDb,
+  sessionDb,
+  signedIn,
+} from '../auth/session.fixture.js';
 import { type TmdbCandidate, type TmdbClient, TmdbError } from '../tmdb/client.js';
 
 const witcher: TmdbCandidate = {
@@ -15,10 +20,14 @@ const witcher: TmdbCandidate = {
 };
 
 let app: FastifyInstance | undefined;
+let stub: SessionDb | undefined;
 
-// `/search` never reaches Postgres itself. The stub answers the guard's
-// session lookup and nothing else, so a route that started querying would get
-// a session row rather than data.
+/** A session row the guard accepts, so a later select can be given its own answer. */
+const live = () => {
+  const at = new Date(Date.now() + 86_400_000);
+  return { githubUserId: OWNER_GITHUB_USER_ID, expiresAt: at, absoluteExpiresAt: at };
+};
+
 /** Only `search` is ever exercised here; the rest satisfy the interface. */
 const searching = (search: TmdbClient['search']): TmdbClient => ({
   search,
@@ -31,18 +40,26 @@ const searching = (search: TmdbClient['search']): TmdbClient => ({
 });
 
 const start = (tmdb: TmdbClient | null): FastifyInstance => {
-  app = buildApp({ config: testConfig, db: sessionDb().db, tmdb, github: githubStub });
+  stub = sessionDb();
+  app = buildApp({ config: testConfig, db: stub.db, tmdb, github: githubStub });
   return app;
+};
+
+/** The guard's session lookup, then the stored-title lookup the route makes. */
+const storing = (rows: unknown[]) => {
+  (stub as SessionDb).selects = [[live()], rows];
 };
 
 afterEach(async () => {
   await app?.close();
   app = undefined;
+  stub = undefined;
 });
 
 describe('GET /search', () => {
   it('returns the candidates TMDB found', async () => {
     const server = start(searching(async () => [witcher]));
+    storing([]);
 
     const response = await server.inject({
       method: 'GET',
@@ -51,7 +68,36 @@ describe('GET /search', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ results: [witcher] });
+    expect(response.json()).toEqual({ results: [{ ...witcher, storedTitleId: null }] });
+  });
+
+  it('names the title already holding a candidate', async () => {
+    const server = start(searching(async () => [witcher]));
+    storing([{ id: 'title-1', kind: 'show', tmdbId: witcher.tmdbId }]);
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=witcher',
+      headers: signedIn,
+    });
+
+    expect(response.json().results[0].storedTitleId).toBe('title-1');
+  });
+
+  // TMDB numbers films and series separately, so an id on its own names two
+  // different things and matching on it alone would hide an unstored film
+  // behind a stored series.
+  it('does not match a series against a film of the same id', async () => {
+    const server = start(searching(async () => [witcher]));
+    storing([{ id: 'title-1', kind: 'movie', tmdbId: witcher.tmdbId }]);
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=witcher',
+      headers: signedIn,
+    });
+
+    expect(response.json().results[0].storedTitleId).toBeNull();
   });
 
   it('caps the results at the requested limit', async () => {

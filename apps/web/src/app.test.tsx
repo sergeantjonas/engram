@@ -1199,14 +1199,13 @@ describe('the title page', () => {
     expect(screen.queryByRole('button', { name: /Mark the whole run/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Take back/ })).toBeNull();
     // The rule between the two halves goes with them, rather than standing
-    // between the Plex link and the intent controls twice over.
+    // beside the rule after the Plex link with nothing between them.
     expect(document.querySelectorAll('span[aria-hidden="true"].w-px')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Want to watch' })).toBeDefined();
   });
 
   it('links every id to its catalogue page and the name to a Plex search', async () => {
-    // As a visitor: the links write nothing, so everyone gets them.
-    stubTitle(false);
+    stubTitle();
     await renderAt(`/titles/${TITLE_ID}`);
 
     await screen.findByRole('heading', { name: 'ONE PIECE' });
@@ -1221,7 +1220,6 @@ describe('the title page', () => {
       expect(link.getAttribute('target')).toBe('_blank');
       expect(link.getAttribute('rel')).toBe('noreferrer');
     }
-    expect(screen.queryByRole('button', { name: 'Want to watch' })).toBeNull();
   });
 
   it('points a film at the movie side of each catalogue', async () => {
@@ -1395,6 +1393,10 @@ describe('the title page', () => {
     expect(screen.queryByRole('button', { name: 'Mark the whole run watched' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Want to watch' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Excluded' })).toBeNull();
+    // The catalogue links are for anyone; Plex's client is a sign-in page to
+    // anyone but the owner, so that link goes with the owner's controls.
+    expect(screen.getByRole('link', { name: 'tvdb 392276' })).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Find in Plex' })).toBeNull();
   });
 
   // The rail's LIST is a mode of this screen, so the screen carries the list.

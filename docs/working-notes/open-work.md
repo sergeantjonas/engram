@@ -255,7 +255,7 @@ the viewer wants of a title. The SPA calls all four.
    the title is, the episode popover is a card with a still and a synopsis —
    and chunks 3 and 4 on 2026-09-22 — the season heading derives its years,
    size and seen state from the cells, and every external id links to its
-   catalogue page beside a Plex search link that needs no `ratingKey`. Chunk 2
+   catalogue page and the owner gets a Plex search link that needs no `ratingKey`. Chunk 2
    carried migration 0011; deployed and backfilled on the box 2026-09-22.
    Chunks 3 and 4 are not yet deployed. Arc 2 is next.
 7. **"Now watching"** — not started. The only part settled is which API

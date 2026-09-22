@@ -177,10 +177,12 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    one shape serves both kinds. Costs nothing and answers half of "tell me
    about this show" with no schema. A **Find in Plex** link,
    `app.plex.tv/desktop/#!/search?query=<encoded name>`, sits first on the
-   action row for everyone, since it writes nothing — the honest,
-   `ratingKey`-free form of the mockup's rejected "play in Plex". The row is
-   no longer owner-only for that reason; the owner's controls follow it after
-   a rule.
+   owner's action row — the honest, `ratingKey`-free form of the mockup's
+   rejected "play in Plex". It was planned as visible to everyone since it
+   writes nothing, but `app.plex.tv` is Plex's hosted client and searches
+   whatever server the signed-in account reaches, so to anyone but the owner
+   it is a link to a sign-in page: a control that does nothing. Owner-only,
+   decided 2026-09-22.
 
 ## Arc 2 · Facts the state vocabulary is missing
 

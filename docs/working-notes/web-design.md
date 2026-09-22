@@ -234,8 +234,10 @@ Around it:
   better as a block that can be scanned for one source than as the tail of a
   sentence. Canonical id first — tvdb for a show, tmdb for a film. Since
   2026-09-22 each id is a link to its catalogue page, underlined on hover only,
-  and a **Find in Plex** link opens the action row for everyone: a search by
-  name, which is what "play in Plex" can honestly be without a `ratingKey`.
+  and a **Find in Plex** link opens the owner's action row: a search by name
+  in Plex's hosted client, which is what "play in Plex" can honestly be
+  without a `ratingKey`, and a sign-in page to anyone else, so it is not shown
+  to anyone else.
   The § 01 rejection stands — there is still no deep link. Reasoning in
   [web-depth.md](web-depth.md) arc 1 chunk 4.
 - A figure row — plays, episodes seen, rewatched, first watched, days since

@@ -202,6 +202,13 @@ to move to. The sentence says "still to see" in place of "next is" when the
 only thing left sits behind where the run stopped, which the mockup's library
 never had to express.
 
+A strip since 2026-09-22 rather than one band cycled through: with several
+runs in rotation, "what now" is a choice between them. Compact cards in one
+row, as many as the strip's width holds at 300px or more — one on a phone,
+up to four — each with its own "Not now", and one card left fills the
+row as the band did. `NEXT UP` sits once above the row. See
+[web-depth.md](web-depth.md) arc 4 chunk 1.
+
 Titles wrap to two lines under the tile and a subtitle past a colon is trimmed
 with the full name on hover. Truncation was accepted as a layout problem rather
 than a font one — it is not a reason to revisit the type.

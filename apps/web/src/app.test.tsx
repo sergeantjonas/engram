@@ -389,7 +389,7 @@ describe('the wall', () => {
 
     await screen.findByRole('heading', { name: 'Heat' });
     expect(screen.queryByRole('heading', { name: 'Bleach' })).toBeNull();
-    // Every episode the band could offer belongs to something the viewer has
+    // Every episode the strip could offer belongs to something the viewer has
     // just said they are not looking at.
     expect(screen.queryByText(/Next up/i)).toBeNull();
 
@@ -521,27 +521,74 @@ describe('the wall', () => {
     });
     await renderAt('/');
 
-    // What to watch leads; where you left off is the reason and goes second.
-    const band = await screen.findByRole('region', { name: 'Next up' });
-    expect(band.textContent).toContain('S4E3 Trial by Ordeal');
-    expect(band.textContent).toContain('You stopped after S4E2, 4 days ago.');
-    expect(within(band).getByRole('link', { name: 'The Witcher' }).getAttribute('href')).toBe(
+    // Every run in rotation is a card of its own, what to watch leading and
+    // where you left off second.
+    const strip = await screen.findByRole('region', { name: 'Next up' });
+    const [witcher, fallout] = within(strip).getAllByRole('listitem');
+    expect(witcher?.textContent).toContain('S4E3 Trial by Ordeal');
+    expect(witcher?.textContent).toContain('You stopped after S4E2, 4 days ago.');
+    expect(within(strip).getByRole('link', { name: 'The Witcher' }).getAttribute('href')).toBe(
       '/titles/a1',
     );
-
-    // "Not now" is this sitting only, and it moves on rather than emptying.
-    within(band).getByRole('button', { name: 'Not now' }).click();
-    await screen.findByRole('link', { name: 'Fallout' });
-    // Nothing ahead of where it stopped, so the band must not imply it follows
+    // Nothing ahead of where it stopped, so the card must not imply it follows
     // on — and with no date on the play there is no "ago" clause to write.
-    expect(screen.getByRole('region', { name: 'Next up' }).textContent).toContain(
-      'You stopped after S2E8, but this one is still unseen.',
-    );
-    // And with one candidate left there is nowhere to move on to.
-    expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull();
+    expect(fallout?.textContent).toContain('You stopped after S2E8, but this one is still unseen.');
+
+    // "Not now" is per card and this sitting only.
+    within(strip).getByRole('button', { name: 'Not now for The Witcher' }).click();
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'The Witcher' })).toBeNull());
+    expect(within(strip).getAllByRole('listitem')).toHaveLength(1);
+    // And with one card left there is nothing beside it to leave showing.
+    expect(within(strip).queryByRole('button', { name: /Not now/ })).toBeNull();
   });
 
-  it('draws no band when there is nothing owed', async () => {
+  it('moves the next run into the place of one passed', async () => {
+    const run = (titleId: string, name: string) => ({
+      titleId,
+      name,
+      posterPath: null,
+      backdropPath: null,
+      stoppedAfter: {
+        season: 1,
+        number: 1,
+        name: null,
+        watchedAt: null,
+        watchedPrecision: 'unknown',
+      },
+      next: { season: 1, number: 2, name: null },
+      continues: true,
+    });
+    stubApi((url) => {
+      if (url.endsWith('/next-up')) {
+        return json({
+          nextUp: [
+            run('a1', 'The Witcher'),
+            run('a2', 'Fallout'),
+            run('a3', 'Severance'),
+            run('a4', 'Andor'),
+            run('a5', 'Legion'),
+          ],
+        });
+      }
+      return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: true });
+    });
+    await renderAt('/');
+
+    // Four at the widest row; the fifth waits for a place.
+    const strip = await screen.findByRole('region', { name: 'Next up' });
+    expect(within(strip).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(strip).queryByRole('link', { name: 'Legion' })).toBeNull();
+
+    // The button keeps the focus and now answers for the card that moved in.
+    const pass = within(strip).getByRole('button', { name: 'Not now for The Witcher' });
+    pass.focus();
+    pass.click();
+    await within(strip).findByRole('link', { name: 'Legion' });
+    expect(document.activeElement).toBe(pass);
+    expect(pass.getAttribute('aria-label')).toBe('Not now for Fallout');
+  });
+
+  it('draws no strip when there is nothing owed', async () => {
     stubApi((url) => {
       if (url.endsWith('/next-up')) return json({ nextUp: [] });
       return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: true });

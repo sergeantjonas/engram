@@ -30,8 +30,9 @@ export interface NextUp {
 }
 
 /**
- * How many the band may cycle through. Small on purpose: this answers "what
- * now", and a list long enough to browse is the wall, which is right there.
+ * How many the strip may offer: as many as its widest row draws, and one to
+ * move in when a card is passed. Small on purpose: this answers "what now",
+ * and a list long enough to browse is the wall, which is right there.
  */
 export const NEXT_UP_LIMIT = 5;
 

@@ -4,7 +4,8 @@
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
-Arc 3 landed 2026-09-22 in five commits, not yet deployed. Arc 4 is next.
+Arc 3 landed 2026-09-22 in five commits, not yet deployed. Arc 4 is in
+progress: chunk 1 landed 2026-09-22, not yet deployed.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -407,11 +408,30 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
 
 ## Arc 4 · Screens the rail owes
 
-1. **Next up as a strip.** One candidate of N with session-only dismissal
-   was right at twelve titles. With ten runs in rotation, the band shows the
-   first three or four as compact cards in a row, `Not now` per card, and the
-   whole strip collapses to one line when there is one. Same query, same
-   dismissal state.
+1. ~~**Next up as a strip.**~~ Landed 2026-09-22. One candidate of N with
+   session-only dismissal was right at twelve titles. With ten runs in
+   rotation, the band shows the first three or four as compact cards in a
+   row, `Not now` per card, and the whole strip collapses to one line when
+   there is one. Same query, same dismissal state.
+
+   Landed as planned: the same `GET /next-up`, its cap left at five, and the
+   same set of titles passed this sitting. How many cards is decided by the
+   strip's own width, a container query rather than the window's, since the
+   rail and the gutter take their share: one on a phone, two from 672px,
+   three from 1024px, four from 1280px, so a card is never under 300px. A
+   laptop at 1512 draws four. One card fills the row, which is the band it
+   was. Each card gives the name, the episode and the reason a line of their
+   own, so a narrow card truncates the episode's name before the show's, and
+   the reason wraps to two lines rather than truncating, since *but this one
+   is still unseen* is the clause that matters. `Not now` rides on the name's
+   line and is drawn on every card while more than one is left; its label
+   names the title. The cards are keyed by slot, so while one is left to move
+   in, passing a card moves the next into its place under the same button
+   rather than dropping the focus; the artwork is keyed by title, so the
+   newcomer never sits beside the poster it replaced. The name is truncated
+   with a tip carrying it whole, as on the wall. One
+   departure: `NEXT UP` moved out of the band to sit once above the row, at
+   9px.
 2. **A home for `want`.** It is a flag on a card and a toggle on the page and
    has no chip. Movies plus *Unwatched* is the backlog only until a show is
    added that has not been started. Add *Want* as a seventh facet, counted

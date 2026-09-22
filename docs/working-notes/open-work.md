@@ -278,7 +278,9 @@ the viewer wants of a title. The SPA calls all four.
    open popover along; chunk 4 the same day — a corner tick on a cell played
    more than once; chunk 5 the same day — the feed pages out in full from a
    new activity route. Arc 3 is complete, none of it yet deployed. Arc 4,
-   the screens the rail owes, is next.
+   the screens the rail owes: chunk 1 landed 2026-09-22 — next up is a strip
+   of cards, as many as the row's width holds, `Not now` on each; not yet
+   deployed.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

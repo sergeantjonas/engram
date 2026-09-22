@@ -141,6 +141,7 @@ const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
   year: 2020,
   posterPath: null,
   status: null,
+  nextAirDate: null,
   state: 'unwatched',
   episodes: { total: 0, seen: 0 },
   want: false,

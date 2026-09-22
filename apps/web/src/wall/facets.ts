@@ -1,4 +1,5 @@
 import type { TitleSummary } from '../api/titles.ts';
+import { CLOSED } from '../title/airing.ts';
 
 /**
  * How long a show can go untouched before it reads as drifting rather than in
@@ -80,6 +81,14 @@ export function matchesFacet(title: TitleSummary, facet: Facet, now: Date): bool
       return title.state === 'in_progress';
     case 'drifting': {
       if (title.state !== 'in_progress') return false;
+      // A run TMDB has closed cannot be picked back up when the next episode
+      // comes, because none is coming: half-watched, it is dropped in fact,
+      // however recent the last episode was.
+      if (title.status !== null && CLOSED.has(title.status)) return true;
+      // The opposite case: a dated episode ahead means the gap is the show's,
+      // not the viewer's. Waiting on a season is not drifting from it.
+      const today = now.toISOString().slice(0, 10);
+      if (title.nextAirDate !== null && title.nextAirDate >= today) return false;
       // Only a date the record knows to the day can be counted from. A coarse
       // entry stores the first instant of the period it names, so "2026" would
       // read as however long ago the 1st of January was — an error bigger than

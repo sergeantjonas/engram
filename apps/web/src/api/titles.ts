@@ -19,6 +19,8 @@ export interface TitleSummary extends Intent {
   posterPath: string | null;
   /** TMDB's word for the run — `Returning Series`, `Ended`, `Canceled`, `Released` — or null until fetched. */
   status: string | null;
+  /** The next episode's `YYYY-MM-DD` while TMDB has one; null for a film or a show with nothing dated. */
+  nextAirDate: string | null;
   state: TitleState;
   /** Always `0 / 0` for a movie, which is "not applicable", not "0 of 0". */
   episodes: { total: number; seen: number };

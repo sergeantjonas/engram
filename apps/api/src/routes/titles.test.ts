@@ -198,6 +198,13 @@ describe('GET /titles', () => {
     expect(titles.map((title: { status: string | null }) => title.status)).toEqual(['Ended', null]);
   });
 
+  it('carries the next air date on the card', async () => {
+    const rows = [listRow({ status: 'Returning Series', next_air_date: '2026-10-20' })];
+    const titles = (await list('', rows)).json().titles;
+
+    expect(titles[0]).toMatchObject({ nextAirDate: '2026-10-20' });
+  });
+
   it('rejects a state nothing can be in', async () => {
     const response = await list('?state=abandoned');
 

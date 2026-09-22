@@ -153,7 +153,7 @@ belongs to has nothing to mark as where you are.
 | Chip | What it means |
 | --- | --- |
 | Still going | some episodes seen, not all |
-| Drifting | still going, and nothing watched for `DRIFTING_AFTER_DAYS` |
+| Drifting | still going, and nothing watched for `DRIFTING_AFTER_DAYS`; a run TMDB has closed counts whatever its dates, one with a dated episode ahead never does |
 | Gaps | an unwatched episode with watched ones either side, in one season |
 | Finished | every regular episode seen, or the film watched |
 | Unwatched | nothing seen |

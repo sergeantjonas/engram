@@ -9,6 +9,7 @@ const title = (over: Partial<TitleSummary> & { name: string }): TitleSummary => 
   year: 2020,
   posterPath: null,
   status: null,
+  nextAirDate: null,
   state: 'unwatched' as TitleState,
   episodes: { total: 8, seen: 0 },
   want: false,

@@ -3,8 +3,9 @@
 **Status:** In progress — scoped 2026-09-21 from a review of the three built
 screens against [web-design.md](web-design.md). Arc 1 is complete: chunks 1
 and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
-2026-09-22 in two commits and carries migration 0012, not yet deployed; chunk
-2 is next. Arcs are ordered; chunks inside an arc are one commit each, and each one
+2026-09-22 in two commits with migration 0012, deployed and refreshed on the
+box the same day; chunk 2 landed 2026-09-22, not yet deployed; chunk 3 is
+next. Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -232,13 +233,27 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    episode's number is stored but not drawn: `next 12 Oct` was the sentence
    planned, and `S3E1` beside it is a claim TMDB revises more often than the
    date.
-2. **Ended resolves drifting.** The open decision on `DRIFTING_AFTER_DAYS`
-   ([open-work.md](open-work.md) § Decisions still open) has nothing to tune
-   against. A half-watched show whose status is Ended is not drifting, it is
-   dropped in fact. `deriveState` or the wall's facet reads status: an
-   in-progress title of an ended show counts under *Drifting* regardless of
-   the day threshold, and the chip's label may want to become *Abandoned*.
-   Decide the label when the count is visible.
+2. ~~**Ended resolves drifting.**~~ Landed 2026-09-22. The open decision on
+   `DRIFTING_AFTER_DAYS` ([open-work.md](open-work.md) § Decisions still open)
+   had nothing to tune against. A half-watched show whose status is Ended is
+   not drifting, it is dropped in fact. Planned as `deriveState` or the wall's
+   facet reading status, with the chip's label possibly becoming *Abandoned*,
+   to be decided when the count was visible.
+
+   The count, taken on the production record after chunk 1's refresh: eight
+   shows in progress — three Canceled, three Returning, two Ended — and the
+   180-day rule already caught three of the five closed ones. Two newly caught
+   shows do not earn a chip of their own, and *Abandoned* claims more than the
+   record knows (The Sandman ended after it was started), so the label stays
+   *Drifting*. The wall's facet, not `deriveState`, reads status: `state` is
+   a fact about the record and stays so. Two rules, both in `matchesFacet`:
+   an in-progress show whose status is Ended or Canceled is drifting whatever
+   its dates; and one whose `next_air_date` is today or ahead is not, whatever
+   its dates — the count showed Bleach and The Rings of Power reading as
+   drifting with an episode scheduled next month, which is waiting, not
+   drifting. `nextAirDate` joins `TitleSummary` for that. Net on production:
+   five drifting before and after, two waiting shows swapped for two cancelled
+   ones.
 3. **Hours as a figure.** `runtimeMin` is stored per episode. The figure row
    adds `31d` or `740h` of television, summed over seen episodes with a
    runtime, and the label says when some episodes had none. Movies use the

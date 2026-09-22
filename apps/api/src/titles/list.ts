@@ -17,6 +17,11 @@ export interface TitleSummary {
    * A fact about the show, where `state` is a fact about the record.
    */
   status: string | null;
+  /**
+   * The next episode's air date as `YYYY-MM-DD`, while TMDB has one. A show
+   * waiting on a dated episode is not drifting however long the gap.
+   */
+  nextAirDate: string | null;
   state: TitleState;
   /**
    * Counts specials out of both halves, the way `deriveState` does. Always
@@ -81,6 +86,7 @@ interface Row extends Record<string, unknown> {
   year: number | null;
   poster_path: string | null;
   status: string | null;
+  next_air_date: string | null;
   want: boolean | null;
   dropped_at: string | null;
   excluded_at: string | null;
@@ -111,7 +117,7 @@ interface Row extends Record<string, unknown> {
 export async function listTitles(db: Database, filter: TitleListFilter = {}) {
   const rows = await db.execute<Row>(sql`
     select
-      t.id, t.key, t.kind, t.name, t.year, t.poster_path, t.status,
+      t.id, t.key, t.kind, t.name, t.year, t.poster_path, t.status, t.next_air_date,
       i.want, i.dropped_at, i.excluded_at,
       lp.present,
       coalesce(e.total, 0)::int as episode_total,
@@ -196,6 +202,7 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
       year: row.year,
       posterPath: row.poster_path,
       status: row.status,
+      nextAirDate: row.next_air_date,
       state: deriveState({
         kind: row.kind,
         episodeTotal: row.episode_total,

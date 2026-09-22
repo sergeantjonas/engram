@@ -12,7 +12,8 @@ export interface AiringLine {
   asOf: string | null;
 }
 
-const CLOSED = new Set(['Ended', 'Canceled']);
+/** TMDB's words for a run that will not continue. */
+export const CLOSED = new Set(['Ended', 'Canceled']);
 
 /**
  * TMDB's status in the header's words. `Released` says nothing the year does

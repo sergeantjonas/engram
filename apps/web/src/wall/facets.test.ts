@@ -21,6 +21,7 @@ const title = (over: Partial<TitleSummary> = {}): TitleSummary => ({
   year: 2020,
   posterPath: null,
   status: null,
+  nextAirDate: null,
   state: 'in_progress',
   episodes: { total: 10, seen: 5 },
   want: false,
@@ -42,6 +43,37 @@ describe('matchesFacet', () => {
     expect(matchesFacet(stale, 'drifting', now)).toBe(true);
     // Still going as well: these are facets, not a partition.
     expect(matchesFacet(stale, 'going', now)).toBe(true);
+  });
+
+  // The threshold measures the viewer's silence; a closed run has nothing left
+  // to be silent about, and a dated episode ahead says the silence is the show's.
+  it('calls a half-watched show TMDB has closed drifting whatever the date', () => {
+    const ended = title({ status: 'Ended', lastWatchedAt: daysAgo(1) });
+    const cancelled = title({
+      status: 'Canceled',
+      lastWatchedAt: null,
+      lastWatchedPrecision: null,
+    });
+
+    expect(matchesFacet(ended, 'drifting', now)).toBe(true);
+    expect(matchesFacet(cancelled, 'drifting', now)).toBe(true);
+    expect(matchesFacet(title({ status: 'Ended', state: 'seen' }), 'drifting', now)).toBe(false);
+  });
+
+  it('will not call a show waiting on a dated episode drifting', () => {
+    const stale = { lastWatchedAt: daysAgo(DRIFTING_AFTER_DAYS + 200), status: 'Returning Series' };
+
+    expect(matchesFacet(title({ ...stale, nextAirDate: '2026-10-20' }), 'drifting', now)).toBe(
+      false,
+    );
+    expect(matchesFacet(title({ ...stale, nextAirDate: '2026-09-20' }), 'drifting', now)).toBe(
+      false,
+    );
+    // A date that has passed without a refresh is no longer a promise.
+    expect(matchesFacet(title({ ...stale, nextAirDate: '2026-09-19' }), 'drifting', now)).toBe(
+      true,
+    );
+    expect(matchesFacet(title({ ...stale, nextAirDate: null }), 'drifting', now)).toBe(true);
   });
 
   it('will not call a finished show drifting, however long ago it ended', () => {

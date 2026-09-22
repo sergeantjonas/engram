@@ -259,8 +259,10 @@ the viewer wants of a title. The SPA calls all four.
    carried migration 0011; deployed and backfilled on the box 2026-09-22.
    Chunks 3 and 4 are not yet deployed. Arc 2 chunk 1 landed 2026-09-22 —
    TMDB's status and next air date stored (migration 0012) and drawn on the
-   header — also not yet deployed; the box needs `backfill:metadata --refresh`
-   after that deploy. Chunk 2, *Ended resolves drifting*, is next.
+   header — deployed and refreshed on the box the same day. Chunk 2 landed
+   2026-09-22: a closed run is drifting whatever its dates, a run with a dated
+   episode ahead is not, label unchanged; not yet deployed. Chunk 3, *Hours as
+   a figure*, is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform
@@ -327,7 +329,10 @@ the viewer wants of a title. The SPA calls all four.
   and the threshold decides one of them. There is nothing left to tune it on.
   Revisit when enough is in progress for the answer to be observable; `dropped`
   is settable now and says the same thing explicitly, which may make the facet
-  redundant rather than mistuned.
+  redundant rather than mistuned. Narrowed 2026-09-22 by web-depth arc 2
+  chunk 2: the threshold no longer decides a closed run (always drifting) or a
+  run with a dated episode ahead (never), so it only measures a returning show
+  with nothing scheduled — on the production record, one show.
 - ~~**Whether legacy-agent libraries exist here.**~~ Answered 2026-09-21, by
   the library dump the same day — it keeps the raw `Guid` arrays, which is what
   nothing captured before it. **No legacy agents on this server.** All 81 items

@@ -255,7 +255,7 @@ the viewer wants of a title. The SPA calls all four.
    size and seen state from the cells, and every external id links to its
    catalogue page and the owner gets a Plex search link that needs no `ratingKey`. Chunk 2
    carried migration 0011; deployed and backfilled on the box 2026-09-22.
-   Chunks 3 and 4 are not yet deployed. Arc 2 chunk 1 landed 2026-09-22 —
+   Chunks 3 and 4 deployed with arc 2. Arc 2 chunk 1 landed 2026-09-22 —
    TMDB's status and next air date stored (migration 0012) and drawn on the
    header — deployed and refreshed on the box the same day. Chunk 2 landed
    2026-09-22: a closed run is drifting whatever its dates, a run with a dated
@@ -275,13 +275,14 @@ the viewer wants of a title. The SPA calls all four.
    same day — one tab stop per season, the arrows walk the cells and carry an
    open popover along; chunk 4 the same day — a corner tick on a cell played
    more than once; chunk 5 the same day — the feed pages out in full from a
-   new activity route. Arc 3 is complete, none of it yet deployed. Arc 4,
+   new activity route. Arc 3 is complete and deployed 2026-09-22. Arc 4,
    the screens the rail owes: chunk 1 landed 2026-09-22 — next up is a strip
    of cards, as many as the row's width holds, `Not now` on each — and
    chunk 2 the same day — *Want* is a chip beside *Unwatched* — and chunk 3
    the same day in three commits — YEAR, the whole dated record as one
    calendar per year over a new `GET /history`, with the year's figures and
-   a picked day's plays beside it; not yet deployed.
+   a picked day's plays beside it; deployed 2026-09-22, no migration.
+   Chunks 4 and 5, export and the type steps, are next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

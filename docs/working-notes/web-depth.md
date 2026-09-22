@@ -4,8 +4,10 @@
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
-Arc 3 landed 2026-09-22 in five commits, not yet deployed. Arc 4 is in
-progress: chunks 1 to 3 landed 2026-09-22, none of it yet deployed.
+Arc 3 landed 2026-09-22 in five commits. Arc 4 is in progress: chunks 1 to
+3 landed 2026-09-22. Both deployed the same day with no migration, and
+`GET /history` answered on the box as the rehearsal had — 461 plays over 24
+titles, all exact, 116 KB.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 

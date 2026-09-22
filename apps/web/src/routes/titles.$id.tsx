@@ -65,31 +65,44 @@ function TitlePage() {
         {/* What was watched and what was meant, on one row. The marking half
           disappears when it has nothing to offer; the intent half is always
           there, because having no opinion is a state you change by saying so
-          rather than one the page can infer. */}
-        {isOwner ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <MarkWatchedButton
-              titleId={id}
-              scope="all"
-              complete={!unwatched}
-              what={film ? 'the film' : 'the whole run'}
-              label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
-              className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
-              {...(film
-                ? { unit: 'play' as const }
-                : { hint: 'Specials are left out — mark those season by season.' })}
-            />
-            <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
-            {/* A rule rather than a gap: the two halves answer different
-              questions and the row would otherwise read as one list. Gone when
-              the marking half is, or it is a rule at the left edge dividing
-              nothing from the intent controls. */}
-            {unwatched || figures.manualPlays > 0 ? (
+          rather than one the page can infer. The Plex search is for anyone:
+          it writes nothing and it asks Plex for nothing, so the record keeps
+          no ratingKey — a search by name is what "play in Plex" honestly is. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            href={`https://app.plex.tv/desktop/#!/search?query=${encodeURIComponent(title.name)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-dim hover:text-tx"
+          >
+            Find in Plex
+          </a>
+          {isOwner ? (
+            <>
               <span aria-hidden="true" className="h-5 w-px bg-line" />
-            ) : null}
-            <IntentControls titleId={id} intent={title} />
-          </div>
-        ) : null}
+              <MarkWatchedButton
+                titleId={id}
+                scope="all"
+                complete={!unwatched}
+                what={film ? 'the film' : 'the whole run'}
+                label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
+                className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
+                {...(film
+                  ? { unit: 'play' as const }
+                  : { hint: 'Specials are left out — mark those season by season.' })}
+              />
+              <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
+              {/* A rule rather than a gap: the two halves answer different
+                  questions and the row would otherwise read as one list. Gone
+                  when the marking half is, or it would stand beside the rule
+                  after the Plex link with nothing between them. */}
+              {unwatched || figures.manualPlays > 0 ? (
+                <span aria-hidden="true" className="h-5 w-px bg-line" />
+              ) : null}
+              <IntentControls titleId={id} intent={title} />
+            </>
+          ) : null}
+        </div>
 
         <YearBar
           moments={data.recentActivity}

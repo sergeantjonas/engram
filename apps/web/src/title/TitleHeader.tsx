@@ -57,12 +57,45 @@ function Identity({ ids, kind }: { ids: ExternalIds; kind: TitleSummary['kind'] 
   // one the title is keyed by and the one that survives a redownload.
   const order =
     kind === 'show' ? (['tvdb', 'tmdb', 'imdb'] as const) : (['tmdb', 'tvdb', 'imdb'] as const);
-  const named = order
-    .map((source) => (ids[source] === null ? null : `${source} ${ids[source]}`))
-    .filter((id) => id !== null);
+  const linked = order.flatMap((source) => {
+    const id = ids[source];
+    return id === null ? [] : [{ source, id, href: cataloguePage(source, id, kind) }];
+  });
 
-  if (named.length === 0) return null;
-  return <p className="font-mono text-[10px] text-faint">{named.join(' · ')}</p>;
+  if (linked.length === 0) return null;
+  return (
+    <p className="font-mono text-[10px] text-faint">
+      {linked.map(({ source, id, href }, index) => (
+        <span key={source}>
+          {index > 0 ? ' · ' : null}
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-4 hover:text-dim hover:underline"
+          >
+            {source} {id}
+          </a>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/**
+ * The catalogue page an id names. TheTVDB's `?tab=movie&id=` answers with its
+ * home page, so both kinds go through its dereferrer, which redirects to the
+ * slugged page; TMDB numbers films and series apart, so the kind picks the path.
+ */
+function cataloguePage(source: keyof ExternalIds, id: string, kind: TitleSummary['kind']): string {
+  switch (source) {
+    case 'tvdb':
+      return `https://thetvdb.com/dereferrer/${kind === 'show' ? 'series' : 'movie'}/${id}`;
+    case 'tmdb':
+      return `https://www.themoviedb.org/${kind === 'show' ? 'tv' : 'movie'}/${id}`;
+    case 'imdb':
+      return `https://www.imdb.com/title/${id}`;
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 # Web design
 
-**Status:** Settled 2026-09-16; amended 2026-09-21 where the build departs from
+**Status:** Settled 2026-09-16; amended 2026-09-21 and 2026-09-22 where the build departs from
 the mockup, each departure marked as such in place. The mockup is the reference,
 not this note: [../design/engram-app.html](../design/engram-app.html), or
 <https://claude.ai/artifact/8Tu2NYg7EXNS8kDw3LanJ5> for the hosted copy. Read
@@ -232,7 +232,12 @@ Around it:
   pill on one line, and the ids are a quieter mono line under it. Kind and
   state earn the space beside the year more than the ids do, and the ids read
   better as a block that can be scanned for one source than as the tail of a
-  sentence. Canonical id first — tvdb for a show, tmdb for a film.
+  sentence. Canonical id first — tvdb for a show, tmdb for a film. Since
+  2026-09-22 each id is a link to its catalogue page, underlined on hover only,
+  and a **Find in Plex** link opens the action row for everyone: a search by
+  name, which is what "play in Plex" can honestly be without a `ratingKey`.
+  The § 01 rejection stands — there is still no deep link. Reasoning in
+  [web-depth.md](web-depth.md) arc 1 chunk 4.
 - A figure row — plays, episodes seen, rewatched, first watched, days since
   last.
 - The twelve-month strip from the first round, so a season's shape is visible

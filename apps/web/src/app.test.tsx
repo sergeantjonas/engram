@@ -1198,10 +1198,66 @@ describe('the title page', () => {
     await screen.findByRole('heading', { name: 'ONE PIECE' });
     expect(screen.queryByRole('button', { name: /Mark the whole run/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Take back/ })).toBeNull();
-    // The rule between the two halves goes with them, rather than standing at
-    // the left edge dividing nothing from the intent controls.
-    expect(document.querySelectorAll('span[aria-hidden="true"].w-px')).toHaveLength(0);
+    // The rule between the two halves goes with them, rather than standing
+    // between the Plex link and the intent controls twice over.
+    expect(document.querySelectorAll('span[aria-hidden="true"].w-px')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Want to watch' })).toBeDefined();
+  });
+
+  it('links every id to its catalogue page and the name to a Plex search', async () => {
+    // As a visitor: the links write nothing, so everyone gets them.
+    stubTitle(false);
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    await screen.findByRole('heading', { name: 'ONE PIECE' });
+    const href = (name: string) => screen.getByRole('link', { name }).getAttribute('href');
+    // TheTVDB's dereferrer rather than `?tab=series&id=`: the tab form answers
+    // a movie id with the home page, and one shape for both kinds is honest.
+    expect(href('tvdb 392276')).toBe('https://thetvdb.com/dereferrer/series/392276');
+    expect(href('tmdb 111110')).toBe('https://www.themoviedb.org/tv/111110');
+    expect(href('imdb tt11737520')).toBe('https://www.imdb.com/title/tt11737520');
+    expect(href('Find in Plex')).toBe('https://app.plex.tv/desktop/#!/search?query=ONE%20PIECE');
+    for (const link of screen.getAllByRole('link', { name: /^(tvdb|tmdb|imdb) |Find in Plex/ })) {
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toBe('noreferrer');
+    }
+    expect(screen.queryByRole('button', { name: 'Want to watch' })).toBeNull();
+  });
+
+  it('points a film at the movie side of each catalogue', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title = { ...body.title, name: 'Heat & Dust', kind: 'movie' };
+        body.ids = { tmdb: '949', tvdb: '113', imdb: 'tt0113277' };
+        body.seasons = [];
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    await screen.findByRole('heading', { name: 'Heat & Dust' });
+    const href = (name: string) => screen.getByRole('link', { name }).getAttribute('href');
+    expect(href('tmdb 949')).toBe('https://www.themoviedb.org/movie/949');
+    expect(href('tvdb 113')).toBe('https://thetvdb.com/dereferrer/movie/113');
+    expect(href('Find in Plex')).toBe(
+      'https://app.plex.tv/desktop/#!/search?query=Heat%20%26%20Dust',
+    );
+  });
+
+  it('draws no identity line for a title with no ids', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        return json({ ...detail(), ids: { tmdb: null, tvdb: null, imdb: null } });
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    expect(screen.queryByRole('link', { name: /^(tvdb|tmdb|imdb) / })).toBeNull();
+    expect(heading.closest('header')?.querySelector('p.font-mono')).toBeNull();
   });
 
   // The notice that offered the way back is gone by the time it fails, so the

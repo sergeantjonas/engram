@@ -251,9 +251,13 @@ the viewer wants of a title. The SPA calls all four.
    field that remembers, keyboard walk), the screens the rail owes (YEAR,
    export, a home for `want`) and the visual pass (the state bar as a
    progress bar). Arc 1 first; its first three chunks spend no TMDB calls.
-   Arc 1 chunks 1 and 2 landed 2026-09-21: the header says what the title is,
-   the episode popover is a card with a still and a synopsis. Chunk 2 carried
-   migration 0011; deployed and backfilled on the box 2026-09-22.
+   Arc 1 is complete: chunks 1 and 2 landed 2026-09-21 — the header says what
+   the title is, the episode popover is a card with a still and a synopsis —
+   and chunks 3 and 4 on 2026-09-22 — the season heading derives its years,
+   size and seen state from the cells, and every external id links to its
+   catalogue page beside a Plex search link that needs no `ratingKey`. Chunk 2
+   carried migration 0011; deployed and backfilled on the box 2026-09-22.
+   Chunks 3 and 4 are not yet deployed. Arc 2 is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

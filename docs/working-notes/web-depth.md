@@ -1,8 +1,8 @@
 # Web depth
 
 **Status:** In progress — scoped 2026-09-21 from a review of the three built
-screens against [web-design.md](web-design.md); arc 1 chunks 1 and 2 landed
-the same day, chunk 3 on 2026-09-22. Arcs are ordered; chunks inside an arc are one commit each, and each one
+screens against [web-design.md](web-design.md). Arc 1 is complete: chunks 1
+and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 is next. Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -165,13 +165,22 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    years the show ran, so the range would describe the show rather than the
    fold, and the summary's job is the count that says whether opening it is
    worth anything.
-4. **Link the ids.** The identity line in `TitleHeader` makes each id a link
-   to its catalogue page (`themoviedb.org/tv/{id}`, `thetvdb.com/?tab=series&id=`,
-   `imdb.com/title/{id}`), opened in a new tab, styled as the mono text it
-   already is with an underline on hover. Costs nothing and answers half of
-   "tell me about this show" with no schema. A Plex web search link
-   (`app.plex.tv/desktop/#!/search?query=<name>`) is the honest, `ratingKey`-free
-   form of the mockup's rejected "play in Plex" and goes on the action row.
+4. ~~**Link the ids.**~~ Landed 2026-09-22. The identity line in `TitleHeader`
+   makes each id a link to its catalogue page, opened in a new tab with
+   `rel="noreferrer"`, styled as the mono text it already is with an underline
+   on hover. TMDB by kind, `themoviedb.org/tv/{id}` or `/movie/{id}`;
+   `imdb.com/title/{id}`. One departure: TheTVDB goes through its dereferrer,
+   `thetvdb.com/dereferrer/series/{id}` and `/dereferrer/movie/{id}`, rather
+   than the `?tab=series&id=` form planned. Probed 2026-09-22: `?tab=series`
+   redirects to the series page, but `?tab=movie&id=` answers a movie id with
+   the home page, while both dereferrer forms redirect to the slugged page, so
+   one shape serves both kinds. Costs nothing and answers half of "tell me
+   about this show" with no schema. A **Find in Plex** link,
+   `app.plex.tv/desktop/#!/search?query=<encoded name>`, sits first on the
+   action row for everyone, since it writes nothing — the honest,
+   `ratingKey`-free form of the mockup's rejected "play in Plex". The row is
+   no longer owner-only for that reason; the owner's controls follow it after
+   a rule.
 
 ## Arc 2 · Facts the state vocabulary is missing
 

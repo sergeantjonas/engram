@@ -6,7 +6,8 @@ and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
 2026-09-22 in two commits with migration 0012, deployed and refreshed on the
 box the same day; chunks 2 and 3 landed 2026-09-22, chunk 3 in two commits
 with migration 0013, and both were deployed and refreshed on the box the same
-day. Chunk 4 is next. Arcs are ordered; chunks inside an arc are one commit each, and each
+day; chunk 3 was then amended so the watched cell is shows-only and a film's
+runtime sits on the meta line. Chunk 4 is next. Arcs are ordered; chunks inside an arc are one commit each, and each
 one deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -277,8 +278,14 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    One departure from the plan's `31d` or `740h`: one unit, never both, and
    hours run to ten days before the figure steps to days, the way
    `formatSince` steps from days to months; floored, since a floor must not
-   round up. Nothing is drawn when the sum is
-   zero, like the other cells. The wall does not carry the figure.
+   round up. Nothing is drawn when the sum is zero, like the other cells. The
+   wall does not carry the figure.
+
+   Amended 2026-09-22 after the first look in production: a film's cell read
+   `1h` for a 96-minute film, a third of it floored away, and only repeated
+   the runtime beside a play count of one. The cell is drawn for shows only;
+   a film's runtime is a fact about the film and sits on the meta line as
+   `Film · 1h 36m`, to the minute. `TitleDetail` carries `runtimeMin` for it.
 4. **A film's run.** *The first new TMDB call.* Collection membership (Dune:
    Part One belongs to the Dune collection), director and the top three cast,
    from `append_to_response=credits` on the details call plus one collection

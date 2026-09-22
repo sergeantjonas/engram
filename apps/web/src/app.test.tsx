@@ -237,6 +237,7 @@ describe('the title pane', () => {
               title: { ...library[0], onDisk: null },
               ids: {},
               backdropPath: null,
+              runtimeMin: null,
               airing: { lastAirDate: null, next: null, fetchedAt: null },
               figures: {
                 plays: 0,
@@ -275,6 +276,7 @@ describe('the title pane', () => {
               title: { ...library[1], onDisk: null },
               ids: {},
               backdropPath: null,
+              runtimeMin: null,
               airing: { lastAirDate: null, next: null, fetchedAt: null },
               figures: {
                 plays: 0,
@@ -496,7 +498,6 @@ describe('the wall', () => {
               name: 'Fallout',
               posterPath: null,
               backdropPath: null,
-              airing: { lastAirDate: null, next: null, fetchedAt: null },
               stoppedAfter: {
                 season: 2,
                 number: 8,
@@ -668,6 +669,7 @@ describe('the title page', () => {
     ids: { tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' },
     backdropPath: '/backdrop.jpg',
     overview: OVERVIEW,
+    runtimeMin: null,
     // Fetched today and ahead of today, so the header claims it without an
     // "as of": the stale case is exercised on its own.
     airing: {
@@ -1281,6 +1283,25 @@ describe('the title page', () => {
     expect(header).toMatch(/18h\s*watched, at least/);
   });
 
+  it("states a film's runtime as a fact and gives it no watched cell", async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.kind = 'movie';
+        body.runtimeMin = 96;
+        body.figures.watchedMin = 96;
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    const header = heading.closest('header')?.textContent ?? '';
+    expect(header).toContain('Film·1h 36m·');
+    expect(header).not.toMatch(/1h\s*watched/);
+  });
+
   it('calls the time watched whole when every seen row has a runtime', async () => {
     stubApi((url) => {
       if (url.includes('/titles/')) {
@@ -1690,6 +1711,7 @@ describe('adding a title', () => {
           // TMDB has a poster for nearly everything and a backdrop for rather
           // less, so the header has to read without one.
           backdropPath: null,
+          runtimeMin: null,
           airing: { lastAirDate: null, next: null, fetchedAt: null },
           // Two plays the API did not send with this response: nothing on the
           // page may assume the feed accounts for the figures beside it.

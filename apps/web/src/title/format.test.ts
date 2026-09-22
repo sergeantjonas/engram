@@ -4,6 +4,7 @@ import {
   formatAirDate,
   formatDuration,
   formatMoment,
+  formatRuntime,
   formatSince,
   formatWatchedShort,
 } from './format.ts';
@@ -192,5 +193,13 @@ describe('formatDuration', () => {
     // month of it is not `740h`.
     expect(formatDuration(240 * 60 - 1)).toBe('239h');
     expect(formatDuration(240 * 60)).toBe('10d');
+  });
+});
+
+describe('formatRuntime', () => {
+  it('keeps the minutes a runtime is known to', () => {
+    expect(formatRuntime(96)).toBe('1h 36m');
+    expect(formatRuntime(120)).toBe('2h');
+    expect(formatRuntime(48)).toBe('48m');
   });
 });

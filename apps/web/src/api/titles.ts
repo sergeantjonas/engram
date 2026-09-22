@@ -137,6 +137,8 @@ export interface TitleDetail {
   backdropPath: string | null;
   /** TMDB's synopsis. Null until the metadata backfill has run for this title. */
   overview: string | null;
+  /** A film's running time in minutes; null for a show, whose time is per episode, or a film TMDB has no figure for. */
+  runtimeMin: number | null;
   airing: Airing;
   figures: TitleFigures;
   /**

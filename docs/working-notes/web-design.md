@@ -251,10 +251,11 @@ Around it:
   to anyone else.
   The § 01 rejection stands — there is still no deep link. Reasoning in
   [web-depth.md](web-depth.md) arc 1 chunk 4.
-- A figure row — plays, episodes seen, rewatched, time watched (a floor when
-  some of it carries no runtime, and the label says so), first watched, days
-  since last. The time cell was added 2026-09-22 by
-  [web-depth.md](web-depth.md) arc 2 chunk 3.
+- A figure row — plays, episodes seen, rewatched, time watched (shows only; a
+  floor when some of it carries no runtime, and the label says so), first
+  watched, days since last. A film's runtime sits on the meta line instead.
+  The time cell was added 2026-09-22 by [web-depth.md](web-depth.md) arc 2
+  chunk 3.
 - The twelve-month strip from the first round, so a season's shape is visible
   without reading the feed.
 

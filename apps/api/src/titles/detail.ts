@@ -155,6 +155,8 @@ export interface TitleDetail {
   backdropPath: string | null;
   /** TMDB's synopsis, as stored. Null for a title added before it was fetched. */
   overview: string | null;
+  /** A film's running time in minutes. Null for a show, whose time is per episode, or a film TMDB has no figure for. */
+  runtimeMin: number | null;
   airing: Airing;
   figures: TitleFigures;
   /**
@@ -198,6 +200,7 @@ export function asStranger(detail: TitleDetail): TitleDetail {
     ids: detail.ids,
     backdropPath: detail.backdropPath,
     overview: detail.overview,
+    runtimeMin: detail.runtimeMin,
     // TMDB's calendar, not the owner's: nothing here was written by hand.
     airing: detail.airing,
     // Whole, `manualPlays` included. How much of the record was typed rather
@@ -222,6 +225,7 @@ interface IdentityRow extends Record<string, unknown> {
   imdb_id: string | null;
   backdrop_path: string | null;
   overview: string | null;
+  runtime_min: number | null;
   last_air_date: string | null;
   next_air_date: string | null;
   next_episode_season: number | null;
@@ -287,7 +291,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
   const [identity] = [
     ...(await db.execute<IdentityRow>(sql`
       select
-        t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path, t.overview,
+        t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path, t.overview, t.runtime_min,
         t.last_air_date, t.next_air_date, t.next_episode_season, t.next_episode_number,
         to_json(t.metadata_fetched_at) as metadata_fetched_at,
         coalesce(f.plays, 0)::int as plays,
@@ -466,6 +470,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     },
     backdropPath: identity?.backdrop_path ?? null,
     overview: identity?.overview ?? null,
+    runtimeMin: identity?.runtime_min ?? null,
     airing: {
       lastAirDate: identity?.last_air_date ?? null,
       // Numbered or nothing: a date alone is not an episode to point at.

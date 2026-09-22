@@ -45,6 +45,7 @@ const identityRow = {
   tvdb_id: '392276',
   imdb_id: 'tt11737520',
   overview: 'Gold Roger was known as the Pirate King.',
+  runtime_min: null,
   last_air_date: '2026-09-14',
   next_air_date: '2026-10-15',
   next_episode_season: 3,
@@ -193,6 +194,7 @@ describe('titleDetail', () => {
 
     expect(result?.ids).toEqual({ tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' });
     expect(result?.overview).toBe('Gold Roger was known as the Pirate King.');
+    expect(result?.runtimeMin).toBeNull();
     expect(result?.figures).toMatchObject({
       plays: 19,
       rewatched: 4,

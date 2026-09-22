@@ -240,3 +240,15 @@ export function formatDuration(minutes: number): string {
   if (hours < 240) return `${Math.floor(hours)}h`;
   return `${Math.floor(hours / 24)}d`;
 }
+
+/**
+ * A film's running time as a fact about the film — `1h 36m`. Two units where
+ * `formatDuration` allows one: a runtime is a figure people know to the
+ * minute, and `1h` for a 96-minute film drops a third of it.
+ */
+export function formatRuntime(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}m`;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
+}

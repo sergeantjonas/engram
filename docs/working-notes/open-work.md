@@ -261,11 +261,13 @@ the viewer wants of a title. The SPA calls all four.
    TMDB's status and next air date stored (migration 0012) and drawn on the
    header — deployed and refreshed on the box the same day. Chunk 2 landed
    2026-09-22: a closed run is drifting whatever its dates, a run with a dated
-   episode ahead is not, label unchanged; not yet deployed. Chunk 3, *Hours as
-   a figure*, landed 2026-09-22 in two commits (migration 0013, a
-   film's `runtime_min`, a `watched` cell in the header's stat box); chunks 2
-   and 3 deployed and refreshed on the box 2026-09-22. Chunk 4, *A film's run*, is next
-   and is the first to spend a new TMDB call.
+   episode ahead is not, label unchanged. Chunk 3, *Hours as a figure*,
+   landed 2026-09-22 in two commits (migration 0013, a film's `runtime_min`,
+   a `watched` cell in the header's stat box for shows; a film's runtime sits
+   on its meta line, amended the same day after the first look in
+   production). Chunks 2 and 3 deployed and refreshed on the box 2026-09-22.
+   Chunk 4, *A film's run*, is next and is the first to spend a new TMDB
+   call.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

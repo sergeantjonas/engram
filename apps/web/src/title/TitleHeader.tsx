@@ -3,7 +3,13 @@ import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { backdropUrl, posterUrl } from '../api/titles.ts';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
 import { airingLine } from './airing.ts';
-import { formatAirDay, formatDuration, formatSince, formatWatchedShort } from './format.ts';
+import {
+  formatAirDay,
+  formatDuration,
+  formatRuntime,
+  formatSince,
+  formatWatchedShort,
+} from './format.ts';
 
 /**
  * One cell of the stat box: the figure large in mono, its name small and
@@ -153,10 +159,14 @@ export function TitleHeader({
   ids,
   backdropPath,
   overview,
+  runtimeMin,
   airing,
   figures,
   today,
-}: Pick<TitleDetail, 'title' | 'ids' | 'backdropPath' | 'overview' | 'airing' | 'figures'> & {
+}: Pick<
+  TitleDetail,
+  'title' | 'ids' | 'backdropPath' | 'overview' | 'runtimeMin' | 'airing' | 'figures'
+> & {
   /** Today as `YYYY-MM-DD`, the page's one clock. */
   today: string;
 }) {
@@ -183,9 +193,11 @@ export function TitleHeader({
       ? { value: String(title.episodes.seen), label: 'episodes seen' }
       : null,
     rewatched > 0 ? { value: String(rewatched), label: 'rewatched' } : null,
-    // A floor when some of what was seen carries no runtime, and the label
-    // says so rather than letting the figure pass for the whole.
-    watchedMin > 0
+    // A show's sum is a figure; a film's would only repeat the runtime the
+    // meta line already states, beside a play count of one. A floor when some
+    // of what was seen carries no runtime, and the label says so rather than
+    // letting the figure pass for the whole.
+    isShow && watchedMin > 0
       ? { value: formatDuration(watchedMin), label: untimed > 0 ? 'watched, at least' : 'watched' }
       : null,
     firstWatchedAt !== null
@@ -236,6 +248,12 @@ export function TitleHeader({
               <span className="font-mono text-xs text-dim">{title.year ?? '????'}</span>
               <span className="text-xs text-faint">·</span>
               <span className="text-xs text-dim">{isShow ? 'Series' : 'Film'}</span>
+              {runtimeMin !== null ? (
+                <>
+                  <span className="text-xs text-faint">·</span>
+                  <span className="font-mono text-xs text-dim">{formatRuntime(runtimeMin)}</span>
+                </>
+              ) : null}
               <span className="text-xs text-faint">·</span>
               <span className="text-xs text-dim">{STATE_LABEL[title.state]}</span>
               {/* Where the run stands, after where the record stands: a fact

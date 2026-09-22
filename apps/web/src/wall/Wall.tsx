@@ -62,6 +62,7 @@ const EMPTY: Record<Facet, string> = {
   gaps: 'No holes in any run.',
   finished: 'Nothing finished yet.',
   unwatched: 'Nothing left unwatched.',
+  want: 'Nothing is flagged as wanted.',
   offdisk: 'Nothing has been reported gone.',
 };
 
@@ -100,7 +101,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
   // nothing.
   const keepForFacet = { ...keep, ...withKind };
   const keepForKind = (next: KindFilter | undefined) =>
-    facet && appliesTo(facet, next) ? { ...keep, facet } : keep;
+    facet && appliesTo(facet, next, isOwner) ? { ...keep, facet } : keep;
 
   return (
     <div className="space-y-6">
@@ -157,7 +158,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
         >
           Any state <b className="font-semibold">{ofKind.length}</b>
         </Link>
-        {facetsFor(kind).map((option) => (
+        {facetsFor(kind, isOwner).map((option) => (
           <Link
             key={option}
             to="/"

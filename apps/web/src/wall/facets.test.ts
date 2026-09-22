@@ -110,12 +110,27 @@ describe('matchesFacet', () => {
     expect(matchesFacet(title({ onDisk: null }), 'offdisk', now)).toBe(false);
     expect(matchesFacet(title({ onDisk: false }), 'offdisk', now)).toBe(true);
   });
+
+  it('keeps a wanted title under Want whatever has been watched of it', () => {
+    // Added before it was started: wanted, and not the same thing as unwatched
+    // for long.
+    expect(matchesFacet(title({ want: true, state: 'unwatched' }), 'want', now)).toBe(true);
+    // Flagged for a second watch, which only the flag can say.
+    expect(matchesFacet(title({ want: true, state: 'seen' }), 'want', now)).toBe(true);
+    expect(matchesFacet(title({ want: false, state: 'unwatched' }), 'want', now)).toBe(false);
+    // Meant, then given up on: the record keeps both, the backlog does not.
+    expect(matchesFacet(title({ want: true, dropped: true }), 'want', now)).toBe(false);
+  });
 });
 
 describe('countFacets', () => {
   it('counts every facet over the whole library, including the empty ones', () => {
     const counts = countFacets(
-      [title(), title({ state: 'seen' }), title({ state: 'unwatched', lastWatchedAt: null })],
+      [
+        title(),
+        title({ state: 'seen' }),
+        title({ state: 'unwatched', lastWatchedAt: null, want: true }),
+      ],
       now,
     );
 
@@ -125,6 +140,7 @@ describe('countFacets', () => {
       gaps: 0,
       finished: 1,
       unwatched: 1,
+      want: 1,
       offdisk: 0,
     });
   });
@@ -132,19 +148,28 @@ describe('countFacets', () => {
 
 describe('facetsFor', () => {
   it('offers every facet when both kinds are on the wall', () => {
-    expect(facetsFor(undefined)).toEqual(FACETS);
-    expect(facetsFor('show')).toEqual(FACETS);
+    expect(facetsFor(undefined, true)).toEqual(FACETS);
+    expect(facetsFor('show', true)).toEqual(FACETS);
   });
 
   it('drops the run facets against films, which can never match one', () => {
     // A film's state is only ever seen or unwatched, so these three are not
     // empty by accident — offering them invites the reader to wonder why.
-    expect(facetsFor('movie')).toEqual(['finished', 'unwatched', 'offdisk']);
+    expect(facetsFor('movie', true)).toEqual(['finished', 'unwatched', 'want', 'offdisk']);
+  });
+
+  it('drops Want for a stranger, whose every title reads as not wanted', () => {
+    expect(facetsFor(undefined, false)).toEqual(FACETS.filter((facet) => facet !== 'want'));
+    expect(facetsFor('movie', false)).toEqual(['finished', 'unwatched', 'offdisk']);
   });
 
   it('agrees with appliesTo', () => {
-    for (const facet of FACETS) {
-      expect(facetsFor('movie').includes(facet)).toBe(appliesTo(facet, 'movie'));
+    for (const isOwner of [true, false]) {
+      for (const facet of FACETS) {
+        expect(facetsFor('movie', isOwner).includes(facet)).toBe(
+          appliesTo(facet, 'movie', isOwner),
+        );
+      }
     }
   });
 });

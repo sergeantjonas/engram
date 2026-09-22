@@ -399,6 +399,9 @@ describe('the wall', () => {
     expect(screen.queryByRole('link', { name: /Drifting/ })).toBeNull();
     expect(screen.queryByRole('link', { name: /Gaps/ })).toBeNull();
     expect(screen.getByRole('link', { name: /Unwatched 1/ })).toBeDefined();
+    // The backlog read as the viewer flagged it, beside the one read off the
+    // record.
+    expect(screen.getByRole('link', { name: /Want 0/ })).toBeDefined();
 
     // The counts beside the kinds describe the library; the state chips
     // describe the kind now showing.
@@ -475,6 +478,21 @@ describe('the wall', () => {
     expect(screen.getByRole('link', { name: /Any state 1/ }).getAttribute('aria-current')).toBe(
       'page',
     );
+  });
+
+  it('ignores Want in the address of anyone but the owner', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({ titles: [title({ name: 'Bleach' })] })
+        : json({ isOwner: false }),
+    );
+    // The owner's link, passed on. Obeyed, it would tell a stranger nothing is
+    // wanted, which is not what the record says but what the API sent them.
+    const router = await renderAt('/?facet=want');
+
+    await screen.findByRole('heading', { name: 'Bleach' });
+    expect(router.state.location.search).toEqual({});
+    expect(screen.queryByText('Nothing is flagged as wanted.')).toBeNull();
   });
 
   // The question someone opening the app is usually asking, which the wall
@@ -629,8 +647,10 @@ describe('the wall', () => {
     await renderAt('/');
 
     await screen.findByRole('heading', { name: 'Bleach' });
-    // The chips read the record, so a stranger gets all of them.
+    // The chips read the record, so a stranger gets them — all but *Want*,
+    // which reads an opinion the API does not send them.
     expect(screen.getByRole('link', { name: /Still going 1/ })).toBeDefined();
+    expect(screen.queryByRole('link', { name: /Want/ })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Show excluded' })).toBeNull();
     expect(screen.queryByRole('link', { name: '+ Add watched' })).toBeNull();
     // The rail offers only what a visitor can reach, so ADD is not on it.

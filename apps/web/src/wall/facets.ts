@@ -18,8 +18,21 @@ export const DRIFTING_AFTER_DAYS = 180;
  * These are facets, not a partition: a show can be still going, drifting and
  * full of holes at once, and each chip carries its own count of the whole
  * library rather than of what is currently on screen.
+ *
+ * *Want* sits beside *Unwatched* because the two are the backlog read two
+ * ways: what the record has no play of, and what the viewer has said they
+ * mean to see. They part as soon as a show is added before it is started, or
+ * a film is flagged for a second watch.
  */
-export const FACETS = ['going', 'drifting', 'gaps', 'finished', 'unwatched', 'offdisk'] as const;
+export const FACETS = [
+  'going',
+  'drifting',
+  'gaps',
+  'finished',
+  'unwatched',
+  'want',
+  'offdisk',
+] as const;
 
 export type Facet = (typeof FACETS)[number];
 
@@ -29,6 +42,7 @@ export const FACET_LABEL: Record<Facet, string> = {
   gaps: 'Gaps',
   finished: 'Finished',
   unwatched: 'Unwatched',
+  want: 'Want',
   offdisk: 'Not on disk',
 };
 
@@ -44,7 +58,8 @@ export const isFacet = (value: unknown): value is Facet =>
  *
  * It earns the room at 82 titles. A third of the library is movies, and the
  * movie backlog is the largest single thing on the wall: this control plus
- * *Unwatched*, rather than a chip of its own saying the same in one word.
+ * *Unwatched*, or *Want* once films are flagged, rather than a chip of its own
+ * saying the same in one word.
  */
 export const KINDS = ['show', 'movie'] as const;
 
@@ -66,11 +81,18 @@ export const isKind = (value: unknown): value is KindFilter =>
  */
 const RUN_ONLY: readonly Facet[] = ['going', 'drifting', 'gaps'];
 
-export const appliesTo = (facet: Facet, kind: KindFilter | undefined): boolean =>
-  kind !== 'movie' || !RUN_ONLY.includes(facet);
+/**
+ * The same structural zero, for a different reader. `want` is an opinion, not
+ * a fact about the record, and the API sends it to anyone but the owner as
+ * false, so a stranger's *Want* could only ever read 0.
+ */
+const OWNER_ONLY: readonly Facet[] = ['want'];
 
-export const facetsFor = (kind: KindFilter | undefined): readonly Facet[] =>
-  FACETS.filter((facet) => appliesTo(facet, kind));
+export const appliesTo = (facet: Facet, kind: KindFilter | undefined, isOwner: boolean): boolean =>
+  (kind !== 'movie' || !RUN_ONLY.includes(facet)) && (isOwner || !OWNER_ONLY.includes(facet));
+
+export const facetsFor = (kind: KindFilter | undefined, isOwner: boolean): readonly Facet[] =>
+  FACETS.filter((facet) => appliesTo(facet, kind, isOwner));
 
 const daysSince = (at: string | null, now: Date): number | null =>
   at === null ? null : Math.floor((now.getTime() - Date.parse(at)) / 86_400_000);
@@ -106,6 +128,13 @@ export function matchesFacet(title: TitleSummary, facet: Facet, now: Date): bool
       return title.state === 'seen';
     case 'unwatched':
       return title.state === 'unwatched';
+    // The flag as set, whatever has been watched since: clearing it is the
+    // viewer's call, and a title finished while wanted still says so. Dropped
+    // is the exception. The two flags are kept apart so the record remembers
+    // a show was meant before it was given up on, but a backlog that lists
+    // what the viewer gave up on is not one.
+    case 'want':
+      return title.want && !title.dropped;
     case 'offdisk':
       return title.onDisk === false;
   }

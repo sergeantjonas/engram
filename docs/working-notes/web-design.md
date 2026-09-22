@@ -125,6 +125,16 @@ The movie backlog gets no chip of its own. It is Movies plus *Unwatched* — 27
 the day this landed — and a third control saying that in one word would be a
 synonym, not an answer.
 
+*Want* is a chip since 2026-09-22, beside *Unwatched*, and it is not that
+synonym: it is the want flag, which had been a word on a card and a toggle on
+the title page with nowhere to list what it marked. The two read the backlog
+two ways — no play on record, and said to be meant — and part as soon as a
+show is added before it is started or a film is flagged for a second watch.
+The backlog is *Movies · Want* once the owner flags them, *Movies ·
+Unwatched* until then. It applies to both kinds, and is the owner's alone: a
+stranger is sent no intent, so theirs could only read 0. See
+[web-depth.md](web-depth.md) arc 4 chunk 2.
+
 The title page's list pane carries the same three positions, added the same
 day and for the same reason: it sorts by state alone, so at 82 titles the run
 being worked through sits between two movies with nothing in common but a
@@ -157,6 +167,7 @@ belongs to has nothing to mark as where you are.
 | Gaps | an unwatched episode with watched ones either side, in one season |
 | Finished | every regular episode seen, or the film watched |
 | Unwatched | nothing seen |
+| Want | flagged *Want to watch* and not dropped, whatever has been seen since; owner only |
 | Not on disk | something reported the files gone — null is "nobody looked" |
 
 The chips are set at 10px rather than the mockup's 8.5px, which is below what

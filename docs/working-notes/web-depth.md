@@ -5,7 +5,7 @@ screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
 Arc 3 landed 2026-09-22 in five commits, not yet deployed. Arc 4 is in
-progress: chunk 1 landed 2026-09-22, not yet deployed.
+progress: chunks 1 and 2 landed 2026-09-22, not yet deployed.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -432,11 +432,29 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    with a tip carrying it whole, as on the wall. One
    departure: `NEXT UP` moved out of the band to sit once above the row, at
    9px.
-2. **A home for `want`.** It is a flag on a card and a toggle on the page and
-   has no chip. Movies plus *Unwatched* is the backlog only until a show is
-   added that has not been started. Add *Want* as a seventh facet, counted
-   like the others; the movie backlog then reads as *Movies · Want* if the
-   owner flags them, or stays *Movies · Unwatched* if not.
+2. ~~**A home for `want`.**~~ Landed 2026-09-22. It is a flag on a card and a
+   toggle on the page and has no chip. Movies plus *Unwatched* is the backlog
+   only until a show is added that has not been started. Add *Want* as a
+   seventh facet, counted like the others; the movie backlog then reads as
+   *Movies · Want* if the owner flags them, or stays *Movies · Unwatched* if
+   not.
+
+   Landed as planned, in the web alone: `want` was already on `TitleSummary`,
+   so the chip is one more case in `matchesFacet` and counts like the others,
+   within the kind and the search box. It sits after *Unwatched*, the two
+   backlog readings side by side, and applies to both kinds. It matches the
+   flag as set, whatever has been seen since: clearing it is the owner's
+   call, and a film finished while wanted, or flagged for a second watch,
+   still says so. A title also flagged dropped is left out: the two flags are
+   apart so the record remembers a show was meant before it was given up on,
+   but a backlog that lists what was given up on is not one. The intent
+   toggle already invalidates the wall's query, so the count follows a flag
+   set on the title page. On the local record the chip reads 0 — nothing is
+   flagged yet. One departure: the chip is the owner's. The API sends a
+   stranger every title's intent as false, so their *Want* could only read 0;
+   `appliesTo` drops it for them as it drops the run chips under Movies, and
+   a stranger arriving on `?facet=want` is redirected to the wall like
+   `?kind=movie&facet=going` is.
 3. **YEAR.** The rail's unbuilt fourth item gets its screen: the whole record
    as a calendar heatmap, one row per year from the first dated event, a cell
    per day shaded by plays, click a day to list what was watched. It reuses

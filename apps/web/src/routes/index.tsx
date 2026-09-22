@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, redirect } from '@tanstack/react-router';
+import { meQuery } from '../api/auth.ts';
 import { type TitleListFilter, titlesQuery } from '../api/titles.ts';
 import { appliesTo, isFacet, isKind } from '../wall/facets.ts';
 import { Wall, type WallSearch } from '../wall/Wall.tsx';
@@ -28,10 +29,13 @@ export const Route = createFileRoute('/')({
    * not drawn under Movies, because a run facet can never match a film. Left
    * alone it renders an empty wall with nothing lit to explain it, so the URL
    * is corrected rather than obeyed — which also leaves something coherent to
-   * bookmark or go back to.
+   * bookmark or go back to. `?facet=want` in a stranger's hands is the same
+   * address: the owner's link, passed on, to a chip that is not drawn for them.
    */
-  beforeLoad: ({ search }) => {
-    if (search.facet !== undefined && !appliesTo(search.facet, search.kind)) {
+  beforeLoad: async ({ context, search }) => {
+    // Primed by the root's `beforeLoad`, so this reads the answer already there.
+    const { isOwner } = await context.queryClient.ensureQueryData(meQuery);
+    if (search.facet !== undefined && !appliesTo(search.facet, search.kind, isOwner)) {
       const { facet: _dropped, ...rest } = search;
       throw redirect({ to: '/', search: rest, replace: true });
     }

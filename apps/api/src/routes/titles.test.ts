@@ -13,6 +13,9 @@ const witcher: TmdbTitleDetails = {
   posterPath: null,
   backdropPath: null,
   overview: null,
+  status: null,
+  lastAirDate: null,
+  nextEpisode: null,
   seasons: [],
 };
 

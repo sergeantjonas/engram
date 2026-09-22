@@ -207,6 +207,13 @@ export function registerTitleRoutes(
             posterPath: sql`coalesce(excluded.poster_path, ${titleTable.posterPath})`,
             backdropPath: sql`coalesce(excluded.backdrop_path, ${titleTable.backdropPath})`,
             overview: sql`coalesce(excluded.overview, ${titleTable.overview})`,
+            // Not coalesced: a status changes and a next episode goes away
+            // once it airs, so what TMDB answered today is the fact.
+            status: plan.title.status,
+            lastAirDate: plan.title.lastAirDate,
+            nextAirDate: plan.title.nextAirDate,
+            nextEpisodeSeason: plan.title.nextEpisodeSeason,
+            nextEpisodeNumber: plan.title.nextEpisodeNumber,
             metadataFetchedAt: new Date(),
           },
         })

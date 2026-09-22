@@ -74,6 +74,24 @@ export const titles = pgTable('title', {
   backdropPath: text('backdrop_path'),
   overview: text('overview'),
 
+  /**
+   * TMDB's status as given — `Returning Series`, `Ended`, `Canceled` for a
+   * show, `Released` for a film. Refreshed rather than coalesced on every
+   * fetch, unlike the artwork: a status is a fact that changes.
+   */
+  status: text('status'),
+  /** The most recent aired episode's date. Null for a film. */
+  lastAirDate: date('last_air_date'),
+  /**
+   * The episode TMDB expects next, when one is scheduled. An announced episode
+   * may carry its numbers before it has a date; once it airs and nothing
+   * follows, all three go, so a refresh writes the group as answered — null
+   * included.
+   */
+  nextAirDate: date('next_air_date'),
+  nextEpisodeSeason: integer('next_episode_season'),
+  nextEpisodeNumber: integer('next_episode_number'),
+
   metadataFetchedAt: timestamp('metadata_fetched_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

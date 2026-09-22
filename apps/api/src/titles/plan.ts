@@ -13,6 +13,11 @@ export interface PlannedTitleRow {
   posterPath: string | null;
   backdropPath: string | null;
   overview: string | null;
+  status: string | null;
+  lastAirDate: string | null;
+  nextAirDate: string | null;
+  nextEpisodeSeason: number | null;
+  nextEpisodeNumber: number | null;
 }
 
 /** An `episode` row, ready to write. */
@@ -59,6 +64,11 @@ export function planTitle(details: TmdbTitleDetails): TitlePlan {
       posterPath: details.posterPath,
       backdropPath: details.backdropPath,
       overview: details.overview,
+      status: details.status,
+      lastAirDate: details.lastAirDate,
+      nextAirDate: details.nextEpisode?.airDate ?? null,
+      nextEpisodeSeason: details.nextEpisode?.season ?? null,
+      nextEpisodeNumber: details.nextEpisode?.number ?? null,
     },
     seasons: details.seasons.map((season) => season.season),
   };

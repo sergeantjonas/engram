@@ -10,6 +10,9 @@ const witcher: TmdbTitleDetails = {
   posterPath: '/AoGsDM02UVt0npBA8OvpDcZbaMi.jpg',
   backdropPath: null,
   overview: 'Geralt of Rivia.',
+  status: 'Returning Series',
+  lastAirDate: '2021-12-17',
+  nextEpisode: { season: 3, number: 1, airDate: '2023-06-29' },
   seasons: [
     { season: 1, episodeCount: 8 },
     { season: 2, episodeCount: 8 },
@@ -24,6 +27,9 @@ const matrix: TmdbTitleDetails = {
   posterPath: '/p96dm7sCMn4VYAStA6siNz30G1r.jpg',
   backdropPath: null,
   overview: 'A computer hacker learns.',
+  status: 'Released',
+  lastAirDate: null,
+  nextEpisode: null,
   seasons: [],
 };
 
@@ -56,8 +62,22 @@ describe('planTitle', () => {
         posterPath: '/AoGsDM02UVt0npBA8OvpDcZbaMi.jpg',
         backdropPath: null,
         overview: 'Geralt of Rivia.',
+        status: 'Returning Series',
+        lastAirDate: '2021-12-17',
+        nextAirDate: '2023-06-29',
+        nextEpisodeSeason: 3,
+        nextEpisodeNumber: 1,
       },
       seasons: [1, 2],
+    });
+  });
+
+  it('flattens a missing next episode to three nulls', () => {
+    const plan = planTitle({ ...witcher, nextEpisode: null });
+
+    expect(plan).toMatchObject({
+      ok: true,
+      title: { nextAirDate: null, nextEpisodeSeason: null, nextEpisodeNumber: null },
     });
   });
 

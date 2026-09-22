@@ -2,7 +2,8 @@
 
 **Status:** In progress — scoped 2026-09-21 from a review of the three built
 screens against [web-design.md](web-design.md). Arc 1 is complete: chunks 1
-and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 is next. Arcs are ordered; chunks inside an arc are one commit each, and each one
+and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 is
+underway: its storage half landed 2026-09-22, the browser half is next. Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -193,6 +194,18 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    reconcile timer on the box that open-work.md's walk item already plans. The header's meta
    line gains `Ended 2015` or `Returning · next 12 Oct`; the next-up band
    gains "next airs 12 Oct" when the run is caught up.
+
+   Storage landed 2026-09-22 as migration 0012: five nullable columns on
+   `title` — `status` as TMDB words it, `last_air_date`, and `next_air_date`
+   with `next_episode_season` and `next_episode_number` — read off the details
+   call the client already makes, carried through `planTitle`, written by
+   `POST /titles` and `backfill:metadata`. One rule differs from the artwork
+   columns: this group is written as answered, null included, because a next
+   episode is gone once it has aired and a coalesced null would keep saying
+   it is coming. Rehearsed locally with `backfill:metadata --refresh` over the
+   82 titles: every row got a status (22 ended, 21 returning, 10 cancelled,
+   29 released), four carry a next air date, none is undated or in the past.
+   Not yet sent to the browser; that is the next commit.
 2. **Ended resolves drifting.** The open decision on `DRIFTING_AFTER_DAYS`
    ([open-work.md](open-work.md) § Decisions still open) has nothing to tune
    against. A half-watched show whose status is Ended is not drifting, it is

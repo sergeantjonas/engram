@@ -62,8 +62,21 @@ export interface TmdbTitleDetails {
   /** The wide still a title page opens with. Absent far more often than a poster. */
   backdropPath: string | null;
   overview: string | null;
+  /** As TMDB words it: `Returning Series`, `Ended`, `Canceled`, `Released`. */
+  status: string | null;
+  /** The most recent aired episode's date. Null for a movie. */
+  lastAirDate: string | null;
+  /** What TMDB expects next, or null when nothing is scheduled. */
+  nextEpisode: TmdbNextEpisode | null;
   /** Empty for a movie. Includes season 0, which is where specials live. */
   seasons: TmdbSeason[];
+}
+
+export interface TmdbNextEpisode {
+  season: number;
+  number: number;
+  /** Announced episodes are sometimes listed before they are dated. */
+  airDate: string | null;
 }
 
 export interface TmdbEpisode {
@@ -107,6 +120,13 @@ interface DetailsBody {
   backdrop_path?: string | null;
   overview?: string;
   imdb_id?: string | null;
+  status?: string | null;
+  last_air_date?: string | null;
+  next_episode_to_air?: {
+    season_number?: number;
+    episode_number?: number;
+    air_date?: string | null;
+  } | null;
   external_ids?: { tvdb_id?: number | null; imdb_id?: string | null };
   seasons?: { season_number?: number; episode_count?: number }[];
 }
@@ -145,6 +165,14 @@ const candidateOf = (row: MultiSearchRow): TmdbCandidate | null => {
     overview: row.overview || null,
   };
 };
+
+/** Only an episode TMDB has numbered can be pointed at; a date alone cannot. */
+function nextEpisodeOf(row: DetailsBody['next_episode_to_air']): TmdbNextEpisode | null {
+  if (!row || typeof row.season_number !== 'number' || typeof row.episode_number !== 'number') {
+    return null;
+  }
+  return { season: row.season_number, number: row.episode_number, airDate: row.air_date || null };
+}
 
 export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
   const { apiKey, fetch = globalThis.fetch, baseUrl = BASE_URL, timeoutMs = TIMEOUT_MS } = options;
@@ -206,6 +234,9 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
         posterPath: body.poster_path ?? null,
         backdropPath: body.backdrop_path ?? null,
         overview: body.overview || null,
+        status: body.status || null,
+        lastAirDate: body.last_air_date || null,
+        nextEpisode: nextEpisodeOf(body.next_episode_to_air),
         seasons: (body.seasons ?? [])
           .filter((s) => typeof s.season_number === 'number' && (s.episode_count ?? 0) > 0)
           .map((s) => ({ season: s.season_number as number, episodeCount: s.episode_count ?? 0 })),

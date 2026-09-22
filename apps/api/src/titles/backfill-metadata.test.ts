@@ -49,6 +49,9 @@ const details = (
     posterPath: string | null;
     backdropPath: string | null;
     overview: string | null;
+    status: string | null;
+    lastAirDate: string | null;
+    nextEpisode: { season: number; number: number; airDate: string | null } | null;
   }> = {},
 ) => ({
   kind: 'show' as const,
@@ -58,6 +61,9 @@ const details = (
   posterPath: '/poster.jpg',
   backdropPath: '/backdrop.jpg',
   overview: 'Something happens.',
+  status: 'Returning Series',
+  lastAirDate: '2026-09-15',
+  nextEpisode: { season: 2, number: 5, airDate: '2026-09-29' },
   seasons: [],
   ...over,
 });
@@ -126,6 +132,39 @@ describe('backfillMetadata', () => {
     expect(updates[0]?.values).not.toHaveProperty('posterPath');
     expect(updates[0]?.values).not.toHaveProperty('overview');
     expect(updates[0]?.values).toMatchObject({ backdropPath: '/backdrop.jpg' });
+  });
+
+  it('writes the status and next episode as answered', async () => {
+    const { db, updates } = stubDb([pending[0] as (typeof pending)[number]]);
+
+    await backfillMetadata(db, stubTmdb());
+
+    expect(updates[0]?.values).toMatchObject({
+      status: 'Returning Series',
+      lastAirDate: '2026-09-15',
+      nextAirDate: '2026-09-29',
+      nextEpisodeSeason: 2,
+      nextEpisodeNumber: 5,
+    });
+  });
+
+  // The opposite of the artwork rule: the episode that was coming has aired,
+  // and keeping the old row would say it is still to come.
+  it('writes a null over a next episode that is no longer scheduled', async () => {
+    const { db, updates } = stubDb([pending[0] as (typeof pending)[number]]);
+
+    await backfillMetadata(
+      db,
+      stubTmdb({ details: async () => details({ status: 'Ended', nextEpisode: null }) }),
+      { refresh: true },
+    );
+
+    expect(updates[0]?.values).toMatchObject({
+      status: 'Ended',
+      nextAirDate: null,
+      nextEpisodeSeason: null,
+      nextEpisodeNumber: null,
+    });
   });
 
   it('asks TMDB with each title’s own kind, so a film is not looked up as a show', async () => {

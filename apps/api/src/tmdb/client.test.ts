@@ -126,6 +126,44 @@ describe('createTmdbClient', () => {
     expect(details.ids).toEqual({ tmdb: '71912', tvdb: '362696' });
   });
 
+  it('reads the status and the episode TMDB expects next off the same call', async () => {
+    const { tmdb } = client({
+      name: 'The Witcher',
+      status: 'Returning Series',
+      last_air_date: '2021-12-17',
+      next_episode_to_air: { season_number: 3, episode_number: 1, air_date: '2023-06-29' },
+    });
+
+    expect(await tmdb.details('show', '71912')).toMatchObject({
+      status: 'Returning Series',
+      lastAirDate: '2021-12-17',
+      nextEpisode: { season: 3, number: 1, airDate: '2023-06-29' },
+    });
+  });
+
+  it('reports no status, no last air date and no next episode as null', async () => {
+    const { tmdb } = client({ name: 'Unlisted', status: '', next_episode_to_air: null });
+
+    expect(await tmdb.details('show', '1')).toMatchObject({
+      status: null,
+      lastAirDate: null,
+      nextEpisode: null,
+    });
+  });
+
+  it('keeps a next episode that is announced but not yet dated', async () => {
+    const { tmdb } = client({
+      name: 'The Witcher',
+      next_episode_to_air: { season_number: 4, episode_number: 1, air_date: '' },
+    });
+
+    expect((await tmdb.details('show', '71912')).nextEpisode).toEqual({
+      season: 4,
+      number: 1,
+      airDate: null,
+    });
+  });
+
   it('reads a movie from its own fields and leaves it without a tvdb id', async () => {
     const { tmdb, calls } = client({
       title: 'The Matrix',

@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { titles as titleTable } from '../db/schema.js';
-import { type TmdbClient, TmdbError } from '../tmdb/client.js';
+import { type TmdbClient, TmdbError, type TmdbTitleDetails } from '../tmdb/client.js';
 
 export interface MetadataBackfillResult {
   name: string;
@@ -56,16 +56,11 @@ export async function backfillMetadata(
     const tmdbId = title.tmdbId;
     if (!tmdbId) continue;
 
-    let posterPath: string | null;
-    let backdropPath: string | null;
-    let overview: string | null;
+    let details: TmdbTitleDetails;
     try {
       // Sequential, like the episode backfill: this runs against one API key
       // shared with the live app.
-      const details = await tmdb.details(title.kind, tmdbId);
-      posterPath = details.posterPath;
-      backdropPath = details.backdropPath;
-      overview = details.overview;
+      details = await tmdb.details(title.kind, tmdbId);
     } catch (error) {
       // One title TMDB cannot answer for must not abandon the other ten.
       const reason = error instanceof TmdbError ? error.message : 'TMDB lookup failed';
@@ -73,6 +68,7 @@ export async function backfillMetadata(
       continue;
     }
 
+    const { posterPath, backdropPath, overview } = details;
     if (!options.dryRun) {
       await db
         .update(titleTable)
@@ -85,6 +81,14 @@ export async function backfillMetadata(
           ...(posterPath === null ? {} : { posterPath }),
           ...(backdropPath === null ? {} : { backdropPath }),
           ...(overview === null ? {} : { overview }),
+          // The one group written null and all: a status changes, and a next
+          // episode is gone once it has aired. TMDB's answer today is the fact,
+          // and a null kept from last run would say an episode is still coming.
+          status: details.status,
+          lastAirDate: details.lastAirDate,
+          nextAirDate: details.nextEpisode?.airDate ?? null,
+          nextEpisodeSeason: details.nextEpisode?.season ?? null,
+          nextEpisodeNumber: details.nextEpisode?.number ?? null,
           metadataFetchedAt: new Date(),
         })
         .where(eq(titleTable.id, title.id));

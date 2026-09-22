@@ -103,7 +103,7 @@ export const Year = memo(function Year({
         className={`w-14 shrink-0 self-start pt-4 text-left font-mono leading-tight hover:text-tx ${current ? 'text-tx' : 'text-dim'}`}
       >
         <span className="block text-[10px]">{year}</span>
-        <span className="block text-[9px] text-faint">{plays}</span>
+        <span className="block text-[10px] text-faint">{plays}</span>
       </button>
       <div className="space-y-1">
         <div

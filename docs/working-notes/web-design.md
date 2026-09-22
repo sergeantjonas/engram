@@ -92,6 +92,14 @@ otherwise reads optically larger. The reason the split is by job is that it
 keeps mono out of the one place it breaks, which is a show name under a 118px
 tile.
 
+Small mono comes in two sizes, settled 2026-09-22: 10px for anything read as
+a value or as words — a date, a figure, a chip and its count, what a field or
+a control says — and 9px for landmarks and labels: a group heading, a strip's
+month names, the rail's items, the short uppercase tags beside a row, the
+name under a stat. Nothing below 9px, since 8.5px is where the chips failed. A layout that cannot hold its text at 10px
+is widened rather than the text shrunk, as the feed's time gutter was. See
+[web-depth.md](web-depth.md) arc 4 chunk 5.
+
 **State vocabulary.** Six states, and the wall filters on them: still going,
 drifting, gaps, finished, not on disk, added by hand. A tile carries its state
 as a 3px bar under the poster, and a title no longer on disk is greyscaled to
@@ -391,8 +399,8 @@ Monday first. Cells are 11px and fixed rather than stretched to the width,
 since eight years have to fit one screen. A day is shaded in jade — the colour
 already meaning *seen* — in four fixed steps rather than scaled to the busiest
 day, because a Plex bulk mark leaves one day with dozens of plays that would
-wash every real evening out to the palest. Month labels and the year's count
-are 9px mono, the year 10px.
+wash every real evening out to the palest. Month labels are 9px mono, the
+year and its count 10px.
 
 The year and the day being read sit in a sticky pane beside it: the year in
 the title page's stat box, the day as a list naming every source behind each

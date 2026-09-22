@@ -177,9 +177,10 @@ export function formatWatchedShort(
  * the same as `formatWatched`.
  *
  * The clock is forced to 24 hours against the locale, which the rest of this
- * file never does: the feed is a column of times in a 96px gutter, and an
- * am/pm suffix is a fifth of that width spent saying what the digits already
- * do. The date half still defers, including its rule about dropping the year.
+ * file never does: the feed is a column of times in a fixed gutter, sized to
+ * the longest date and time it holds, and an am/pm suffix would widen every
+ * row to say what the digits already do. The date half still defers,
+ * including its rule about dropping the year.
  */
 export function formatMoment(
   at: string | null,

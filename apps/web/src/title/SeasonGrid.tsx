@@ -169,7 +169,7 @@ export function SeasonGrid({
       what={heading.toLowerCase()}
       label={`mark ${heading.toLowerCase()} watched`}
       complete={seen === season.episodes.length}
-      className="font-mono text-[9.5px] tracking-[.08em] text-faint underline-offset-4 hover:text-jade hover:underline"
+      className="font-mono text-[10px] tracking-[.08em] text-faint underline-offset-4 hover:text-jade hover:underline"
     />
   ) : null;
 

@@ -96,7 +96,7 @@ export function YearBar({
             />
           ))}
         </div>
-        <div className="mt-1 flex justify-between font-mono text-[7.5px] tracking-[.06em] text-faint uppercase">
+        <div className="mt-1 flex justify-between font-mono text-[9px] tracking-[.06em] text-faint uppercase">
           {ticks.map((tick) => (
             <span key={tick.at}>{tick.label}</span>
           ))}

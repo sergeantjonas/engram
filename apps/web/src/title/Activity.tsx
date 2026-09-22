@@ -113,9 +113,13 @@ function Moment({ moment, titleName }: { moment: WatchMoment; titleName: string 
   const episode = episodeLabel(moment);
   return (
     <li className="flex items-baseline gap-2.5 border-b border-line py-1.5 text-xs">
+      {/* Wide enough for an older date and its time on one line at 10px,
+          the floor for anything read — `Nov 28, 2025 · 15:09` — in English
+          and Dutch; French and German month names run longer and wrap. On a
+          phone the name needs the width more, so there the time wraps. */}
       <time
         dateTime={moment.watchedAt ?? undefined}
-        className="w-24 flex-none font-mono text-[8.5px] text-faint"
+        className="w-24 flex-none font-mono text-[10px] text-faint sm:w-36"
       >
         {formatMoment(moment.watchedAt, moment.precision)}
       </time>

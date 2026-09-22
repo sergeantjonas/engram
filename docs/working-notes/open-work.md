@@ -284,8 +284,10 @@ the viewer wants of a title. The SPA calls all four.
    a picked day's plays beside it; deployed 2026-09-22, no migration.
    Chunk 4, export, the same day in two commits — the whole record streamed
    as CSV and JSON by owner-only routes, and a block on `/settings` that says
-   how much of it rests on the owner's word before offering it — not yet
-   deployed. Chunk 5, the type steps, follows.
+   how much of it rests on the owner's word before offering it — and chunk
+   5 the same day, small mono settled at 10px for anything read and 9px for
+   landmarks and ticks. Arc 4 is complete; chunks 4 and 5 are not yet
+   deployed. Arc 5, the visual pass, is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

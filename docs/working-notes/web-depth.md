@@ -4,11 +4,11 @@
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
-Arc 3 landed 2026-09-22 in five commits. Arc 4 is in progress: chunks 1 to
-3 landed 2026-09-22. Both deployed the same day with no migration, and
-`GET /history` answered on the box as the rehearsal had — 461 plays over 24
-titles, all exact, 116 KB. Chunk 4 landed the same day, not yet deployed;
-chunk 5 is left.
+Arc 3 landed 2026-09-22 in five commits. Arc 4 is complete, all of it
+landed 2026-09-22. Arc 3 and arc 4's first three chunks deployed the same
+day with no migration, and `GET /history` answered on the box as the
+rehearsal had — 461 plays over 24 titles, all exact, 116 KB. Chunks 4 and
+5 are not yet deployed and carry no migration. Arc 5 is next.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -47,12 +47,10 @@ in particular.
   made in a route or a component.
 - **Artwork is the only saturated thing.** Any tint drawn from a poster stays
   under six percent over `--surf`. Jade and gold keep their jobs.
-- **Two mono sizes, not seven.** As of the review the code sets mono at 10,
-  9.5, 9, 8.5, 8 and 7.5px across seven call sites. The design fixed 10px as
-  the floor after 8.5px failed on the chips;
-  [Activity.tsx:42](../../apps/web/src/title/Activity.tsx#L42) uses 8.5px
-  anyway. Arc 4 settles the steps; until then, new code uses 10px and 9px
-  only.
+- **Two mono sizes, not six.** As of the review the code set small mono at
+  10, 9.5, 9, 8.5, 8 and 7.5px. The design fixed 10px as the floor after
+  8.5px failed on the chips. Settled by arc 4 chunk 5: 10px for anything
+  read, 9px for landmarks and tick labels, and nothing else.
 - **Migrations are generated.** A new column goes in `schema.ts`, then
   `db:generate`. Never hand-written SQL.
 - **There are two databases now.** See the next section before any chunk
@@ -167,7 +165,7 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    DOM still reads `Season 2`, which is what the region's label and the mark
    control's sentence are built from; the heading went from 9.5px to 10px mono as the
    one type-size change in scope, and the *Mark season watched* control
-   beside it is still 9.5px and waits for arc 4. Specials keep their
+   beside it was left at 9.5px for arc 4 chunk 5. Specials keep their
    `Specials · n of m` summary with no year range: an OVA list spans whatever
    years the show ran, so the range would describe the show rather than the
    fold, and the summary's job is the count that says whether opening it is
@@ -594,10 +592,24 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    sign-in. The page checks the session as it opens and a session extends on
    use, so the window is small, and a fetch that could show a better error
    would have to hold the whole file in the page to hand it over.
-5. **Type steps.** Settle mono at two sizes, 10px for anything read and 9px
-   for landmarks and tick labels, and remove the other five. The review
-   counted the call sites; do this as one commit against the running app, not
-   from the grep.
+5. ~~**Type steps.**~~ Landed 2026-09-22. Settle mono at two sizes, 10px for
+   anything read and 9px for landmarks and tick labels, and remove the other
+   five. The review counted the call sites; do this as one commit against the
+   running app, not from the grep.
+
+   Six call sites were off the two steps by then, and each was judged on the
+   running title page rather than by its number, bar *Mark season watched*,
+   which only the owner sees and went to 10px to match the season heading
+   beside it. Read, so 10px: the search box, that control, the feed's times
+   and the list pane's "since" figures. Landmarks and ticks, so 9px: the list
+   pane's group headings and the twelve-month strip's month labels. The YEAR
+   screen's count under each year moved from 9px to 10px by the same rule,
+   being a figure. One knock-on, found on the page: the feed's times wrapped
+   at 10px in their 96px gutter — `Dec 2, 2025 ·` over `15:50` — so from
+   640px the gutter is 144px, which holds an older date and its time on one
+   line in English and Dutch. Below that the name needs the width more, and
+   the time wraps. Mono at 12px and the stat box's 17px figures are display
+   sizes, not the small steps, and were left alone.
 
 ## Arc 5 · Visual
 

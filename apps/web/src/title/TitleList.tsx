@@ -98,7 +98,7 @@ export function TitleList({
         </div>
         {groupedTitles(shown).map((group) => (
           <div key={group.state}>
-            <h2 className="px-3.5 pt-2.5 pb-1.5 font-mono text-[8px] tracking-[.14em] text-faint uppercase">
+            <h2 className="px-3.5 pt-2.5 pb-1.5 font-mono text-[9px] tracking-[.14em] text-faint uppercase">
               {group.label}
             </h2>
             <ul>
@@ -161,7 +161,7 @@ function Row({
           />
         </span>
       </span>
-      {since ? <span className="flex-none font-mono text-[8px] text-faint">{since}</span> : null}
+      {since ? <span className="flex-none font-mono text-[10px] text-faint">{since}</span> : null}
     </Link>
   );
 }

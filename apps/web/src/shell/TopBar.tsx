@@ -83,7 +83,7 @@ export function TopBar() {
             placeholder="Search your record…"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            className="min-w-0 flex-1 border border-line bg-surf px-2.5 py-1.5 font-mono text-[9.5px] text-tx placeholder:text-dim"
+            className="min-w-0 flex-1 border border-line bg-surf px-2.5 py-1.5 font-mono text-[10px] text-tx placeholder:text-dim"
           />
         </form>
       </search>

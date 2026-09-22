@@ -30,10 +30,18 @@ for (const result of results) {
 const withPoster = results.filter((result) => !result.failed && result.posterPath).length;
 const withBackdrop = results.filter((result) => !result.failed && result.backdropPath).length;
 const failed = results.filter((result) => result.failed).length;
+const collections = new Set(
+  results
+    .filter((result) => result.collection && !result.collection.failed)
+    .map((result) => result.collection?.id),
+);
+const collectionsFailed = results.filter((result) => result.collection?.failed).length;
 console.log(
   `\n${dryRun ? 'would fetch' : 'fetched'} metadata for ${results.length - failed} titles` +
     `, ${withPoster} with a poster, ${withBackdrop} with a backdrop` +
-    (failed > 0 ? `, ${failed} failed` : ''),
+    (failed > 0 ? `, ${failed} failed` : '') +
+    (collections.size > 0 ? `; ${collections.size} collections` : '') +
+    (collectionsFailed > 0 ? `, ${collectionsFailed} collection fetches failed` : ''),
 );
 
 await sql.end();

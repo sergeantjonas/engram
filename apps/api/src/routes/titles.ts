@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
 import {
+  collections as collectionTable,
   episodes as episodeTable,
   intent as intentTable,
   titles as titleTable,
@@ -190,6 +191,17 @@ export function registerTitleRoutes(
     }
 
     const { title, created, seasons } = await db.transaction(async (tx) => {
+      // The collection row first, since the title's column points at it. Its
+      // parts are the backfill's one extra call and are not fetched here.
+      if (plan.collection !== null) {
+        await tx
+          .insert(collectionTable)
+          .values({ tmdbId: plan.collection.id, name: plan.collection.name })
+          .onConflictDoUpdate({
+            target: collectionTable.tmdbId,
+            set: { name: sql`excluded.name` },
+          });
+      }
       const [row] = await tx
         .insert(titleTable)
         .values({ ...plan.title, metadataFetchedAt: new Date() })
@@ -208,6 +220,9 @@ export function registerTitleRoutes(
             backdropPath: sql`coalesce(excluded.backdrop_path, ${titleTable.backdropPath})`,
             overview: sql`coalesce(excluded.overview, ${titleTable.overview})`,
             runtimeMin: sql`coalesce(excluded.runtime_min, ${titleTable.runtimeMin})`,
+            director: sql`coalesce(excluded.director, ${titleTable.director})`,
+            cast: sql`coalesce(excluded.top_cast, ${titleTable.cast})`,
+            collectionId: sql`coalesce(excluded.collection_id, ${titleTable.collectionId})`,
             // Not coalesced: a status changes and a next episode goes away
             // once it airs, so what TMDB answered today is the fact.
             status: plan.title.status,

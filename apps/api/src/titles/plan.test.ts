@@ -14,6 +14,9 @@ const witcher: TmdbTitleDetails = {
   lastAirDate: '2021-12-17',
   nextEpisode: { season: 3, number: 1, airDate: '2023-06-29' },
   runtimeMin: null,
+  director: null,
+  cast: [],
+  collection: null,
   seasons: [
     { season: 1, episodeCount: 8 },
     { season: 2, episodeCount: 8 },
@@ -32,6 +35,9 @@ const matrix: TmdbTitleDetails = {
   lastAirDate: null,
   nextEpisode: null,
   runtimeMin: 136,
+  director: null,
+  cast: [],
+  collection: null,
   seasons: [],
 };
 
@@ -70,8 +76,31 @@ describe('planTitle', () => {
         nextEpisodeSeason: 3,
         nextEpisodeNumber: 1,
         runtimeMin: null,
+        director: null,
+        cast: null,
+        collectionId: null,
       },
       seasons: [1, 2],
+      collection: null,
+    });
+  });
+
+  it('carries a film’s credits and names the collection row the title will point at', () => {
+    const plan = planTitle({
+      ...matrix,
+      director: 'Lana Wachowski',
+      cast: ['Keanu Reeves', 'Laurence Fishburne', 'Carrie-Anne Moss'],
+      collection: { id: 2344, name: 'The Matrix Collection' },
+    });
+
+    expect(plan).toMatchObject({
+      ok: true,
+      title: {
+        director: 'Lana Wachowski',
+        cast: ['Keanu Reeves', 'Laurence Fishburne', 'Carrie-Anne Moss'],
+        collectionId: 2344,
+      },
+      collection: { id: 2344, name: 'The Matrix Collection' },
     });
   });
 

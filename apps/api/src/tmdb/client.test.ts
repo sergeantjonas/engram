@@ -53,6 +53,14 @@ const client = (body: unknown, status?: number) => {
 };
 
 describe('createTmdbClient', () => {
+  it('asks a show for its external ids alone, since its credits are per episode', async () => {
+    const { tmdb, calls } = client({ name: 'The Witcher', first_air_date: '2019-12-20' });
+
+    await tmdb.details('show', '71912');
+
+    expect(firstCall(calls).searchParams.get('append_to_response')).toBe('external_ids');
+  });
+
   it('maps tv to show and movie to movie, taking each kind its own date field', async () => {
     const { tmdb } = client({ results: [witcher, matrix] });
 
@@ -171,19 +179,65 @@ describe('createTmdbClient', () => {
       release_date: '1999-03-30',
       imdb_id: 'tt0133093',
       runtime: 136,
+      credits: {
+        cast: [
+          { name: 'Laurence Fishburne', order: 1 },
+          { name: 'Keanu Reeves', order: 0 },
+          { name: 'Carrie-Anne Moss', order: 2 },
+          { name: 'Hugo Weaving', order: 3 },
+        ],
+        crew: [
+          { name: 'Joel Silver', job: 'Producer' },
+          { name: 'Lana Wachowski', job: 'Director' },
+          { name: 'Lilly Wachowski', job: 'Director' },
+        ],
+      },
+      belongs_to_collection: { id: 2344, name: 'The Matrix Collection' },
     });
 
     const details = await tmdb.details('movie', '603');
 
     expect(firstCall(calls).pathname).toBe('/3/movie/603');
+    // Credits ride the same call; a show's are per episode and not asked for.
+    expect(firstCall(calls).searchParams.get('append_to_response')).toBe('external_ids,credits');
     expect(details).toMatchObject({
       kind: 'movie',
       name: 'The Matrix',
       year: 1999,
       ids: { tmdb: '603', imdb: 'tt0133093' },
       runtimeMin: 136,
+      director: 'Lana Wachowski',
+      cast: ['Keanu Reeves', 'Laurence Fishburne', 'Carrie-Anne Moss'],
+      collection: { id: 2344, name: 'The Matrix Collection' },
       seasons: [],
     });
+  });
+
+  it('reads a collection in release order, the undated last', async () => {
+    const { tmdb, calls } = client({
+      id: 2344,
+      name: 'The Matrix Collection',
+      parts: [
+        {
+          id: 604,
+          title: 'The Matrix Reloaded',
+          release_date: '2003-05-15',
+          poster_path: '/r.jpg',
+        },
+        { id: 999, title: 'The Matrix 5' },
+        { id: 603, title: 'The Matrix', release_date: '1999-03-30', poster_path: null },
+      ],
+    });
+
+    const collection = await tmdb.collection(2344);
+
+    expect(firstCall(calls).pathname).toBe('/3/collection/2344');
+    expect(collection.name).toBe('The Matrix Collection');
+    expect(collection.parts.map((part) => [part.tmdbId, part.year])).toEqual([
+      ['603', 1999],
+      ['604', 2003],
+      ['999', null],
+    ]);
   });
 
   // TMDB answers 0 rather than omitting a running time it does not know.

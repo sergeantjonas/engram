@@ -1,7 +1,16 @@
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { titles as titleTable } from '../db/schema.js';
-import { type TmdbClient, TmdbError, type TmdbTitleDetails } from '../tmdb/client.js';
+import {
+  collections as collectionTable,
+  collectionParts as partTable,
+  titles as titleTable,
+} from '../db/schema.js';
+import {
+  type TmdbClient,
+  type TmdbCollectionPart,
+  TmdbError,
+  type TmdbTitleDetails,
+} from '../tmdb/client.js';
 
 export interface MetadataBackfillResult {
   name: string;
@@ -11,6 +20,8 @@ export interface MetadataBackfillResult {
   backdropPath: string | null;
   /** Set when TMDB could not answer; the row is left exactly as it was. */
   failed?: string;
+  /** The film's collection and how many parts it has, when the film belongs to one. */
+  collection?: { id: number; name: string; parts: number; failed?: string };
 }
 
 /**
@@ -51,6 +62,8 @@ export async function backfillMetadata(
     .orderBy(titleTable.name);
 
   const results: MetadataBackfillResult[] = [];
+  // Once per collection, not per film in it: the four Thor films share one.
+  const fetchedCollections = new Map<number, NonNullable<MetadataBackfillResult['collection']>>();
 
   for (const title of pending) {
     const tmdbId = title.tmdbId;
@@ -68,7 +81,15 @@ export async function backfillMetadata(
       continue;
     }
 
-    const { posterPath, backdropPath, overview, runtimeMin } = details;
+    const { posterPath, backdropPath, overview, runtimeMin, director, collection } = details;
+    const cast = details.cast.length > 0 ? details.cast : null;
+    if (!options.dryRun && collection !== null) {
+      // Before the title, whose column points at it.
+      await db
+        .insert(collectionTable)
+        .values({ tmdbId: collection.id, name: collection.name })
+        .onConflictDoUpdate({ target: collectionTable.tmdbId, set: { name: sql`excluded.name` } });
+    }
     if (!options.dryRun) {
       await db
         .update(titleTable)
@@ -82,6 +103,9 @@ export async function backfillMetadata(
           ...(backdropPath === null ? {} : { backdropPath }),
           ...(overview === null ? {} : { overview }),
           ...(runtimeMin === null ? {} : { runtimeMin }),
+          ...(director === null ? {} : { director }),
+          ...(cast === null ? {} : { cast }),
+          ...(collection === null ? {} : { collectionId: collection.id }),
           // The one group written null and all: a status changes, and a next
           // episode is gone once it has aired. TMDB's answer today is the fact,
           // and a null kept from last run would say an episode is still coming.
@@ -95,8 +119,59 @@ export async function backfillMetadata(
         .where(eq(titleTable.id, title.id));
     }
 
-    results.push({ name: title.name, posterPath, backdropPath });
+    const result: MetadataBackfillResult = { name: title.name, posterPath, backdropPath };
+    if (collection !== null) {
+      result.collection =
+        fetchedCollections.get(collection.id) ??
+        (await fetchCollection(db, tmdb, collection, options.dryRun ?? false));
+      fetchedCollections.set(collection.id, result.collection);
+    }
+    results.push(result);
   }
 
   return results;
+}
+
+/**
+ * The one call per film beyond its details: the collection's parts, so the
+ * page can draw a sibling that is not on record. Refetched whenever the film
+ * is, since a collection grows; a failure is reported on the film and leaves
+ * the parts already stored alone.
+ */
+async function fetchCollection(
+  db: Database,
+  tmdb: TmdbClient,
+  collection: { id: number; name: string },
+  dryRun: boolean,
+): Promise<NonNullable<MetadataBackfillResult['collection']>> {
+  let parts: TmdbCollectionPart[];
+  try {
+    parts = (await tmdb.collection(collection.id)).parts;
+  } catch (error) {
+    const failed = error instanceof TmdbError ? error.message : 'TMDB lookup failed';
+    return { id: collection.id, name: collection.name, parts: 0, failed };
+  }
+
+  if (!dryRun) {
+    if (parts.length > 0) {
+      await db
+        .insert(partTable)
+        .values(parts.map((part) => ({ ...part, collectionId: collection.id })))
+        .onConflictDoUpdate({
+          target: [partTable.collectionId, partTable.tmdbId],
+          set: {
+            name: sql`excluded.name`,
+            year: sql`excluded.year`,
+            releaseDate: sql`excluded.release_date`,
+            posterPath: sql`coalesce(excluded.poster_path, ${partTable.posterPath})`,
+          },
+        });
+    }
+    await db
+      .update(collectionTable)
+      .set({ fetchedAt: new Date() })
+      .where(eq(collectionTable.tmdbId, collection.id));
+  }
+
+  return { id: collection.id, name: collection.name, parts: parts.length };
 }

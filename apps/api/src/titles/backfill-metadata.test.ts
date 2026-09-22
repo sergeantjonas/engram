@@ -21,6 +21,9 @@ const pending = [
  */
 const stubDb = (rows = pending) => {
   const updates: { values: Record<string, unknown>; predicate: unknown }[] = [];
+  const inserted: { values: unknown; set: Record<string, unknown> }[] = [];
+  /** Every write in order, so a test can hold a collection row to precede its title. */
+  const writes: ('insert' | 'update')[] = [];
   const selected: unknown[] = [];
 
   const db = {
@@ -36,12 +39,21 @@ const stubDb = (rows = pending) => {
       set: (values: Record<string, unknown>) => ({
         where: async (predicate: unknown) => {
           updates.push({ values, predicate });
+          writes.push('update');
+        },
+      }),
+    }),
+    insert: () => ({
+      values: (values: unknown) => ({
+        onConflictDoUpdate: async (clause: { set: Record<string, unknown> }) => {
+          inserted.push({ values, set: clause.set });
+          writes.push('insert');
         },
       }),
     }),
   } as unknown as Database;
 
-  return { db, updates, selected };
+  return { db, updates, inserted, writes, selected };
 };
 
 const details = (
@@ -53,6 +65,9 @@ const details = (
     lastAirDate: string | null;
     nextEpisode: { season: number; number: number; airDate: string | null } | null;
     runtimeMin: number | null;
+    director: string | null;
+    cast: string[];
+    collection: { id: number; name: string } | null;
   }> = {},
 ) => ({
   kind: 'show' as const,
@@ -66,6 +81,9 @@ const details = (
   lastAirDate: '2026-09-15',
   nextEpisode: { season: 2, number: 5, airDate: '2026-09-29' },
   runtimeMin: null,
+  director: null,
+  cast: [],
+  collection: null,
   seasons: [],
   ...over,
 });
@@ -74,6 +92,7 @@ const stubTmdb = (over: Partial<TmdbClient> = {}): TmdbClient => ({
   search: async () => [],
   details: async () => details(),
   seasonEpisodes: async () => [],
+  collection: async () => ({ id: 0, name: '', parts: [] }),
   ...over,
 });
 
@@ -143,6 +162,88 @@ describe('backfillMetadata', () => {
     await backfillMetadata(db, stubTmdb({ details: async () => details({ runtimeMin: 136 }) }));
 
     expect(updates[0]?.values).toMatchObject({ runtimeMin: 136 });
+  });
+
+  it('writes a film’s credits, and its collection row before the title that points at it', async () => {
+    const { db, updates, inserted, writes } = stubDb([pending[1] as (typeof pending)[number]]);
+    const parts = [
+      {
+        tmdbId: '1311031',
+        name: 'Infinity Castle',
+        year: 2025,
+        releaseDate: '2025-07-18',
+        posterPath: '/a.jpg',
+      },
+      { tmdbId: '1311032', name: 'Part Two', year: null, releaseDate: null, posterPath: null },
+    ];
+
+    const results = await backfillMetadata(
+      db,
+      stubTmdb({
+        details: async () =>
+          details({
+            director: 'Haruo Sotozaki',
+            cast: ['Natsuki Hanae', 'Akari Kito'],
+            collection: { id: 1, name: 'Demon Slayer' },
+          }),
+        collection: async () => ({ id: 1, name: 'Demon Slayer', parts }),
+      }),
+    );
+
+    expect(writes).toEqual(['insert', 'update', 'insert', 'update']);
+    expect(inserted[0]?.values).toEqual({ tmdbId: 1, name: 'Demon Slayer' });
+    expect(updates[0]?.values).toMatchObject({
+      director: 'Haruo Sotozaki',
+      cast: ['Natsuki Hanae', 'Akari Kito'],
+      collectionId: 1,
+    });
+    expect(inserted[1]?.values).toEqual(parts.map((part) => ({ ...part, collectionId: 1 })));
+    expect(updates[1]?.values).toHaveProperty('fetchedAt');
+    expect(results[0]?.collection).toEqual({ id: 1, name: 'Demon Slayer', parts: 2 });
+  });
+
+  it('fetches a collection once however many of its films are in the run', async () => {
+    const two = [pending[1], { ...pending[1], id: 'c', name: 'Mugen Train', tmdbId: '635302' }];
+    const { db, inserted } = stubDb(two as typeof pending);
+    let calls = 0;
+
+    const results = await backfillMetadata(
+      db,
+      stubTmdb({
+        details: async () => details({ collection: { id: 1, name: 'Demon Slayer' } }),
+        collection: async () => {
+          calls += 1;
+          return { id: 1, name: 'Demon Slayer', parts: [] };
+        },
+      }),
+    );
+
+    expect(calls).toBe(1);
+    expect(results.map((result) => result.collection?.parts)).toEqual([0, 0]);
+    // The collection row is still named on each film; only the parts call is shared.
+    expect(inserted).toHaveLength(2);
+  });
+
+  it('keeps the film when its collection cannot be fetched, and says so', async () => {
+    const { db, updates, inserted } = stubDb([pending[1] as (typeof pending)[number]]);
+
+    const results = await backfillMetadata(
+      db,
+      stubTmdb({
+        details: async () => details({ collection: { id: 1, name: 'Demon Slayer' } }),
+        collection: async () => {
+          throw new TmdbError('TMDB responded 404', 404);
+        },
+      }),
+    );
+
+    expect(updates[0]?.values).toMatchObject({ collectionId: 1 });
+    expect(inserted).toHaveLength(1);
+    expect(results[0]?.failed).toBeUndefined();
+    expect(results[0]?.collection).toMatchObject({
+      name: 'Demon Slayer',
+      failed: 'TMDB responded 404',
+    });
   });
 
   it('writes the status and next episode as answered', async () => {

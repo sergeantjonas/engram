@@ -7,7 +7,8 @@ and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
 box the same day; chunks 2 and 3 landed 2026-09-22, chunk 3 in two commits
 with migration 0013, and both were deployed and refreshed on the box the same
 day; chunk 3 was then amended so the watched cell is shows-only and a film's
-runtime sits on the meta line. Chunk 4 is next. Arcs are ordered; chunks inside an arc are one commit each, and each
+runtime sits on the meta line. Chunk 4's storage half landed 2026-09-22 as
+migration 0014; its page is next. Arcs are ordered; chunks inside an arc are one commit each, and each
 one deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -293,6 +294,27 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    show's grid would be, as tiles with the same state bar as the wall, and a
    sibling not on record links to the add screen prefilled. Defer until arc 1
    has shown whether the film page still reads empty with an overview on it.
+
+   Judged 2026-09-22 on the production film page after chunk 3: the header
+   reads as a title page and the page still stops at the actions, with most
+   of the viewport empty below one activity row. A show fills that band with
+   its grid; a film has nothing to put there, and this is what would.
+
+   Storage landed first, 2026-09-22, as migration 0014. `director` and
+   `top_cast` (the three top-billed names, as jsonb) on `title`, read off the
+   film's details call with `credits` appended — one call still, and a show's
+   credits are per episode and not asked for. A `collection` table keyed on
+   TMDB's id, named the first time a film that belongs to one is fetched by
+   either `POST /titles` or `backfill:metadata`, and `title.collection_id`
+   pointing at it; a `collection_part` table holding what the collection call
+   returns — tmdb id, name, year, release date, poster — so the page can draw
+   a sibling that is not on record without asking TMDB. The parts are the one
+   new call per film and are fetched by `backfill:metadata` only, refetched
+   on every refresh since a collection grows; a part on record is found by
+   matching its tmdb id against `title.tmdb_id`. Credits and collection are
+   written add-only like the artwork. Rehearsed locally: 29 films, all with a
+   director and cast, 21 of them in 13 collections. The page is the next
+   commit.
 
 ## Arc 3 · Manual entry as a first-class verb
 

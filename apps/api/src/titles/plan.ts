@@ -19,6 +19,10 @@ export interface PlannedTitleRow {
   nextEpisodeSeason: number | null;
   nextEpisodeNumber: number | null;
   runtimeMin: number | null;
+  director: string | null;
+  /** Null rather than empty when there is none, so an upsert can coalesce it like the artwork. */
+  cast: string[] | null;
+  collectionId: number | null;
 }
 
 /** An `episode` row, ready to write. */
@@ -34,7 +38,13 @@ export interface PlannedEpisodeRow {
 }
 
 export type TitlePlan =
-  | { ok: true; title: PlannedTitleRow; seasons: number[] }
+  | {
+      ok: true;
+      title: PlannedTitleRow;
+      seasons: number[];
+      /** The row `title.collection_id` points at, to be written before the title. */
+      collection: { id: number; name: string } | null;
+    }
   | { ok: false; reason: string };
 
 /**
@@ -71,8 +81,12 @@ export function planTitle(details: TmdbTitleDetails): TitlePlan {
       nextEpisodeSeason: details.nextEpisode?.season ?? null,
       nextEpisodeNumber: details.nextEpisode?.number ?? null,
       runtimeMin: details.runtimeMin,
+      director: details.director,
+      cast: details.cast.length > 0 ? details.cast : null,
+      collectionId: details.collection?.id ?? null,
     },
     seasons: details.seasons.map((season) => season.season),
+    collection: details.collection,
   };
 }
 

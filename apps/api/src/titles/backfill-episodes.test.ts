@@ -76,9 +76,13 @@ const stubTmdb = (over: Partial<TmdbClient> = {}): TmdbClient => ({
     lastAirDate: null,
     nextEpisode: null,
     runtimeMin: null,
+    director: null,
+    cast: [],
+    collection: null,
     seasons: [{ season: 1, episodeCount: 2 }],
   }),
   seasonEpisodes: async () => [episode(1, 1), episode(1, 2)],
+  collection: async () => ({ id: 0, name: '', parts: [] }),
   ...over,
 });
 

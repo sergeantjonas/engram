@@ -34,6 +34,9 @@ const searching = (search: TmdbClient['search']): TmdbClient => ({
   details: async () => {
     throw new Error('not reached');
   },
+  collection: async () => {
+    throw new Error('not reached');
+  },
   seasonEpisodes: async () => {
     throw new Error('not reached');
   },

@@ -70,6 +70,11 @@ export interface TmdbTitleDetails {
   nextEpisode: TmdbNextEpisode | null;
   /** A movie's running time in minutes. Null for a show, which has it per episode. */
   runtimeMin: number | null;
+  /** A movie's director and three top-billed names. Null and empty for a show. */
+  director: string | null;
+  cast: string[];
+  /** The film series a movie belongs to, when TMDB groups it in one. */
+  collection: { id: number; name: string } | null;
   /** Empty for a movie. Includes season 0, which is where specials live. */
   seasons: TmdbSeason[];
 }
@@ -94,10 +99,26 @@ export interface TmdbEpisode {
   stillPath: string | null;
 }
 
+export interface TmdbCollectionPart {
+  tmdbId: string;
+  name: string;
+  year: number | null;
+  releaseDate: string | null;
+  posterPath: string | null;
+}
+
+export interface TmdbCollection {
+  id: number;
+  name: string;
+  /** In release order, the unreleased and undated last. */
+  parts: TmdbCollectionPart[];
+}
+
 export interface TmdbClient {
   search(query: string): Promise<TmdbCandidate[]>;
   details(kind: TitleKind, tmdbId: string): Promise<TmdbTitleDetails>;
   seasonEpisodes(tmdbId: string, season: number): Promise<TmdbEpisode[]>;
+  collection(id: number): Promise<TmdbCollection>;
 }
 
 /** A row of `/search/multi`, typed as loosely as the endpoint actually behaves. */
@@ -126,6 +147,11 @@ interface DetailsBody {
   last_air_date?: string | null;
   /** A movie's field; a show carries `episode_run_time`, a list that is usually empty. */
   runtime?: number | null;
+  credits?: {
+    cast?: { name?: string; order?: number }[];
+    crew?: { name?: string; job?: string }[];
+  };
+  belongs_to_collection?: { id?: number; name?: string } | null;
   next_episode_to_air?: {
     season_number?: number;
     episode_number?: number;
@@ -133,6 +159,17 @@ interface DetailsBody {
   } | null;
   external_ids?: { tvdb_id?: number | null; imdb_id?: string | null };
   seasons?: { season_number?: number; episode_count?: number }[];
+}
+
+interface CollectionBody {
+  id?: number;
+  name?: string;
+  parts?: {
+    id?: number;
+    title?: string;
+    release_date?: string;
+    poster_path?: string | null;
+  }[];
 }
 
 interface SeasonBody {
@@ -178,6 +215,30 @@ function nextEpisodeOf(row: DetailsBody['next_episode_to_air']): TmdbNextEpisode
   return { season: row.season_number, number: row.episode_number, airDate: row.air_date || null };
 }
 
+/** The director, or null: a film with two credited directors names the first. */
+function directorOf(credits: DetailsBody['credits']): string | null {
+  const director = credits?.crew?.find((member) => member.job === 'Director');
+  return director?.name || null;
+}
+
+/** The three top-billed names, in billing order. */
+function castOf(credits: DetailsBody['credits']): string[] {
+  return (credits?.cast ?? [])
+    .filter((member): member is { name: string; order: number } => {
+      return typeof member.name === 'string' && typeof member.order === 'number';
+    })
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 3)
+    .map((member) => member.name);
+}
+
+function collectionOf(
+  body: DetailsBody['belongs_to_collection'],
+): { id: number; name: string } | null {
+  if (!body || typeof body.id !== 'number' || !body.name) return null;
+  return { id: body.id, name: body.name };
+}
+
 export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
   const { apiKey, fetch = globalThis.fetch, baseUrl = BASE_URL, timeoutMs = TIMEOUT_MS } = options;
 
@@ -217,9 +278,12 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
 
     async details(kind, tmdbId) {
       const path = kind === 'show' ? `/tv/${tmdbId}` : `/movie/${tmdbId}`;
-      // One call rather than two: the tvdb id a show is keyed on lives behind
-      // /external_ids, and appending it costs nothing extra.
-      const body = (await get(path, { append_to_response: 'external_ids' })) as DetailsBody | null;
+      // One call rather than two or three: the tvdb id a show is keyed on
+      // lives behind /external_ids, a film's director and cast behind
+      // /credits, and appending them costs nothing extra. A show's credits
+      // are per episode and are not asked for.
+      const append = kind === 'movie' ? 'external_ids,credits' : 'external_ids';
+      const body = (await get(path, { append_to_response: append })) as DetailsBody | null;
       const name = body?.name ?? body?.title;
       if (!body || !name) throw new TmdbError('TMDB returned a title with no name');
 
@@ -246,6 +310,9 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
           kind === 'movie' && typeof body.runtime === 'number' && body.runtime > 0
             ? body.runtime
             : null,
+        director: kind === 'movie' ? directorOf(body.credits) : null,
+        cast: kind === 'movie' ? castOf(body.credits) : [],
+        collection: kind === 'movie' ? collectionOf(body.belongs_to_collection) : null,
         seasons: (body.seasons ?? [])
           .filter((s) => typeof s.season_number === 'number' && (s.episode_count ?? 0) > 0)
           .map((s) => ({ season: s.season_number as number, episodeCount: s.episode_count ?? 0 })),
@@ -273,6 +340,31 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
       }
 
       return episodes;
+    },
+
+    async collection(id) {
+      const body = (await get(`/collection/${id}`, {})) as CollectionBody | null;
+      if (!body || typeof body.id !== 'number' || !body.name) {
+        throw new TmdbError('TMDB has no such collection', 404);
+      }
+      const parts = (body.parts ?? [])
+        .filter((part): part is { id: number; title: string } & typeof part => {
+          return typeof part.id === 'number' && typeof part.title === 'string';
+        })
+        .map((part) => ({
+          tmdbId: String(part.id),
+          name: part.title,
+          year: yearOf(part.release_date),
+          releaseDate: part.release_date || null,
+          posterPath: part.poster_path ?? null,
+        }));
+      // An announced part has no date yet and belongs at the end, not the front.
+      parts.sort((a, b) => {
+        if (a.releaseDate === null) return b.releaseDate === null ? 0 : 1;
+        if (b.releaseDate === null) return -1;
+        return a.releaseDate < b.releaseDate ? -1 : a.releaseDate > b.releaseDate ? 1 : 0;
+      });
+      return { id: body.id, name: body.name, parts };
     },
   };
 }

@@ -17,6 +17,9 @@ const witcher: TmdbTitleDetails = {
   lastAirDate: null,
   nextEpisode: null,
   runtimeMin: null,
+  director: null,
+  cast: [],
+  collection: null,
   seasons: [],
 };
 
@@ -24,6 +27,7 @@ const stub = (over: Partial<TmdbClient> = {}): TmdbClient => ({
   search: async () => [],
   details: async () => witcher,
   seasonEpisodes: async () => [],
+  collection: async () => ({ id: 0, name: '', parts: [] }),
   ...over,
 });
 

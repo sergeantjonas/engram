@@ -10,6 +10,7 @@ import {
   pgEnum,
   pgTable,
   pgView,
+  primaryKey,
   real,
   text,
   timestamp,
@@ -42,6 +43,40 @@ export const watchPrecision = pgEnum('watch_precision', [
   'year',
   'unknown',
 ]);
+
+/**
+ * A film series as TMDB groups it: Dune: Part One belongs to the Dune
+ * collection. Named the first time a film that belongs to one is fetched;
+ * `fetched_at` is set once its parts have been asked for, which is the one
+ * TMDB call per film that `backfill:metadata` makes beyond the details call.
+ */
+export const collections = pgTable('collection', {
+  tmdbId: integer('tmdb_id').primaryKey(),
+  name: text('name').notNull(),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+});
+
+/**
+ * One film of a collection, as TMDB lists it. Stored so the page can draw a
+ * sibling that is not on record without asking TMDB; a part on record is
+ * found by matching `tmdb_id` against `title.tmdb_id`, which is why this is
+ * text like that column.
+ */
+export const collectionParts = pgTable(
+  'collection_part',
+  {
+    collectionId: integer('collection_id')
+      .notNull()
+      .references(() => collections.tmdbId, { onDelete: 'cascade' }),
+    tmdbId: text('tmdb_id').notNull(),
+    name: text('name').notNull(),
+    year: integer('year'),
+    /** Full date where the year is not enough to order two parts from one year. */
+    releaseDate: date('release_date'),
+    posterPath: text('poster_path'),
+  },
+  (t) => [primaryKey({ columns: [t.collectionId, t.tmdbId] })],
+);
 
 /**
  * A work, identified by external ids rather than anything Plex-internal.
@@ -96,6 +131,14 @@ export const titles = pgTable('title', {
    * of its episodes' `runtime_min`, and for a film TMDB has no figure for.
    */
   runtimeMin: integer('runtime_min'),
+  /**
+   * A film's credits, off the same details call. The director alone and the
+   * three top-billed names: enough to say what the film is, not a cast list.
+   * Null for a show, whose credits are per episode and not stored.
+   */
+  director: text('director'),
+  cast: jsonb('top_cast').$type<string[]>(),
+  collectionId: integer('collection_id').references(() => collections.tmdbId),
 
   metadataFetchedAt: timestamp('metadata_fetched_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

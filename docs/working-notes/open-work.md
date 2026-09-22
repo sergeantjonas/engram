@@ -272,8 +272,9 @@ the viewer wants of a title. The SPA calls all four.
    collection as tiles where a show's grid sits); deployed and refreshed on
    the box 2026-09-22. Arc 2 is complete. Arc 3, manual entry as a
    first-class verb: chunk 1 landed 2026-09-22 — a range scope for marks,
-   shift-click in the grid — not yet deployed; chunk 2, the date field that
-   remembers, is next.
+   shift-click in the grid — and chunk 2 the same day — the mark form opens
+   with the date the last mark on the page was written with; neither yet
+   deployed. Chunk 3, the keyboard walk, is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

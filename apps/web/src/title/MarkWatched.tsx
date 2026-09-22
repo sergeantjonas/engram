@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { type MarkedWatched, markUnwatched, markWatched, type WatchScope } from '../api/titles.ts';
 import { useToast } from '../shell/Toasts.tsx';
+import { useLastDate } from './LastDate.tsx';
 import { useSettle } from './settle.ts';
 
 /** What the API counts in a given scope: episodes for a show, plays for a film. */
@@ -52,11 +53,18 @@ export function MarkWatched({
   const settle = useSettle(titleId);
   const toast = useToast();
   const fieldId = useId();
-  const [when, setWhen] = useState('');
+  // Opens with what the last mark on this page was dated, since a run entered
+  // cell by cell is one year typed many times. Still a field, so the prefill
+  // is read before it is written.
+  const last = useLastDate();
+  const [when, setWhen] = useState(last.value);
 
   const mark = useMutation({
-    mutationFn: () => markWatched({ titleId, scope, watchedAt: when }),
-    onSuccess: async (result) => {
+    // The date travels as the variable so what is remembered is what was
+    // written, not whatever the field holds by the time the answer arrives.
+    mutationFn: (watchedAt: string) => markWatched({ titleId, scope, watchedAt }),
+    onSuccess: async (result, watchedAt) => {
+      last.remember(watchedAt);
       await settle();
       // Closed, then said elsewhere. The answer is about the record rather
       // than about this panel, and a panel kept open to report its own result
@@ -96,7 +104,7 @@ export function MarkWatched({
       className="space-y-2"
       onSubmit={(event) => {
         event.preventDefault();
-        mark.mutate();
+        mark.mutate(when);
       }}
     >
       {hint ? <p className="text-xs text-faint">{hint}</p> : null}

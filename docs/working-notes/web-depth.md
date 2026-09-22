@@ -4,9 +4,9 @@
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
-Arc 3 chunk 1 landed 2026-09-22, not yet deployed; chunk 2 is next. Arcs are
-ordered; chunks inside an arc are one commit each, and each
-one deploys to a live record — see Shipping against production.
+Arc 3 chunks 1 and 2 landed 2026-09-22, not yet deployed; chunk 3 is next.
+Arcs are ordered; chunks inside an arc are one commit each, and each one
+deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
 type split, state vocabulary and the "a control that does nothing is worse
@@ -353,11 +353,17 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    The retraction has no range, so the notice after a range mark offers no
    undo: taking back the season would remove hand-entered plays the mark
    never touched. A misjudged range is taken back cell by cell.
-2. **The date field remembers.** Every popover opens blank, so a season
-   entered cell by cell means retyping `2019` each time. Keep the last date
+2. ~~**The date field remembers.**~~ Landed 2026-09-22. Every popover opens
+   blank, so a season entered cell by cell means retyping `2019` each time. Keep the last date
    typed on the page for the session, in module state or a context above the
    grid, and prefill it. The commit bar and the toast still state the
    precision, so a stale prefill is visible before it is written.
+
+   Landed as a context above the page's column, keyed on the title so the
+   next title's form opens blank; the form remembers what it wrote on
+   success, and the add screen, which has no provider, is blank every time.
+   Nothing is drawn beyond the prefilled field, and the notice does not name
+   the date, so the prefill is read in the field before it is written.
 3. **Keyboard walk.** Cells are buttons, so ONE PIECE is 1100 tab stops. One
    tab stop per season with a roving `tabindex`; arrow keys move between
    cells, Enter opens the popover, and while a popover is open the arrows move

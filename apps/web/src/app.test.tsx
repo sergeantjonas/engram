@@ -1053,6 +1053,40 @@ describe('the title page', () => {
     });
   });
 
+  // A season entered cell by cell is one year typed thirty times, so the next
+  // form on the page opens with the last date written.
+  it('opens the next mark form with the date the last one was written with', async () => {
+    stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    fireEvent.change(await screen.findByRole('textbox', { name: /When\?/ }), {
+      target: { value: '2019' },
+    });
+    screen.getByRole('button', { name: 'Mark watched' }).click();
+    await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, seen' });
+
+    // The specials are still unmarked, so their control is the one left open.
+    (await screen.findByRole('button', { name: 'Mark specials watched' })).click();
+    expect(await screen.findByRole('textbox', { name: /When\?/ })).toHaveProperty('value', '2019');
+  });
+
+  it('forgets the date when the page is another title’s', async () => {
+    stubTitle();
+    const router = await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    fireEvent.change(await screen.findByRole('textbox', { name: /When\?/ }), {
+      target: { value: '2019' },
+    });
+    screen.getByRole('button', { name: 'Mark watched' }).click();
+    await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, seen' });
+
+    await router.navigate({ to: '/titles/$id', params: { id: 'another-title' } });
+    (await screen.findByRole('button', { name: 'Mark specials watched' })).click();
+    expect(await screen.findByRole('textbox', { name: /When\?/ })).toHaveProperty('value', '');
+  });
+
   // Blank is the ordinary answer, and it has to reach the API as no date at
   // all: an empty string would be a claim about when rather than an absence.
   it('leaves the date out entirely when the viewer does not remember one', async () => {

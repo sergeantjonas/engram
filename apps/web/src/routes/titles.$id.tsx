@@ -6,6 +6,7 @@ import { useIsOwner } from '../auth/useIsOwner.ts';
 import { Activity } from '../title/Activity.tsx';
 import { Collection } from '../title/Collection.tsx';
 import { IntentControls } from '../title/Intent.tsx';
+import { LastDateProvider } from '../title/LastDate.tsx';
 import { MarkWatchedButton, TakeBack } from '../title/MarkWatched.tsx';
 import { SeasonGrid } from '../title/SeasonGrid.tsx';
 import { Section } from '../title/Section.tsx';
@@ -60,10 +61,13 @@ function TitlePage() {
     <div className="-m-[18px] grid min-h-full min-w-0 md:grid-cols-[216px_1fr]">
       <TitleList titles={inLibrary} currentId={id} kind={kind} />
 
-      <div className="min-w-0 space-y-5 p-[18px]">
-        <TitleHeader {...data} today={today} />
+      {/* Keyed on the title: the date remembered for one page must not open
+          the next title's form. */}
+      <LastDateProvider key={id}>
+        <div className="min-w-0 space-y-5 p-[18px]">
+          <TitleHeader {...data} today={today} />
 
-        {/* What was watched and what was meant, on one row. The marking half
+          {/* What was watched and what was meant, on one row. The marking half
           disappears when it has nothing to offer; the intent half is always
           there, because having no opinion is a state you change by saying so
           rather than one the page can infer. The Plex search opens Plex's
@@ -72,67 +76,68 @@ function TitlePage() {
           and it stays with the owner's controls. It asks Plex for nothing and
           the record keeps no ratingKey: a search by name is what "play in
           Plex" honestly is. */}
-        {isOwner ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <a
-              href={`https://app.plex.tv/desktop/#!/search?query=${encodeURIComponent(title.name)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-dim hover:text-tx"
-            >
-              Find in Plex
-            </a>
-            <span aria-hidden="true" className="h-5 w-px bg-line" />
-            <MarkWatchedButton
-              titleId={id}
-              scope="all"
-              complete={!unwatched}
-              what={film ? 'the film' : 'the whole run'}
-              label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
-              className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
-              {...(film
-                ? { unit: 'play' as const }
-                : { hint: 'Specials are left out — mark those season by season.' })}
-            />
-            <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
-            {/* A rule rather than a gap: the two halves answer different
+          {isOwner ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href={`https://app.plex.tv/desktop/#!/search?query=${encodeURIComponent(title.name)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-dim hover:text-tx"
+              >
+                Find in Plex
+              </a>
+              <span aria-hidden="true" className="h-5 w-px bg-line" />
+              <MarkWatchedButton
+                titleId={id}
+                scope="all"
+                complete={!unwatched}
+                what={film ? 'the film' : 'the whole run'}
+                label={film ? 'Mark the film watched' : 'Mark the whole run watched'}
+                className="rounded border border-line px-3 py-1.5 text-sm text-dim hover:border-jade hover:text-jade"
+                {...(film
+                  ? { unit: 'play' as const }
+                  : { hint: 'Specials are left out — mark those season by season.' })}
+              />
+              <TakeBack titleId={id} scope="all" entered={figures.manualPlays} />
+              {/* A rule rather than a gap: the two halves answer different
                 questions and the row would otherwise read as one list. Gone
                 when the marking half is, or it would stand beside the rule
                 after the Plex link with nothing between them. */}
-            {unwatched || figures.manualPlays > 0 ? (
-              <span aria-hidden="true" className="h-5 w-px bg-line" />
-            ) : null}
-            <IntentControls titleId={id} intent={title} />
-          </div>
-        ) : null}
+              {unwatched || figures.manualPlays > 0 ? (
+                <span aria-hidden="true" className="h-5 w-px bg-line" />
+              ) : null}
+              <IntentControls titleId={id} intent={title} />
+            </div>
+          ) : null}
 
-        <YearBar
-          moments={data.recentActivity}
-          truncated={figures.plays > data.recentActivity.length}
-        />
+          <YearBar
+            moments={data.recentActivity}
+            truncated={figures.plays > data.recentActivity.length}
+          />
 
-        {/* Where a show's grid sits: the run a film is part of. */}
-        {data.collection !== null ? (
-          <Collection collection={data.collection} currentId={id} kind={kind} />
-        ) : null}
+          {/* Where a show's grid sits: the run a film is part of. */}
+          {data.collection !== null ? (
+            <Collection collection={data.collection} currentId={id} kind={kind} />
+          ) : null}
 
-        {seasons.length > 0 ? (
-          <Section
-            heading="Episodes"
-            aside={`${title.episodes.seen} of ${title.episodes.total}${
-              figures.rewatched > 0 ? ` · ${figures.rewatched} rewatched` : ''
-            }`}
-          >
-            {/* Seasons sit close together: the run is one object, and a
+          {seasons.length > 0 ? (
+            <Section
+              heading="Episodes"
+              aside={`${title.episodes.seen} of ${title.episodes.total}${
+                figures.rewatched > 0 ? ` · ${figures.rewatched} rewatched` : ''
+              }`}
+            >
+              {/* Seasons sit close together: the run is one object, and a
               page-worth of air between each reads as unrelated grids. */}
-            {runFirst(seasons).map((season) => (
-              <SeasonGrid key={season.season} season={season} titleId={id} today={today} />
-            ))}
-          </Section>
-        ) : null}
+              {runFirst(seasons).map((season) => (
+                <SeasonGrid key={season.season} season={season} titleId={id} today={today} />
+              ))}
+            </Section>
+          ) : null}
 
-        <Activity moments={data.recentActivity} plays={figures.plays} titleName={title.name} />
-      </div>
+          <Activity moments={data.recentActivity} plays={figures.plays} titleName={title.name} />
+        </div>
+      </LastDateProvider>
     </div>
   );
 }

@@ -29,13 +29,15 @@ const json = (body: unknown, status = 200) =>
 /**
  * What a screen asks for regardless of what the test is about: who is looking,
  * and — since the title page draws the whole library down its left — the
- * library itself. A test that cares about either answers it before reaching
- * this.
+ * library itself, and the export's counts, which /settings loads beside its
+ * list. A test that cares about any of them answers it before reaching this.
  */
 const elsewhere = (url: string, isOwner = true, init?: RequestInit) =>
   url.endsWith('/titles') && (init?.method ?? 'GET') === 'GET'
     ? json({ titles: [] })
-    : json({ isOwner });
+    : url.endsWith('/export')
+      ? json({ titles: 0, events: 0, manual: 0 })
+      : json({ isOwner });
 
 async function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -2550,6 +2552,55 @@ describe('settings', () => {
     expect(JSON.parse(String(put?.init?.body))).toEqual({ excluded: false });
     expect(screen.getByRole('status').textContent).toContain('Bleach is back on the wall.');
     expect(screen.getByText('Nothing is excluded.')).toBeDefined();
+  });
+
+  // What rests only on the owner's word is said before the file is taken.
+  const exportSays = async (summary: { titles: number; events: number; manual: number }) => {
+    stubApi((url) =>
+      url.endsWith('/export')
+        ? json(summary)
+        : url.includes('/titles?includeExcluded=true')
+          ? json({ titles: [] })
+          : elsewhere(url),
+    );
+    await renderAt('/settings');
+    return screen.findByRole('region', { name: 'Export' });
+  };
+
+  it('states the hand-entered claims, then offers the record as two files', async () => {
+    const section = await exportSays({ titles: 82, events: 1109, manual: 648 });
+
+    expect(section.textContent).toContain(
+      '82 titles and 1109 events. 648 of them were entered by hand, and nothing but your word stands behind them.',
+    );
+    expect(within(section).getByRole('link', { name: 'Download CSV' }).getAttribute('href')).toBe(
+      'http://localhost:2012/export/record.csv',
+    );
+    expect(within(section).getByRole('link', { name: 'Download JSON' }).getAttribute('href')).toBe(
+      'http://localhost:2012/export/record.json',
+    );
+  });
+
+  it.each([
+    [
+      { titles: 1, events: 1, manual: 1 },
+      'It was entered by hand, and nothing but your word stands behind it.',
+    ],
+    [
+      { titles: 5, events: 5, manual: 5 },
+      'All of them were entered by hand, and nothing but your word stands behind them.',
+    ],
+    [
+      { titles: 5, events: 5, manual: 1 },
+      '1 of them was entered by hand, and nothing but your word stands behind it.',
+    ],
+    [{ titles: 5, events: 5, manual: 0 }, 'None was entered by hand.'],
+    [{ titles: 1, events: 1, manual: 0 }, 'It was not entered by hand.'],
+    [{ titles: 3, events: 0, manual: 0 }, '3 titles and no events yet.'],
+  ])('says it plainly for %o', async (summary, sentence) => {
+    const section = await exportSays(summary);
+
+    expect(section.textContent).toContain(sentence);
   });
 });
 

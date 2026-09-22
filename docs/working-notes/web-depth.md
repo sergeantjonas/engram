@@ -7,8 +7,8 @@ with migrations 0012 to 0014, each refreshed on the box the day it shipped.
 Arc 3 landed 2026-09-22 in five commits. Arc 4 is in progress: chunks 1 to
 3 landed 2026-09-22. Both deployed the same day with no migration, and
 `GET /history` answered on the box as the rehearsal had — 461 plays over 24
-titles, all exact, 116 KB. Chunk 4's routes landed the same day, not yet
-deployed.
+titles, all exact, 116 KB. Chunk 4 landed the same day, not yet deployed;
+chunk 5 is left.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -540,7 +540,7 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    the calendar, which puts the day's list beside the day it lists, and the
    year's label beside its calendar carries the year's play count and picks
    the year when pressed.
-4. **Export.** [web-design.md](web-design.md) says the "does this rest only on
+4. ~~**Export.**~~ Landed 2026-09-22 in two commits. [web-design.md](web-design.md) says the "does this rest only on
    my word" question matters most to the export, and there is no export. A
    block on `/settings` — the route exists since 2026-09-22, the excluded
    titles being its first block — with a download of the full record as JSON
@@ -580,6 +580,20 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    Rehearsed against the local record: 82 titles, 1109 events of which 648
    are manual, 175 KB of CSV and 405 KB of JSON, the same 1109 in the same
    order when paged seven at a time.
+
+   The block followed on `/settings`, under the excluded titles. It states
+   the counts first — `82 titles and 1109 events. 648 of them were entered by
+   hand, and nothing but your word stands behind them. Each row names its
+   source.` — then what each file holds, then two plain links, one per
+   format. Titles and events side by side rather than one across the other,
+   since a title only wanted has no event and the count includes it. Links
+   rather than a fetch: the API sends an attachment, so the browser saves it
+   as it streams, and the session cookie travels with a top-level navigation
+   as it does for the sign-in. The cost is that a session gone stale between
+   opening the page and clicking lands on the API's bare 401 rather than the
+   sign-in. The page checks the session as it opens and a session extends on
+   use, so the window is small, and a fetch that could show a better error
+   would have to hold the whole file in the page to hand it over.
 5. **Type steps.** Settle mono at two sizes, 10px for anything read and 9px
    for landmarks and tick labels, and remove the other five. The review
    counted the call sites; do this as one commit against the running app, not

@@ -1,7 +1,8 @@
 # Authentication
 
 **Status:** Shipped — the whole build order landed 2026-09-17/18, and the
-read/write split on 2026-09-19. Read before changing any auth code; the
+read/write split on 2026-09-19; the open-routes list gained the title's
+activity page on 2026-09-22. Read before changing any auth code; the
 reasoning here is why it is shaped the way it is.
 
 Engram has exactly one human user, and exactly one of them may write. The
@@ -176,7 +177,9 @@ a diary. Nothing about the watching itself is refused; what is refused is
 refused because a stranger would be acting, or because the field is the owner
 writing to themselves rather than a fact about a title.
 
-Open: `GET /titles` and `GET /titles/:id`. The wall, and any title page on it.
+Open: `GET /titles`, `GET /titles/:id` and `GET /titles/:id/activity`. The
+wall, any title page on it, and the rest of a title's feed past the page the
+detail carries.
 
 Closed, and each for its own reason:
 

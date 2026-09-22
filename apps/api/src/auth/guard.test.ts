@@ -70,6 +70,10 @@ describe('the owner guard', () => {
 
     expect((await get(server, '/titles')).statusCode).toBe(200);
     expect((await get(server, '/next-up')).statusCode).toBe(200);
+    // Past the gate, though the id is nobody's: the answer is the route's.
+    expect(
+      (await get(server, '/titles/0f7c2c3a-8a0e-4c5f-9f6b-2a1c0e9a7701/activity')).statusCode,
+    ).not.toBe(401);
     expect((await server.inject({ method: 'POST', url: '/titles' })).statusCode).toBe(401);
   });
 

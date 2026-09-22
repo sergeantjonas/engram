@@ -51,6 +51,8 @@ const OPEN_ROUTES = new Set([
   // owner's key and exists only to feed the add screen — stays behind the gate.
   'GET /titles',
   'GET /titles/:id',
+  // The rest of a title's feed; the detail already carries its first page.
+  'GET /titles/:id/activity',
   // Same reasoning as the two above, and it discloses nothing they do not:
   // what was watched and what comes after it is the record itself.
   'GET /next-up',

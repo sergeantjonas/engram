@@ -305,7 +305,9 @@ Around it:
 
   Beside each is the way back out: a mark can be taken back, and the controls
   that offer it appear only where this record was told something by hand.
-- Activity, last 5 of 19, with rewatches marked.
+- Activity, last 5 of 19, with rewatches marked, and `show all 19` paging the
+  rest out in fifties since 2026-09-22 — [web-depth.md](web-depth.md) arc 3
+  chunk 5.
 - Intent controls: still watching, dropped after S2.
 
   Built as three independent toggles — want to watch, dropped, excluded — on

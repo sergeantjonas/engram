@@ -8,7 +8,7 @@ import {
   intent as intentTable,
   titles as titleTable,
 } from '../db/schema.js';
-import { asStranger, titleDetail } from '../titles/detail.js';
+import { asStranger, titleActivity, titleDetail } from '../titles/detail.js';
 import { listTitles, withoutIntent } from '../titles/list.js';
 import { nextUp } from '../titles/next-up.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
@@ -33,6 +33,26 @@ const listQuery = z.object({
 });
 
 const detailParams = z.object({ id: z.uuid('id must be the id of a stored title') });
+
+/**
+ * A page of the feed. Digit strings rather than coercion, as the retraction's
+ * season is: `z.coerce.number()` reads an empty value as zero. The cap is on
+ * what one request may ask for, not on how far it may page.
+ */
+const activityQuery = z.object({
+  offset: z
+    .string()
+    .regex(/^\d+$/, 'offset must be a whole number')
+    .transform(Number)
+    .refine(Number.isSafeInteger, 'offset is too large')
+    .default(0),
+  limit: z
+    .string()
+    .regex(/^\d+$/, 'limit must be a whole number')
+    .transform(Number)
+    .refine((limit) => limit >= 1 && limit <= 200, 'limit must be between 1 and 200')
+    .default(50),
+});
 
 /**
  * What the viewer wants, which is the thing Plex cannot express at all.
@@ -151,6 +171,31 @@ export function registerTitleRoutes(
     }
 
     return request.isOwner ? detail : asStranger(detail);
+  });
+
+  // The rest of the feed, past the page the detail carries. Public like the
+  // detail's own slice: the feed is the record, and its sources with it.
+  app.get('/titles/:id/activity', async (request, reply) => {
+    const params = detailParams.safeParse(request.params);
+    const query = activityQuery.safeParse(request.query);
+    if (!params.success || !query.success) {
+      const issues = [
+        ...(params.success ? [] : params.error.issues),
+        ...(query.success ? [] : query.error.issues),
+      ];
+      return reply
+        .code(400)
+        .send({ error: 'bad_request', message: issues.map((issue) => issue.message).join('; ') });
+    }
+
+    const page = await titleActivity(db, params.data.id, query.data);
+    if (!page || (page.title.excluded && !request.isOwner)) {
+      return reply
+        .code(404)
+        .send({ error: 'not_found', message: 'no title is stored under that id' });
+    }
+
+    return { moments: page.moments };
   });
 
   app.post('/titles', async (request, reply) => {

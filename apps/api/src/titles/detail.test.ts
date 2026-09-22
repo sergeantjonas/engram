@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sessionDb } from '../auth/session.fixture.js';
-import { titleDetail } from './detail.js';
+import { titleActivity, titleDetail } from './detail.js';
 
 const titleRow = {
   id: 't1',
@@ -403,5 +403,35 @@ describe('titleDetail', () => {
     const result = await detail([episodeRow()]);
 
     expect(result?.seasons[0]?.episodes[0]?.gap).toBeNull();
+  });
+});
+
+describe('titleActivity', () => {
+  it('maps a page of the feed onto the shape the detail uses', async () => {
+    const stub = sessionDb();
+    stub.executions = [[titleRow], [activityRow(), activityRow({ id: 'w2', rewatch: true })]];
+
+    const page = await titleActivity(stub.db, 't1', { offset: 50, limit: 50 });
+
+    expect(page?.title.id).toBe('t1');
+    expect(page?.moments.map((moment) => [moment.id, moment.rewatch])).toEqual([
+      ['w1', false],
+      ['w2', true],
+    ]);
+    expect(page?.moments[0]).toMatchObject({
+      season: 2,
+      number: 4,
+      name: 'Big Trouble in Little Garden',
+      watchedAt: '2026-03-24T12:56:00+00:00',
+      precision: 'exact',
+      source: 'plex-history',
+    });
+  });
+
+  it('is null when nothing is stored under that id', async () => {
+    const stub = sessionDb();
+    stub.executions = [[]];
+
+    expect(await titleActivity(stub.db, 't1', { offset: 0, limit: 50 })).toBeNull();
   });
 });

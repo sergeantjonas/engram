@@ -1054,6 +1054,83 @@ describe('the title page', () => {
     });
   });
 
+  // The feed is the raw evidence and the only view naming each event's
+  // source, so it has to be reachable in full, in pages.
+  it('shows the whole feed on request, a page at a time', async () => {
+    const moment = (n: number) => ({
+      id: `w${n}`,
+      season: 1,
+      number: n,
+      name: `Play ${n}`,
+      watchedAt: null,
+      precision: 'unknown',
+      source: 'plex-history',
+      rewatch: false,
+    });
+    const calls = stubApi((url) => {
+      if (url.includes('/activity?offset=0&')) {
+        return json({ moments: Array.from({ length: 50 }, (_, i) => moment(i + 1)) });
+      }
+      if (url.includes('/activity?offset=50&')) return json({ moments: [moment(51)] });
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.figures.plays = 51;
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    expect(await screen.findByRole('heading', { name: /Activity\s*last 2 of 51/ })).toBeDefined();
+    (await screen.findByRole('button', { name: 'show all 51' })).click();
+
+    expect(await screen.findByText('Play 50')).toBeDefined();
+    expect(screen.getByRole('heading', { name: /Activity\s*50 of 51/ })).toBeDefined();
+    (await screen.findByRole('button', { name: 'show 50 more' })).click();
+
+    expect(await screen.findByText('Play 51')).toBeDefined();
+    expect(screen.getByRole('heading', { name: /Activity\s*51 of 51/ })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /show/ })).toBeNull();
+    const pages = calls.filter((call) => call.url.includes('/activity')).map((call) => call.url);
+    expect(pages).toEqual([
+      `http://localhost:2012/titles/${TITLE_ID}/activity?offset=0&limit=50`,
+      `http://localhost:2012/titles/${TITLE_ID}/activity?offset=50&limit=50`,
+    ]);
+  });
+
+  // A round fifty must not offer a page of nothing: the known total ends the
+  // feed as surely as a short page does.
+  it('offers no further page once the whole feed is shown', async () => {
+    stubApi((url) => {
+      if (url.includes('/activity?')) {
+        return json({
+          moments: Array.from({ length: 50 }, (_, i) => ({
+            id: `w${i}`,
+            season: 1,
+            number: i + 1,
+            name: `Play ${i + 1}`,
+            watchedAt: null,
+            precision: 'unknown',
+            source: 'plex-history',
+            rewatch: false,
+          })),
+        });
+      }
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.figures.plays = 50;
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'show all 50' })).click();
+
+    expect(await screen.findByRole('heading', { name: /Activity\s*50 of 50/ })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /show/ })).toBeNull();
+  });
+
   // A cell is otherwise binary. A second play is a corner tick, not a colour,
   // and the label says the count.
   it('ticks the corner of a cell played more than once', async () => {

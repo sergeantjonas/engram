@@ -276,8 +276,9 @@ the viewer wants of a title. The SPA calls all four.
    with the date the last mark on the page was written with; chunk 3 the
    same day — one tab stop per season, the arrows walk the cells and carry an
    open popover along; chunk 4 the same day — a corner tick on a cell played
-   more than once. None yet deployed. Chunk 5, the activity feed in full, is
-   next.
+   more than once; chunk 5 the same day — the feed pages out in full from a
+   new activity route. Arc 3 is complete, none of it yet deployed. Arc 4,
+   the screens the rail owes, is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

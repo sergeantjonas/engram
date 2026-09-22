@@ -282,6 +282,71 @@ describe('GET /titles', () => {
   });
 });
 
+describe('GET /titles/:id/activity', () => {
+  const activityRow = {
+    id: 'w1',
+    season: 1,
+    number: 1,
+    name: 'A Grain of Truth',
+    watched_at: '2025-12-02T21:00:00+00:00',
+    watched_precision: 'exact',
+    source: 'plex-history',
+    rewatch: false,
+  };
+
+  const page = (
+    url: string,
+    executions: unknown[][] = [[listRow()], [activityRow]],
+    headers: Record<string, string> = signedIn,
+  ) => {
+    const stub = sessionDb();
+    stub.executions = executions;
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    return app.inject({ method: 'GET', url, headers });
+  };
+
+  it('answers one page of the feed, newest first as the detail does', async () => {
+    const response = await page(`/titles/${listRow().id}/activity?offset=50&limit=50`);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      moments: [
+        {
+          id: 'w1',
+          season: 1,
+          number: 1,
+          name: 'A Grain of Truth',
+          watchedAt: '2025-12-02T21:00:00+00:00',
+          precision: 'exact',
+          source: 'plex-history',
+          rewatch: false,
+        },
+      ],
+    });
+  });
+
+  it('rejects an offset or a limit it cannot read, or a limit past the cap', async () => {
+    expect((await page(`/titles/${listRow().id}/activity?offset=-1`)).statusCode).toBe(400);
+    expect((await page(`/titles/${listRow().id}/activity?limit=201`)).statusCode).toBe(400);
+    expect((await page(`/titles/${listRow().id}/activity?limit=`)).statusCode).toBe(400);
+    expect(
+      (await page(`/titles/${listRow().id}/activity?offset=${'9'.repeat(25)}`)).statusCode,
+    ).toBe(400);
+  });
+
+  it('answers 404 for an id nothing is stored under, and to a stranger for an excluded title', async () => {
+    expect((await page(`/titles/${listRow().id}/activity`, [[]])).statusCode).toBe(404);
+    const excluded = listRow({ excluded_at: '2026-09-17T00:00:00+00:00' });
+    expect(
+      (await page(`/titles/${listRow().id}/activity`, [[excluded], [activityRow]], stranger))
+        .statusCode,
+    ).toBe(404);
+    expect(
+      (await page(`/titles/${listRow().id}/activity`, [[excluded], [activityRow]])).statusCode,
+    ).toBe(200);
+  });
+});
+
 describe('GET /titles/:id', () => {
   const identityRow = {
     tmdb_id: '71912',

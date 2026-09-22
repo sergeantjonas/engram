@@ -135,7 +135,12 @@ function TitlePage() {
             </Section>
           ) : null}
 
-          <Activity moments={data.recentActivity} plays={figures.plays} titleName={title.name} />
+          <Activity
+            titleId={id}
+            moments={data.recentActivity}
+            plays={figures.plays}
+            titleName={title.name}
+          />
         </div>
       </LastDateProvider>
     </div>

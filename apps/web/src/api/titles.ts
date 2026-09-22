@@ -219,6 +219,16 @@ export function titleQuery(id: string) {
   });
 }
 
+/** How many plays one page of the feed asks for. */
+export const ACTIVITY_PAGE = 50;
+
+/** One page of the feed, past the slice the detail carries. */
+export function activityPage(id: string, offset: number) {
+  return apiFetch<{ moments: WatchMoment[] }>(
+    `/titles/${encodeURIComponent(id)}/activity?offset=${offset}&limit=${ACTIVITY_PAGE}`,
+  );
+}
+
 export function setGap(episodeId: string, gap: { reason: GapReason; note: string | null }) {
   return apiFetch<{ gap: EpisodeGap }>(`/episodes/${encodeURIComponent(episodeId)}/gap`, {
     method: 'PUT',

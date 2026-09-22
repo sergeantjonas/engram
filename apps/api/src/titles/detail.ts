@@ -438,41 +438,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     order by e.season asc, e.number asc
   `);
 
-  const activity = await db.execute<ActivityRow>(sql`
-    select
-      we.id, e.season, e.number, e.name,
-      to_json(we.watched_at) as watched_at,
-      we.watched_precision,
-      we.source,
-      -- Anything but the first play of this episode. Ranked over every event
-      -- the WHERE kept, which is before the LIMIT trims, so the flag does not
-      -- change with how many rows are asked for. A film's events all carry a
-      -- null episode and Postgres groups those as one partition, which is
-      -- right: the second viewing of a film is a rewatch.
-      -- Nulls first here, where the boundaries elsewhere put them last: this
-      -- asks which play came first, and an undated one is a remembered watch
-      -- from before the record existed. At the front, every dated play after
-      -- it is a rewatch, which is what it was. The id breaks the tie a bulk
-      -- backfill creates by sharing one transaction's timestamp across every
-      -- row it writes.
-      row_number() over (
-        partition by we.episode_id
-        order by we.watched_at asc nulls first, we.ingested_at asc, we.id asc
-      ) > 1 as rewatch
-    from watch_event we
-      left join episode e on e.id = we.episode_id
-      join title t on t.id = we.title_id
-    where we.title_id = ${titleId}
-      -- The same set the figures count, or the feed and the play total it is
-      -- printed beside would be talking about different things.
-      and (e.season <> 0 or (e.season is null and t.kind = 'movie'))
-      -- Stopping is not watching. A play-grained source reports every stop,
-      -- and play_count takes only the finished ones, so a feed carrying the
-      -- rest would render "last 3 of 1".
-      and we.completed
-    order by we.watched_at desc nulls last, we.ingested_at desc, we.id desc
-    limit ${ACTIVITY_LIMIT}
-  `);
+  const activity = await activityRows(db, titleId, ACTIVITY_LIMIT, 0);
 
   // Only when there is one to ask about: a show, or a film TMDB groups in
   // nothing, makes no fifth statement. A part on record is found by its tmdb
@@ -587,16 +553,85 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       lastWatchedAt: identity?.last_watched_at ?? null,
       lastWatchedPrecision: identity?.last_watched_precision ?? null,
     },
-    recentActivity: [...activity].map((row) => ({
-      id: row.id,
-      season: row.season,
-      number: row.number,
-      name: row.name,
-      watchedAt: row.watched_at,
-      precision: row.watched_precision,
-      source: row.source,
-      rewatch: row.rewatch,
-    })),
+    recentActivity: [...activity].map(toMoment),
     seasons: [...seasons.entries()].map(([season, episodes]) => ({ season, episodes })),
   };
+}
+
+/**
+ * The feed, newest first, one page at a time: `titleDetail` takes the first
+ * `ACTIVITY_LIMIT` of it and the activity route the rest in pages, so the two
+ * cannot disagree about which events the feed is made of.
+ */
+async function activityRows(
+  db: Database,
+  titleId: string,
+  limit: number,
+  offset: number,
+): Promise<Iterable<ActivityRow>> {
+  return await db.execute<ActivityRow>(sql`
+    select
+      we.id, e.season, e.number, e.name,
+      to_json(we.watched_at) as watched_at,
+      we.watched_precision,
+      we.source,
+      -- Anything but the first play of this episode. Ranked over every event
+      -- the WHERE kept, which is before the LIMIT trims, so the flag does not
+      -- change with how many rows are asked for. A film's events all carry a
+      -- null episode and Postgres groups those as one partition, which is
+      -- right: the second viewing of a film is a rewatch.
+      -- Nulls first here, where the boundaries elsewhere put them last: this
+      -- asks which play came first, and an undated one is a remembered watch
+      -- from before the record existed. At the front, every dated play after
+      -- it is a rewatch, which is what it was. The id breaks the tie a bulk
+      -- backfill creates by sharing one transaction's timestamp across every
+      -- row it writes.
+      row_number() over (
+        partition by we.episode_id
+        order by we.watched_at asc nulls first, we.ingested_at asc, we.id asc
+      ) > 1 as rewatch
+    from watch_event we
+      left join episode e on e.id = we.episode_id
+      join title t on t.id = we.title_id
+    where we.title_id = ${titleId}
+      -- The same set the figures count, or the feed and the play total it is
+      -- printed beside would be talking about different things.
+      and (e.season <> 0 or (e.season is null and t.kind = 'movie'))
+      -- Stopping is not watching. A play-grained source reports every stop,
+      -- and play_count takes only the finished ones, so a feed carrying the
+      -- rest would render "last 3 of 1".
+      and we.completed
+    order by we.watched_at desc nulls last, we.ingested_at desc, we.id desc
+    limit ${limit} offset ${offset}
+  `);
+}
+
+const toMoment = (row: ActivityRow): WatchMoment => ({
+  id: row.id,
+  season: row.season,
+  number: row.number,
+  name: row.name,
+  watchedAt: row.watched_at,
+  precision: row.watched_precision,
+  source: row.source,
+  rewatch: row.rewatch,
+});
+
+/**
+ * One page of the feed past what the detail carries.
+ *
+ * Null when nothing is stored under the id; the summary is loaded first so the
+ * route can refuse a stranger an excluded title the way the detail does. How
+ * many there are in total is the detail's `figures.plays`, counted over the
+ * same set, so this carries no count of its own.
+ */
+export async function titleActivity(
+  db: Database,
+  titleId: string,
+  page: { offset: number; limit: number },
+): Promise<{ title: TitleSummary; moments: WatchMoment[] } | null> {
+  const [title] = await listTitles(db, { titleId, includeExcluded: true });
+  if (!title) return null;
+  const rows = await activityRows(db, titleId, page.limit, page.offset);
+  return { title, moments: [...rows].map(toMoment) };
 }

@@ -2,8 +2,9 @@ import type { EpisodeCell as Episode, SeasonGrid as Season } from '../api/titles
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { EpisodeCell } from './EpisodeCell.tsx';
 import { MarkWatchedButton } from './MarkWatched.tsx';
+import { seasonFacts } from './season-facts.ts';
 
-const HEADING = 'font-mono text-[9.5px] tracking-[.08em] text-dim';
+const HEADING = 'font-mono text-[10px] tracking-[.08em] uppercase text-dim';
 
 /** What TMDB gives no date for, gathered at the end rather than left loose. */
 const UNDATED = '—';
@@ -39,7 +40,8 @@ export function SeasonGrid({
   // episodes, and that many subscriptions to the same query is a thousand
   // observers doing the same bookkeeping for one answer.
   const isOwner = useIsOwner();
-  const seen = season.episodes.filter((episode) => episode.seen).length;
+  const facts = seasonFacts(season.episodes, today);
+  const { seen } = facts;
   const heading = season.season === 0 ? 'Specials' : `Season ${season.season}`;
   // Fixed 34×28 cells that wrap, not a grid that stretches to the container.
   // A season is a shape to be read at a glance — where the run breaks, how far
@@ -120,8 +122,13 @@ export function SeasonGrid({
     <section aria-label={heading} className="space-y-1.5">
       <div className="flex items-baseline gap-3">
         {/* Under the page's Episodes heading, not beside it. */}
+        {/* Derived from the cells, since no season row exists to hold it: the
+            years it aired across, its size, then only what is owed — a season
+            with no hole in the run says nothing more. */}
         <h3 className={HEADING}>
-          {heading} · {seen} of {season.episodes.length}
+          {[heading, facts.years, `${facts.count} ep`, facts.state]
+            .filter((part) => part !== null)
+            .join(' · ')}
         </h3>
         {markSeason}
       </div>

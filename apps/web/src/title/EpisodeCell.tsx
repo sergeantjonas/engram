@@ -16,7 +16,7 @@ import { MarkWatched, TakeBack } from './MarkWatched.tsx';
 type CellStatus = 'seen' | 'skipped' | 'missing' | 'unaired' | 'unmatched' | 'hole';
 
 /** Seen wins: a gap left on a watched episode is stale, and the grid shows the fact. */
-function statusOf(episode: Cell, today: string): CellStatus {
+export function statusOf(episode: Cell, today: string): CellStatus {
   if (episode.seen) return 'seen';
   if (episode.gap) return episode.gap.reason;
   if (episode.airDate !== null && episode.airDate > today) return 'unaired';

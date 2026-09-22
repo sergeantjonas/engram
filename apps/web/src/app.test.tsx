@@ -789,6 +789,11 @@ describe('the title page', () => {
       screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' }),
     ).toBeDefined();
     expect(screen.getByRole('region', { name: 'Season 2' })).toBeDefined();
+    // Derived off the cells: the one dated cell gives the year, the count is
+    // every cell, and one hole is named rather than counted.
+    expect(
+      screen.getByRole('heading', { name: 'Season 2 · 2026 · 3 ep · one missing' }),
+    ).toBeDefined();
     // Folded, not hidden: the specials are there for whoever opens them — and
     // last, so a show with 89 featurettes does not open on a count of them.
     expect(screen.getByText('Specials · 0 of 1')).toBeDefined();
@@ -957,18 +962,22 @@ describe('the title page', () => {
     await renderAt(`/titles/${TITLE_ID}`);
 
     const grid = await screen.findByRole('region', { name: 'Season 2' });
-    expect(grid.textContent).toContain('2004');
-    expect(grid.textContent).toContain('2005');
+    // Below the heading, which names the range itself: the rail is the claim.
+    const rail = grid.lastElementChild?.textContent ?? '';
+    expect(rail).toContain('2004');
+    expect(rail).toContain('2005');
   });
 
   // A season that ran inside one year has nothing to landmark, and a year
-  // repeated down the side would be noise.
+  // repeated down the side would be noise. The heading still names the year
+  // once, so the check is on the cells beneath it.
   it('leaves a season that ran inside one year alone', async () => {
     stubTitle();
     await renderAt(`/titles/${TITLE_ID}`);
 
     const grid = await screen.findByRole('region', { name: 'Season 2' });
-    expect(grid.textContent).not.toMatch(/20\d\d/);
+    expect(grid.querySelector('h3')?.textContent).toContain('2026');
+    expect(grid.lastElementChild?.textContent).not.toMatch(/20\d\d/);
   });
 
   it('records why a hole is a hole and redraws the cell', async () => {
@@ -1055,7 +1064,8 @@ describe('the title page', () => {
 
     // In a notice rather than in the panel, and asserted after the refetch has
     // landed: the panel is gone by then, which is the point of moving it out.
-    await screen.findByRole('heading', { name: /Season 2\s*·\s*3 of 3/ });
+    // A season with no hole left says nothing about its state.
+    await screen.findByRole('heading', { name: 'Season 2 · 2026 · 3 ep' });
     expect(screen.getByText('Marked 2 episodes in season 2; 1 already on record.')).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Mark watched' })).toBeNull();
     const post = calls.find((call) => call.init?.method === 'POST');

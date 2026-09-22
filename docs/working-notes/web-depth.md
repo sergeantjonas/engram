@@ -2,7 +2,7 @@
 
 **Status:** In progress — scoped 2026-09-21 from a review of the three built
 screens against [web-design.md](web-design.md); arc 1 chunks 1 and 2 landed
-the same day. Arcs are ordered; chunks inside an arc are one commit each, and each one
+the same day, chunk 3 on 2026-09-22. Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -141,11 +141,30 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    backup, deploy, `backfill-cli.js` in the api container — and it answered
    line for line as the rehearsal had: 53 shows, 0 rows added, the same 8
    unlisted rows, all on Bleach.
-3. **Season facts on the heading.** A `season` table does not exist and one
-   row per season is not worth one yet. Instead the heading derives what it
-   can: `SEASON 2 · 2019–2020 · 10 EP · ONE MISSING`, the year range from the
-   air dates the landmarks already compute. Season name, poster and overview
-   from TMDB are deferred until something needs them beyond a heading.
+3. ~~**Season facts on the heading.**~~ Landed 2026-09-22. A `season` table
+   does not exist and one row per season is not worth one yet, so the heading
+   derives what it can from the cells the grid already holds:
+   `SEASON 2 · 2019–2020 · 10 EP · ONE MISSING`. `seasonFacts` in
+   [apps/web/src/title/season-facts.ts](../../apps/web/src/title/season-facts.ts)
+   is pure — `today` comes in as an argument — and unit-tested on plain cells.
+   The year range comes off the air dates: one year prints once, no dated
+   episode prints no range. The count is every cell. The state reuses
+   `statusOf` from the cell, so what a cell draws and what the heading counts
+   cannot disagree: a hole is a cell not seen that is part of the run, which
+   makes a declared skip a hole and leaves *not out yet* and *not on TMDB*
+   out. A season with no hole says nothing more; one hole says `ONE MISSING`;
+   more say the count, `3 MISSING`; a run with holes and nothing seen says
+   `NONE SEEN`, which is what `0 of 10` used to say without repeating the
+   count now beside it. Departures: the caps come from CSS on the shared
+   heading class, so the specials fold is capitalised the same way and the
+   DOM still reads `Season 2`, which is what the region's label and the mark
+   control's sentence are built from; the heading went from 9.5px to 10px mono as the
+   one type-size change in scope, and the *Mark season watched* control
+   beside it is still 9.5px and waits for arc 4. Specials keep their
+   `Specials · n of m` summary with no year range: an OVA list spans whatever
+   years the show ran, so the range would describe the show rather than the
+   fold, and the summary's job is the count that says whether opening it is
+   worth anything.
 4. **Link the ids.** The identity line in `TitleHeader` makes each id a link
    to its catalogue page (`themoviedb.org/tv/{id}`, `thetvdb.com/?tab=series&id=`,
    `imdb.com/title/{id}`), opened in a new tab, styled as the mono text it

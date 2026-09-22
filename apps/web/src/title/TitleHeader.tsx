@@ -160,12 +160,22 @@ export function TitleHeader({
   backdropPath,
   overview,
   runtimeMin,
+  director,
+  cast,
   airing,
   figures,
   today,
 }: Pick<
   TitleDetail,
-  'title' | 'ids' | 'backdropPath' | 'overview' | 'runtimeMin' | 'airing' | 'figures'
+  | 'title'
+  | 'ids'
+  | 'backdropPath'
+  | 'overview'
+  | 'runtimeMin'
+  | 'director'
+  | 'cast'
+  | 'airing'
+  | 'figures'
 > & {
   /** Today as `YYYY-MM-DD`, the page's one clock. */
   today: string;
@@ -298,6 +308,24 @@ export function TitleHeader({
           `data` in place when the pane navigates, and one title's "more" must
           not arrive open on the next. */}
       <Overview key={title.id} text={overview} />
+
+      {/* Who made it, in one line under what it is about. Names in the text
+          colour, the joining words dim, so the line reads as names. */}
+      {director !== null || cast.length > 0 ? (
+        <p className="mt-2 text-xs text-dim">
+          {director !== null ? (
+            <>
+              Directed by <span className="text-tx">{director}</span>
+            </>
+          ) : null}
+          {director !== null && cast.length > 0 ? ' · ' : null}
+          {cast.length > 0 ? (
+            <>
+              with <span className="text-tx">{cast.join(', ')}</span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
 
       {/* Only the readings that exist, and no box at all when none do: an empty
           ruled strip under a title nobody has watched says less than nothing. */}

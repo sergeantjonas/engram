@@ -266,10 +266,12 @@ the viewer wants of a title. The SPA calls all four.
    a `watched` cell in the header's stat box for shows; a film's runtime sits
    on its meta line, amended the same day after the first look in
    production). Chunks 2 and 3 deployed and refreshed on the box 2026-09-22.
-   Chunk 4, *A film's run*, has its storage half landed 2026-09-22
-   (migration 0014: director, top cast, collection and its parts, the first
-   new TMDB call, one per film in a collection); the film page's credits and
-   collection tiles are next.
+   Chunk 4, *A film's run*, landed 2026-09-22 in two commits (migration
+   0014: director, top cast, collection and its parts, the first new TMDB
+   call, one per collection; a credits line under the synopsis and the
+   collection as tiles where a show's grid sits); not yet deployed, and the
+   box needs `backfill:metadata --refresh` after that deploy. Arc 2 is
+   complete. Arc 3, manual entry as a first-class verb, is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

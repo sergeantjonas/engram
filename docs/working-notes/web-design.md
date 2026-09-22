@@ -256,6 +256,13 @@ Around it:
   watched, days since last. A film's runtime sits on the meta line instead.
   The time cell was added 2026-09-22 by [web-depth.md](web-depth.md) arc 2
   chunk 3.
+- A film's credits in one line under the synopsis — `Directed by … · with …`,
+  the director and three top-billed names, names in the text colour — and,
+  where a show's grid would be, the collection the film belongs to as wall
+  tiles with the wall's state bar: parts on record link to their pages, the
+  one being read is ringed, a sibling not on record is faded and links to the
+  add screen with its name filled in. Added 2026-09-22 by
+  [web-depth.md](web-depth.md) arc 2 chunk 4.
 - The twelve-month strip from the first round, so a season's shape is visible
   without reading the feed.
 

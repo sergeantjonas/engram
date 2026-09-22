@@ -7,8 +7,10 @@ and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
 box the same day; chunks 2 and 3 landed 2026-09-22, chunk 3 in two commits
 with migration 0013, and both were deployed and refreshed on the box the same
 day; chunk 3 was then amended so the watched cell is shows-only and a film's
-runtime sits on the meta line. Chunk 4's storage half landed 2026-09-22 as
-migration 0014; its page is next. Arcs are ordered; chunks inside an arc are one commit each, and each
+runtime sits on the meta line. Chunk 4 landed 2026-09-22 in two commits with
+migration 0014, not yet deployed; the box needs `backfill:metadata --refresh`
+after that deploy for credits and collections. Arc 2 is complete; arc 3 is
+next. Arcs are ordered; chunks inside an arc are one commit each, and each
 one deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -287,7 +289,7 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    the runtime beside a play count of one. The cell is drawn for shows only;
    a film's runtime is a fact about the film and sits on the meta line as
    `Film · 1h 36m`, to the minute. `TitleDetail` carries `runtimeMin` for it.
-4. **A film's run.** *The first new TMDB call.* Collection membership (Dune:
+4. ~~**A film's run.**~~ Landed 2026-09-22 in two commits. *The first new TMDB call.* Collection membership (Dune:
    Part One belongs to the Dune collection), director and the top three cast,
    from `append_to_response=credits` on the details call plus one collection
    call per film that has one. The film page draws the collection where a
@@ -313,8 +315,22 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    on every refresh since a collection grows; a part on record is found by
    matching its tmdb id against `title.tmdb_id`. Credits and collection are
    written add-only like the artwork. Rehearsed locally: 29 films, all with a
-   director and cast, 21 of them in 13 collections. The page is the next
-   commit.
+   director and cast, 21 of them in 13 collections.
+
+   The page followed. The detail route carries `director`, `cast` and a
+   `collection` of parts, each part with the id and wall state of the title
+   it is on record as, or null; the parts are a fifth statement made only
+   when the title names a collection. The header says `Directed by Denis
+   Villeneuve · with Timothée Chalamet, Rebecca Ferguson, Zendaya` under the
+   synopsis, names in the text colour and the joining words dim. The
+   collection sits where a show's grid would, a section headed by its name
+   with `2 of 3 on record` aside, tiles like the wall's with the same state
+   bar: a part on record links to its page, the one being read is ringed and
+   not linked to itself, and a sibling never added is drawn faded with no bar
+   and links to `/add?q=` with its name filled in. Two departures from the
+   plan: the cast is three names and not a role each, and a stranger sees the
+   collection whole, since a part's state is the record the wall already
+   shows them.
 
 ## Arc 3 · Manual entry as a first-class verb
 

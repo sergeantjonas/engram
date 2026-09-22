@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
 import { MANUAL_SOURCE } from '../watch/plan.js';
 import { listTitles, type TitleSummary, withoutIntent } from './list.js';
+import { deriveState, type TitleState } from './plan.js';
 
 /** What the viewer has said about a hole, if anything. */
 export interface EpisodeGap {
@@ -144,6 +145,25 @@ export interface Airing {
   fetchedAt: string | null;
 }
 
+/**
+ * One film of the collection the title belongs to, as TMDB lists it. `title`
+ * is set when the film is on record here, with the state the wall would give
+ * it; null is a sibling never watched or added, which the page still draws.
+ */
+export interface CollectionPart {
+  tmdbId: string;
+  name: string;
+  year: number | null;
+  posterPath: string | null;
+  title: { id: string; state: TitleState } | null;
+}
+
+export interface Collection {
+  name: string;
+  /** In release order, the undated last, the way the parts were stored. */
+  parts: CollectionPart[];
+}
+
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
@@ -157,6 +177,11 @@ export interface TitleDetail {
   overview: string | null;
   /** A film's running time in minutes. Null for a show, whose time is per episode, or a film TMDB has no figure for. */
   runtimeMin: number | null;
+  /** A film's director and top-billed names. Null and empty for a show, whose credits are not stored. */
+  director: string | null;
+  cast: string[];
+  /** The film series this belongs to, when TMDB groups it in one and the backfill has fetched it. */
+  collection: Collection | null;
   airing: Airing;
   figures: TitleFigures;
   /**
@@ -201,6 +226,11 @@ export function asStranger(detail: TitleDetail): TitleDetail {
     backdropPath: detail.backdropPath,
     overview: detail.overview,
     runtimeMin: detail.runtimeMin,
+    // Facts about the film, and a part's state is the record the wall already
+    // shows a stranger.
+    director: detail.director,
+    cast: detail.cast,
+    collection: detail.collection,
     // TMDB's calendar, not the owner's: nothing here was written by hand.
     airing: detail.airing,
     // Whole, `manualPlays` included. How much of the record was typed rather
@@ -226,6 +256,10 @@ interface IdentityRow extends Record<string, unknown> {
   backdrop_path: string | null;
   overview: string | null;
   runtime_min: number | null;
+  director: string | null;
+  top_cast: string[] | null;
+  collection_id: number | null;
+  collection_name: string | null;
   last_air_date: string | null;
   next_air_date: string | null;
   next_episode_season: number | null;
@@ -240,6 +274,15 @@ interface IdentityRow extends Record<string, unknown> {
   first_watched_precision: WatchPrecision | null;
   last_watched_at: string | null;
   last_watched_precision: WatchPrecision | null;
+}
+
+interface PartRow extends Record<string, unknown> {
+  tmdb_id: string;
+  name: string;
+  year: number | null;
+  poster_path: string | null;
+  title_id: string | null;
+  movie_seen: boolean | null;
 }
 
 interface ActivityRow extends Record<string, unknown> {
@@ -292,6 +335,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     ...(await db.execute<IdentityRow>(sql`
       select
         t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path, t.overview, t.runtime_min,
+        t.director, t.top_cast, t.collection_id, c.name as collection_name,
         t.last_air_date, t.next_air_date, t.next_episode_season, t.next_episode_number,
         to_json(t.metadata_fetched_at) as metadata_fetched_at,
         coalesce(f.plays, 0)::int as plays,
@@ -357,6 +401,7 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
             and (ep.season <> 0 or (ep.season is null and tt.kind = 'movie'))
           group by we.title_id
         ) m on m.title_id = t.id
+        left join collection c on c.tmdb_id = t.collection_id
       where t.id = ${titleId}
     `)),
   ];
@@ -429,6 +474,27 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     limit ${ACTIVITY_LIMIT}
   `);
 
+  // Only when there is one to ask about: a show, or a film TMDB groups in
+  // nothing, makes no fifth statement. A part on record is found by its tmdb
+  // id, and takes the state the wall gives a film — seen or not, off its one
+  // watch_state row.
+  const parts =
+    identity?.collection_id == null
+      ? []
+      : await db.execute<PartRow>(sql`
+          select
+            p.tmdb_id, p.name, p.year, p.poster_path,
+            t.id as title_id, m.movie_seen
+          from collection_part p
+            left join title t on t.tmdb_id = p.tmdb_id and t.kind = 'movie'
+            left join (
+              select title_id, bool_or(seen) as movie_seen
+              from watch_state where episode_id is null group by title_id
+            ) m on m.title_id = t.id
+          where p.collection_id = ${identity.collection_id}
+          order by p.release_date asc nulls last, p.name asc
+        `);
+
   const seasons = new Map<number, EpisodeCell[]>();
   for (const row of rows) {
     const cell: EpisodeCell = {
@@ -471,6 +537,32 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     backdropPath: identity?.backdrop_path ?? null,
     overview: identity?.overview ?? null,
     runtimeMin: identity?.runtime_min ?? null,
+    director: identity?.director ?? null,
+    cast: identity?.top_cast ?? [],
+    collection:
+      identity?.collection_id != null && identity.collection_name !== null
+        ? {
+            name: identity.collection_name,
+            parts: parts.map((row) => ({
+              tmdbId: row.tmdb_id,
+              name: row.name,
+              year: row.year,
+              posterPath: row.poster_path,
+              title:
+                row.title_id === null
+                  ? null
+                  : {
+                      id: row.title_id,
+                      state: deriveState({
+                        kind: 'movie',
+                        episodeTotal: 0,
+                        seenCount: 0,
+                        movieSeen: row.movie_seen ?? false,
+                      }),
+                    },
+            })),
+          }
+        : null,
     airing: {
       lastAirDate: identity?.last_air_date ?? null,
       // Numbered or nothing: a date alone is not an episode to point at.

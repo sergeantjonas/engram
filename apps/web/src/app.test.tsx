@@ -238,6 +238,9 @@ describe('the title pane', () => {
               ids: {},
               backdropPath: null,
               runtimeMin: null,
+              director: null,
+              cast: [],
+              collection: null,
               airing: { lastAirDate: null, next: null, fetchedAt: null },
               figures: {
                 plays: 0,
@@ -277,6 +280,9 @@ describe('the title pane', () => {
               ids: {},
               backdropPath: null,
               runtimeMin: null,
+              director: null,
+              cast: [],
+              collection: null,
               airing: { lastAirDate: null, next: null, fetchedAt: null },
               figures: {
                 plays: 0,
@@ -670,6 +676,9 @@ describe('the title page', () => {
     backdropPath: '/backdrop.jpg',
     overview: OVERVIEW,
     runtimeMin: null,
+    director: null,
+    cast: [],
+    collection: null,
     // Fetched today and ahead of today, so the header claims it without an
     // "as of": the stale case is exercised on its own.
     airing: {
@@ -1302,6 +1311,76 @@ describe('the title page', () => {
     expect(header).not.toMatch(/1h\s*watched/);
   });
 
+  it('says who made a film under what it is about', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.kind = 'movie';
+        body.director = 'Denis Villeneuve';
+        body.cast = ['Timothée Chalamet', 'Rebecca Ferguson', 'Zendaya'];
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    const header = heading.closest('header')?.textContent ?? '';
+    expect(header).toContain(
+      'Directed by Denis Villeneuve · with Timothée Chalamet, Rebecca Ferguson, Zendaya',
+    );
+  });
+
+  // Where a show's grid sits. A part on record is a wall tile and links to its
+  // page; a sibling never added is drawn faded and offers the add screen.
+  it('draws a film’s collection, and offers to add the part that is not on record', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.kind = 'movie';
+        body.collection = {
+          name: 'Dune Collection',
+          parts: [
+            {
+              tmdbId: '438631',
+              name: 'Dune',
+              year: 2021,
+              posterPath: null,
+              title: { id: TITLE_ID, state: 'seen' },
+            },
+            {
+              tmdbId: '693134',
+              name: 'Dune: Part Two',
+              year: 2024,
+              posterPath: null,
+              title: { id: 'other', state: 'unwatched' },
+            },
+            { tmdbId: '1', name: 'Dune: Part Three', year: null, posterPath: null, title: null },
+          ],
+        };
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    expect(
+      await screen.findByRole('heading', { name: /Dune Collection\s*2 of 3 on record/ }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('link', { name: 'Dune: Part Two, Unwatched' }).getAttribute('href'),
+    ).toBe('/titles/other');
+    expect(
+      screen.getByRole('link', { name: 'Dune: Part Three, Not on record' }).getAttribute('href'),
+    ).toBe('/add?q=Dune%3A+Part+Three');
+    // Whole names: every part of a Dune collection starts with "Dune".
+    expect(screen.getByRole('heading', { name: 'Dune: Part Two' })).toBeDefined();
+    // The one being read is marked, not linked to itself.
+    expect(screen.queryByRole('link', { name: /^Dune, / })).toBeNull();
+    const section = screen.getByRole('heading', { name: /Dune Collection/ }).closest('section');
+    expect(section?.querySelector('[aria-current="page"]')?.textContent).toContain('Dune');
+  });
+
   it('calls the time watched whole when every seen row has a runtime', async () => {
     stubApi((url) => {
       if (url.includes('/titles/')) {
@@ -1712,6 +1791,9 @@ describe('adding a title', () => {
           // less, so the header has to read without one.
           backdropPath: null,
           runtimeMin: null,
+          director: null,
+          cast: [],
+          collection: null,
           airing: { lastAirDate: null, next: null, fetchedAt: null },
           // Two plays the API did not send with this response: nothing on the
           // page may assume the feed accounts for the figures beside it.

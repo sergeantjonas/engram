@@ -15,7 +15,7 @@ export const STATE_LABEL: Record<TitleState, string> = {
  * is never covered. It carries no text: the link's `aria-label` is what states
  * the title's state, and it has to keep doing so for as long as this is colour.
  */
-const STATE_BAR: Record<TitleState, string> = {
+export const STATE_BAR: Record<TitleState, string> = {
   unwatched: 'bg-line',
   in_progress: 'bg-gold',
   seen: 'bg-jade',

@@ -4,6 +4,7 @@ import { ApiError } from '../api/client.ts';
 import { type TitleDetail, titleQuery, titlesQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { Activity } from '../title/Activity.tsx';
+import { Collection } from '../title/Collection.tsx';
 import { IntentControls } from '../title/Intent.tsx';
 import { MarkWatchedButton, TakeBack } from '../title/MarkWatched.tsx';
 import { SeasonGrid } from '../title/SeasonGrid.tsx';
@@ -109,6 +110,11 @@ function TitlePage() {
           moments={data.recentActivity}
           truncated={figures.plays > data.recentActivity.length}
         />
+
+        {/* Where a show's grid sits: the run a film is part of. */}
+        {data.collection !== null ? (
+          <Collection collection={data.collection} currentId={id} kind={kind} />
+        ) : null}
 
         {seasons.length > 0 ? (
           <Section

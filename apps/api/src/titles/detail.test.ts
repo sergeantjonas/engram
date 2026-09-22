@@ -46,6 +46,10 @@ const identityRow = {
   imdb_id: 'tt11737520',
   overview: 'Gold Roger was known as the Pirate King.',
   runtime_min: null,
+  director: null,
+  top_cast: null,
+  collection_id: null,
+  collection_name: null,
   last_air_date: '2026-09-14',
   next_air_date: '2026-10-15',
   next_episode_season: 3,
@@ -203,6 +207,70 @@ describe('titleDetail', () => {
       firstWatchedPrecision: 'day',
       lastWatchedPrecision: 'exact',
     });
+  });
+
+  it('has no credits and no collection for a show', async () => {
+    const result = await detail([episodeRow()]);
+
+    expect(result).toMatchObject({ director: null, cast: [], collection: null });
+  });
+
+  // The fifth statement, made only when the title names a collection: a part
+  // on record takes the wall's state for a film, a sibling never added is
+  // still listed so the page can offer to add it.
+  it('lists a film’s collection with each part’s standing on the record', async () => {
+    const stub = sessionDb();
+    stub.executions = [
+      [{ ...titleRow, kind: 'movie', key: 'movie:tmdb:438631', name: 'Dune' }],
+      [
+        {
+          ...identityRow,
+          director: 'Denis Villeneuve',
+          top_cast: ['Timothée Chalamet', 'Rebecca Ferguson', 'Zendaya'],
+          collection_id: 726871,
+          collection_name: 'Dune Collection',
+        },
+      ],
+      [],
+      [],
+      [
+        {
+          tmdb_id: '438631',
+          name: 'Dune',
+          year: 2021,
+          poster_path: '/d1.jpg',
+          title_id: 't1',
+          movie_seen: true,
+        },
+        {
+          tmdb_id: '693134',
+          name: 'Dune: Part Two',
+          year: 2024,
+          poster_path: '/d2.jpg',
+          title_id: 't2',
+          movie_seen: null,
+        },
+        {
+          tmdb_id: '1',
+          name: 'Dune: Part Three',
+          year: null,
+          poster_path: null,
+          title_id: null,
+          movie_seen: null,
+        },
+      ],
+    ];
+
+    const result = await titleDetail(stub.db, 't1');
+
+    expect(result?.director).toBe('Denis Villeneuve');
+    expect(result?.cast).toEqual(['Timothée Chalamet', 'Rebecca Ferguson', 'Zendaya']);
+    expect(result?.collection?.name).toBe('Dune Collection');
+    expect(result?.collection?.parts.map((part) => [part.name, part.title])).toEqual([
+      ['Dune', { id: 't1', state: 'seen' }],
+      ['Dune: Part Two', { id: 't2', state: 'unwatched' }],
+      ['Dune: Part Three', null],
+    ]);
   });
 
   it('carries where the run stands on TMDB’s calendar', async () => {

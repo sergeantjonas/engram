@@ -130,6 +130,21 @@ export interface Airing {
   fetchedAt: string | null;
 }
 
+/** One film of a collection. `title` is set when it is on record here, with the state the wall gives a film. */
+export interface CollectionPart {
+  tmdbId: string;
+  name: string;
+  year: number | null;
+  posterPath: string | null;
+  title: { id: string; state: TitleState } | null;
+}
+
+export interface Collection {
+  name: string;
+  /** In release order, the undated last. */
+  parts: CollectionPart[];
+}
+
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
@@ -139,6 +154,11 @@ export interface TitleDetail {
   overview: string | null;
   /** A film's running time in minutes; null for a show, whose time is per episode, or a film TMDB has no figure for. */
   runtimeMin: number | null;
+  /** A film's director and top-billed names; null and empty for a show. */
+  director: string | null;
+  cast: string[];
+  /** The film series this belongs to, once the backfill has fetched it. */
+  collection: Collection | null;
   airing: Airing;
   figures: TitleFigures;
   /**

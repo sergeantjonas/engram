@@ -282,7 +282,8 @@ the viewer wants of a title. The SPA calls all four.
    of cards, as many as the row's width holds, `Not now` on each — and
    chunk 2 the same day — *Want* is a chip beside *Unwatched* — and chunk 3,
    YEAR, begun the same day with `GET /history`, every dated play in one
-   answer; not yet deployed.
+   answer, and the counting of it into days and yearly figures in the
+   browser; not yet deployed.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

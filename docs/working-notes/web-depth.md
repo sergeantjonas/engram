@@ -5,8 +5,8 @@ screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
 Arc 3 landed 2026-09-22 in five commits, not yet deployed. Arc 4 is in
-progress: chunks 1 and 2 landed 2026-09-22, and chunk 3's route the same
-day; none of it yet deployed.
+progress: chunks 1 and 2 landed 2026-09-22, and chunk 3's route and its
+counting in the browser the same day; none of it yet deployed.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -484,6 +484,32 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    year's plays. The wall's list decides what is excluded and a play is kept
    only if its title is on it, so there is one rule. Rehearsed against the
    local record: 461 plays over 24 titles, all exact, 116 KB.
+
+   The counting followed, pure and unit-tested in
+   [apps/web/src/year/viewings.ts](../../apps/web/src/year/viewings.ts).
+   `dayOf` is the rule for which day a play is on: an exact play in the
+   viewer's zone, a day entered by hand as written — read as an instant in
+   UTC, not cut from the string Postgres prints in its session's zone — and a
+   month or a year on no day. One departure: the plan had `marksIn` itself
+   generalised past its window, but a calendar counts plays per day where the
+   strip places marks along a line, and what the two share is the day rule.
+   So `marksIn` takes `dayOf` instead, and the twelve-month strip now
+   collapses marks by the viewer's day rather than UTC's. `viewingsOf` counts
+   rows by `watch_state`'s rule at a calendar's grain: per episode per day,
+   the larger of what the per-play sources counted and one. The library
+   walk's own total is left out, since only its last play has a date. A claim
+   coarser than a day stands for a viewing only where nothing finer covers
+   its episode inside its period, and viewings are ordered by the calendar
+   before the instant, since west of UTC a day entered by hand starts the
+   evening before. A run is finished in the year of the latest of its regular
+   episodes' first dated viewings. That reads an undated mark beside a dated
+   play as the same watching, which is the opposite of the feed, where an
+   undated play comes first and every dated one after it is a rewatch. A
+   backfill marks whole shows undated, and the feed's reading would leave the
+   finale Plex saw on the night it aired finishing the run in no year. On
+   the local record 461 rows are 382 viewings on 132 days. One day holds 78,
+   which is what a Plex bulk *mark as watched* leaves: the library walk
+   stamps every episode with the same last view.
 4. **Export.** [web-design.md](web-design.md) says the "does this rest only on
    my word" question matters most to the export, and there is no export. A
    block on `/settings` — the route exists since 2026-09-22, the excluded

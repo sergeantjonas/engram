@@ -22,13 +22,22 @@ describe('marksIn', () => {
     const { marks } = marksIn(
       [
         moment({ watchedAt: '2026-09-10T09:00:00.000Z' }),
-        moment({ watchedAt: '2026-09-10T22:00:00.000Z' }),
+        moment({ watchedAt: '2026-09-10T20:00:00.000Z' }),
         moment({ watchedAt: '2026-09-11T09:00:00.000Z' }),
       ],
       now,
+      'UTC',
     );
 
     expect(marks.map((mark) => mark.day)).toEqual(['2026-09-10', '2026-09-11']);
+  });
+
+  // The day is the viewer's: 22:30 UTC is already the next day in Brussels.
+  it('reads the day in the viewer’s zone', () => {
+    const late = [moment({ watchedAt: '2026-09-10T22:30:00.000Z' })];
+
+    expect(marksIn(late, now, 'UTC').marks[0]?.day).toBe('2026-09-10');
+    expect(marksIn(late, now, 'Europe/Brussels').marks[0]?.day).toBe('2026-09-11');
   });
 
   // A coarse entry holds the first instant of its period, so a 2019 watch

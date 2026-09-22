@@ -1264,6 +1264,40 @@ describe('the title page', () => {
     );
   });
 
+  it('adds up the time watched, and says when the sum is a floor', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.figures.watchedMin = 1121;
+        body.figures.untimed = 2;
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    const header = heading.closest('header')?.textContent ?? '';
+    expect(header).toMatch(/18h\s*watched, at least/);
+  });
+
+  it('calls the time watched whole when every seen row has a runtime', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.figures.watchedMin = 136;
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    const header = heading.closest('header')?.textContent ?? '';
+    expect(header).toMatch(/2h\s*watched/);
+    expect(header).not.toContain('at least');
+  });
+
   it('says where the run stands after where the record does', async () => {
     stubApi((url) => {
       if (url.includes('/titles/')) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatAgo,
   formatAirDate,
+  formatDuration,
   formatMoment,
   formatSince,
   formatWatchedShort,
@@ -174,5 +175,22 @@ describe('formatAirDate', () => {
 
   it('reads a date as a day, in the zone it was given in', () => {
     expect(formatAirDate('2026-10-20')).toContain('2026');
+  });
+});
+
+describe('formatDuration', () => {
+  it('names the unit a person would, and one unit only', () => {
+    expect(formatDuration(48)).toBe('48m');
+    expect(formatDuration(136)).toBe('2h');
+    expect(formatDuration(1121)).toBe('18h');
+    expect(formatDuration(9837)).toBe('163h');
+    expect(formatDuration(44_400)).toBe('30d');
+  });
+
+  it('steps from hours to days at ten days, not at one', () => {
+    // Two days of television is `48h` to anyone who has said it aloud; a
+    // month of it is not `740h`.
+    expect(formatDuration(240 * 60 - 1)).toBe('239h');
+    expect(formatDuration(240 * 60)).toBe('10d');
   });
 });

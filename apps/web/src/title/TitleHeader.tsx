@@ -3,7 +3,7 @@ import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { backdropUrl, posterUrl } from '../api/titles.ts';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
 import { airingLine } from './airing.ts';
-import { formatAirDay, formatSince, formatWatchedShort } from './format.ts';
+import { formatAirDay, formatDuration, formatSince, formatWatchedShort } from './format.ts';
 
 /**
  * One cell of the stat box: the figure large in mono, its name small and
@@ -164,7 +164,8 @@ export function TitleHeader({
   const backdrop = backdropUrl(backdropPath);
   const isShow = title.kind === 'show';
   const run = airingLine(title, airing, today);
-  const { plays, rewatched, firstWatchedAt, firstWatchedPrecision, lastWatchedPrecision } = figures;
+  const { plays, rewatched, watchedMin, untimed, firstWatchedAt, firstWatchedPrecision } = figures;
+  const { lastWatchedPrecision } = figures;
 
   const since = formatSince(figures.lastWatchedAt, lastWatchedPrecision);
   // A coarse entry formats as the period itself, not a duration, so "since
@@ -182,6 +183,11 @@ export function TitleHeader({
       ? { value: String(title.episodes.seen), label: 'episodes seen' }
       : null,
     rewatched > 0 ? { value: String(rewatched), label: 'rewatched' } : null,
+    // A floor when some of what was seen carries no runtime, and the label
+    // says so rather than letting the figure pass for the whole.
+    watchedMin > 0
+      ? { value: formatDuration(watchedMin), label: untimed > 0 ? 'watched, at least' : 'watched' }
+      : null,
     firstWatchedAt !== null
       ? { value: formatWatchedShort(firstWatchedAt, firstWatchedPrecision), label: 'first watched' }
       : null,

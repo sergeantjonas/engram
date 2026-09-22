@@ -225,3 +225,18 @@ export function formatAirDay(airDate: string, today: string): string {
     timeZone: 'UTC',
   }).format(new Date(`${airDate}T00:00:00Z`));
 }
+
+/**
+ * Minutes of television as one figure — `48m`, `31h`, `41d`. Hours until a
+ * count of days is what a person would say, the way `formatSince` steps from
+ * days to months: `740h` is a row of digits, `31d` is a month of evenings.
+ * Floored, never padded with a smaller unit: the cell holds one number, and
+ * the figure is a floor whichever label it gets, so it must not round up to
+ * time the record does not hold.
+ */
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = minutes / 60;
+  if (hours < 240) return `${Math.floor(hours)}h`;
+  return `${Math.floor(hours / 24)}d`;
+}

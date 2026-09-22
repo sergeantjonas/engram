@@ -4,9 +4,11 @@
 screens against [web-design.md](web-design.md). Arc 1 is complete: chunks 1
 and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
 2026-09-22 in two commits with migration 0012, deployed and refreshed on the
-box the same day; chunk 2 landed 2026-09-22, not yet deployed; chunk 3's storage half landed
-2026-09-22 as migration 0013, its figure is next. Arcs are ordered; chunks inside an arc are one commit each, and each one
-deploys to a live record — see Shipping against production.
+box the same day; chunks 2 and 3 landed 2026-09-22, chunk 3 in two commits
+with migration 0013. Neither is deployed yet, and the box needs
+`backfill:metadata --refresh` after that deploy for films' runtimes. Chunk 4
+is next. Arcs are ordered; chunks inside an arc are one commit each, and each
+one deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
 type split, state vocabulary and the "a control that does nothing is worse
@@ -254,11 +256,11 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    drifting. `nextAirDate` joins `TitleSummary` for that. Net on production:
    five drifting before and after, two waiting shows swapped for two cancelled
    ones.
-3. **Hours as a figure.** `runtimeMin` is stored per episode. The figure row
-   adds `31d` or `740h` of television, summed over seen episodes with a
-   runtime, and the label says when some episodes had none. Movies use the
-   title's runtime, which needs a `runtime_min` column on `title` from the
-   same details call as chunk 1.
+3. ~~**Hours as a figure.**~~ Landed 2026-09-22 in two commits. `runtimeMin`
+   is stored per episode. The figure row adds `31d` or `740h` of television,
+   summed over seen episodes with a runtime, and the label says when some
+   episodes had none. Movies use the title's runtime, which needs a
+   `runtime_min` column on `title` from the same details call as chunk 1.
 
    Storage landed first, 2026-09-22, as migration 0013: one nullable
    `runtime_min` on `title`, read off a movie's details body (TMDB writes 0
@@ -268,8 +270,16 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    subquery as `plays` over the same set — each seen row once however often
    it was played, an episode's own runtime or the title's for a film, a
    stored 0 counted as untimed. Rehearsed locally: 29 films, all with a
-   runtime; Bleach 9837 minutes with 8 untimed episodes. The figure itself
-   is the next commit.
+   runtime; Bleach 9837 minutes with 8 untimed episodes.
+
+   The figure followed as a cell in the header's stat box, `19h` in mono with
+   `watched` beneath, or `watched, at least` when any seen row had no runtime
+   — the floor is said in the label rather than left to pass for the whole.
+   One departure from the plan's `31d` or `740h`: one unit, never both, and
+   hours run to ten days before the figure steps to days, the way
+   `formatSince` steps from days to months; floored, since a floor must not
+   round up. Nothing is drawn when the sum is
+   zero, like the other cells. The wall does not carry the figure.
 4. **A film's run.** *The first new TMDB call.* Collection membership (Dune:
    Part One belongs to the Dune collection), director and the top three cast,
    from `append_to_response=credits` on the details call plus one collection

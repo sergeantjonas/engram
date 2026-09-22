@@ -99,6 +99,17 @@ export function TopBar() {
             + Add watched
           </Link>
         ) : null}
+        {/* Beside the sign-out rather than on the rail: the rail is the record's
+            sections, and this is the owner's page about the record. */}
+        {isOwner ? (
+          <Link
+            to="/settings"
+            className="text-sm text-dim underline-offset-4 hover:underline"
+            activeProps={{ className: 'text-tx underline' }}
+          >
+            Settings
+          </Link>
+        ) : null}
         <AuthStatus />
       </div>
     </header>

@@ -304,9 +304,10 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    nothing more elaborate is planned.
 4. **Export.** [web-design.md](web-design.md) says the "does this rest only on
    my word" question matters most to the export, and there is no export. A
-   `/settings` route with a download of the full record as JSON and as CSV,
-   `source` on every row, and a count of manual claims stated before the
-   download. Owner-only, streamed from the API.
+   block on `/settings` — the route exists since 2026-09-22, the excluded
+   titles being its first block — with a download of the full record as JSON
+   and as CSV, `source` on every row, and a count of manual claims stated
+   before the download. Owner-only, streamed from the API.
 5. **Type steps.** Settle mono at two sizes, 10px for anything read and 9px
    for landmarks and tick labels, and remove the other five. The review
    counted the call sites; do this as one commit against the running app, not

@@ -209,6 +209,13 @@ than a font one — it is not a reason to revisit the type.
 "Add watched" sits in the top chrome on every screen, because it is a primary
 verb in this app rather than something behind a settings page.
 
+There is a settings page all the same — `/settings`, since 2026-09-22 — for
+what the owner does *to* the record rather than in it: the excluded titles,
+each with a way back to the wall, and later the export. It is a *Settings*
+link beside the sign-out, not a rail item: the rail is the record's sections,
+and its items were sized for four-letter words. Owner-only in the same way as
+`/add`, redirecting a stranger to sign in with the way back attached.
+
 ## 02 · Title
 
 The episode grid is the best thing in any of the mockups and survives intact.

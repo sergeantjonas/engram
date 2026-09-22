@@ -344,6 +344,17 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Done
 
+- **2026-09-22** — `/settings`, the owner's page about the record, with the
+  excluded titles as its first block. Excluding a title took it off the wall,
+  and the wall's own *Show excluded* link was the only way back — mixed in
+  with everything else, with no view of only the rejects. The page lists them
+  by name with a *Restore* per row (`PUT /titles/:id/intent` with
+  `excluded: false`; no API change). Owner-gated like `/add`, reached from a
+  *Settings* link beside the sign-out rather than from the rail: the rail is
+  the record's sections, and its 38px items were sized for four-letter words.
+  Later owner-only blocks — the export [web-depth.md](web-depth.md) arc 4
+  already puts on this route — are further `Section`s here, not screens.
+
 - **2026-09-21** — Settled: a large season 0 goes to the bottom of the page.
   Nothing is dropped and nothing stops being imported — the count is honest and
   TMDB's data is not ours to throw away — but the page draws the run first and

@@ -1889,3 +1889,60 @@ describe('adding a title', () => {
     expect(screen.getByRole('button', { name: 'Add Heat' })).toBeDefined();
   });
 });
+
+describe('settings', () => {
+  const excluded = title({ id: 'show-x', name: 'Bleach', year: 2004, excluded: true });
+  const kept = title({ id: 'show-k', name: 'Heat', kind: 'movie', key: 'movie:tmdb:2' });
+
+  it('turns a stranger away at the door, with the way back attached', async () => {
+    const calls = stubApi(() => json({ isOwner: false }));
+    await renderAt('/settings');
+
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Continue with GitHub' }).getAttribute('href')).toBe(
+      'http://localhost:2012/auth/github/login?next=%2Fsettings',
+    );
+    expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+    // Turned away before the excluded listing was asked for on their behalf.
+    expect(calls.some((call) => call.url.includes('includeExcluded'))).toBe(false);
+  });
+
+  it('lists only the excluded titles, each leading to its page', async () => {
+    stubApi((url) =>
+      url.includes('/titles?includeExcluded=true')
+        ? json({ titles: [kept, excluded] })
+        : elsewhere(url),
+    );
+    await renderAt('/settings');
+
+    await screen.findByRole('heading', { name: 'Settings' });
+    expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings');
+    const section = screen.getByRole('region', { name: /Excluded titles/ });
+    expect(within(section).getByRole('link', { name: 'Bleach' }).getAttribute('href')).toBe(
+      '/titles/show-x',
+    );
+    expect(within(section).queryByText('Heat')).toBeNull();
+    expect(within(section).getByText('Series · 2004')).toBeDefined();
+  });
+
+  it('restores a title to the wall and drops it from the list', async () => {
+    let titles = [excluded];
+    const calls = stubApi((url, init) => {
+      if (url.endsWith('/titles/show-x/intent') && init?.method === 'PUT') {
+        titles = [{ ...excluded, excluded: false }];
+        return json({ intent: { want: false, dropped: false, excluded: false } });
+      }
+      if (url.includes('/titles?includeExcluded=true')) return json({ titles });
+      return elsewhere(url);
+    });
+    await renderAt('/settings');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Restore Bleach' }));
+
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'Bleach' })).toBeNull());
+    const put = calls.find((call) => call.init?.method === 'PUT');
+    expect(JSON.parse(String(put?.init?.body))).toEqual({ excluded: false });
+    expect(screen.getByRole('status').textContent).toContain('Bleach is back on the wall.');
+    expect(screen.getByText('Nothing is excluded.')).toBeDefined();
+  });
+});

@@ -9,6 +9,7 @@ import {
   titles as titleTable,
 } from '../db/schema.js';
 import { asStranger, titleActivity, titleDetail } from '../titles/detail.js';
+import { history } from '../titles/history.js';
 import { listTitles, withoutIntent } from '../titles/list.js';
 import { nextUp } from '../titles/next-up.js';
 import { planEpisodes, planTitle } from '../titles/plan.js';
@@ -147,6 +148,13 @@ export function registerTitleRoutes(
    * hundred cards that never read it would pay for the band on every page.
    */
   app.get('/next-up', async () => ({ nextUp: await nextUp(db) }));
+
+  /**
+   * The whole dated record at once, for the YEAR screen: every title's plays
+   * in one answer rather than a feed per title, because a calendar is the one
+   * view that has to see all of them to draw a single day.
+   */
+  app.get('/history', async () => history(db));
 
   /**
    * One title and its grid, which is where the work happens.

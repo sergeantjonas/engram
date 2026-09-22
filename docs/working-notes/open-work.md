@@ -280,8 +280,9 @@ the viewer wants of a title. The SPA calls all four.
    new activity route. Arc 3 is complete, none of it yet deployed. Arc 4,
    the screens the rail owes: chunk 1 landed 2026-09-22 — next up is a strip
    of cards, as many as the row's width holds, `Not now` on each — and
-   chunk 2 the same day — *Want* is a chip beside *Unwatched*; not yet
-   deployed.
+   chunk 2 the same day — *Want* is a chip beside *Unwatched* — and chunk 3,
+   YEAR, begun the same day with `GET /history`, every dated play in one
+   answer; not yet deployed.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

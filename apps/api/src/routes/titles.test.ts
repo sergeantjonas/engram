@@ -347,6 +347,84 @@ describe('GET /titles/:id/activity', () => {
   });
 });
 
+describe('GET /history', () => {
+  const playRow = {
+    id: 'w1',
+    title_id: listRow().id,
+    season: 1,
+    number: 1,
+    name: 'The End’s Beginning',
+    runtime_min: 61,
+    watched_at: '2025-12-02T23:40:00+00:00',
+    watched_precision: 'exact',
+    source: 'plex-history',
+  };
+
+  const read = (
+    headers: Record<string, string> = signedIn,
+    executions: unknown[][] = [[listRow({ want: true })], [playRow]],
+  ) => {
+    const stub = sessionDb();
+    stub.executions = executions;
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    return app.inject({ method: 'GET', url: '/history', headers });
+  };
+
+  it('answers the dated plays with the titles that name them, and no opinions', async () => {
+    const response = await read(stranger);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      titles: [
+        {
+          id: listRow().id,
+          kind: 'show',
+          name: 'The Witcher',
+          posterPath: null,
+          state: 'seen',
+        },
+      ],
+      // The instant as stored: which day it falls on is the viewer's question.
+      plays: [
+        {
+          id: 'w1',
+          titleId: listRow().id,
+          season: 1,
+          number: 1,
+          name: 'The End’s Beginning',
+          runtimeMin: 61,
+          watchedAt: '2025-12-02T23:40:00+00:00',
+          precision: 'exact',
+          source: 'plex-history',
+        },
+      ],
+    });
+  });
+
+  it('leaves out an excluded title and its plays even for the owner', async () => {
+    const other = 'a4c1d6e2-5b7f-4e8a-9c3d-1f2e3a4b5c6d';
+    const response = await read(signedIn, [
+      [listRow(), listRow({ id: other, name: 'Bluey', excluded_at: '2026-09-17T00:00:00+00:00' })],
+      [playRow, { ...playRow, id: 'w2', title_id: other }],
+    ]);
+
+    expect(response.json().titles.map((title: { name: string }) => title.name)).toEqual([
+      'The Witcher',
+    ]);
+    expect(response.json().plays.map((play: { id: string }) => play.id)).toEqual(['w1']);
+  });
+
+  it('names only the titles something was watched of', async () => {
+    const other = 'a4c1d6e2-5b7f-4e8a-9c3d-1f2e3a4b5c6d';
+    const response = await read(signedIn, [
+      [listRow(), listRow({ id: other, name: 'Never Started' })],
+      [playRow],
+    ]);
+
+    expect(response.json().titles).toHaveLength(1);
+  });
+});
+
 describe('GET /titles/:id', () => {
   const identityRow = {
     tmdb_id: '71912',

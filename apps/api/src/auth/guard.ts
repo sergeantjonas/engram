@@ -56,6 +56,9 @@ const OPEN_ROUTES = new Set([
   // Same reasoning as the two above, and it discloses nothing they do not:
   // what was watched and what comes after it is the record itself.
   'GET /next-up',
+  // Every title's dated plays at once, which discloses nothing the feeds above
+  // do not.
+  'GET /history',
   // Tautulli has no cookie jar, so its own shared secret is what
   // authenticates it — checked in the handler, not here. Open by method and
   // pattern together, so nothing else about /webhooks is opened with it.

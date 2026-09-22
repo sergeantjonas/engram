@@ -5,7 +5,8 @@ screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
 Arc 3 landed 2026-09-22 in five commits, not yet deployed. Arc 4 is in
-progress: chunks 1 and 2 landed 2026-09-22, not yet deployed.
+progress: chunks 1 and 2 landed 2026-09-22, and chunk 3's route the same
+day; none of it yet deployed.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -463,6 +464,26 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    product. Figures at the top: plays, episodes, hours, titles finished, per
    selected year. This is the stats surface the Trakt replacement goal names;
    nothing more elaborate is planned.
+
+   The route landed first, 2026-09-22: `GET /history`, open like the other
+   reads, answers every finished play that carries a date — one row per
+   event, oldest first, with its episode, its runtime by the detail's rule
+   and its source — beside the name, kind, poster and state of each title
+   those plays name. Events
+   rather than days, because the day an instant falls on is the viewer's: a
+   play at half past midnight in Brussels is the previous day in UTC, and the
+   server does not know where the viewer is. The same reason puts the
+   collapsing of sources in the browser. On the local record 76 of 382
+   play-days — an episode or a film on one Brussels day — are claimed by both
+   the Plex history and the library walk, and whether two rows are one
+   viewing depends on the day they land on. Specials are in, unlike the title
+   figures, since a calendar records what was watched on a day; a show's
+   event naming no episode is out, as it is from the figures, since it would
+   count one watching twice with nothing to match it on. Excluded titles are
+   out for everyone, owner included: "not mine, never was" has no place in a
+   year's plays. The wall's list decides what is excluded and a play is kept
+   only if its title is on it, so there is one rule. Rehearsed against the
+   local record: 461 plays over 24 titles, all exact, 116 KB.
 4. **Export.** [web-design.md](web-design.md) says the "does this rest only on
    my word" question matters most to the export, and there is no export. A
    block on `/settings` — the route exists since 2026-09-22, the excluded

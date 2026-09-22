@@ -8,9 +8,8 @@ box the same day; chunks 2 and 3 landed 2026-09-22, chunk 3 in two commits
 with migration 0013, and both were deployed and refreshed on the box the same
 day; chunk 3 was then amended so the watched cell is shows-only and a film's
 runtime sits on the meta line. Chunk 4 landed 2026-09-22 in two commits with
-migration 0014, not yet deployed; the box needs `backfill:metadata --refresh`
-after that deploy for credits and collections. Arc 2 is complete; arc 3 is
-next. Arcs are ordered; chunks inside an arc are one commit each, and each
+migration 0014, deployed and refreshed on the box the same day. Arc 2 is
+complete; arc 3 is next. Arcs are ordered; chunks inside an arc are one commit each, and each
 one deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,

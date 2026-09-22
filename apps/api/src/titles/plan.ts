@@ -18,6 +18,7 @@ export interface PlannedTitleRow {
   nextAirDate: string | null;
   nextEpisodeSeason: number | null;
   nextEpisodeNumber: number | null;
+  runtimeMin: number | null;
 }
 
 /** An `episode` row, ready to write. */
@@ -69,6 +70,7 @@ export function planTitle(details: TmdbTitleDetails): TitlePlan {
       nextAirDate: details.nextEpisode?.airDate ?? null,
       nextEpisodeSeason: details.nextEpisode?.season ?? null,
       nextEpisodeNumber: details.nextEpisode?.number ?? null,
+      runtimeMin: details.runtimeMin,
     },
     seasons: details.seasons.map((season) => season.season),
   };

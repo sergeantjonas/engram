@@ -148,6 +148,7 @@ describe('createTmdbClient', () => {
       status: null,
       lastAirDate: null,
       nextEpisode: null,
+      runtimeMin: null,
     });
   });
 
@@ -169,6 +170,7 @@ describe('createTmdbClient', () => {
       title: 'The Matrix',
       release_date: '1999-03-30',
       imdb_id: 'tt0133093',
+      runtime: 136,
     });
 
     const details = await tmdb.details('movie', '603');
@@ -179,8 +181,16 @@ describe('createTmdbClient', () => {
       name: 'The Matrix',
       year: 1999,
       ids: { tmdb: '603', imdb: 'tt0133093' },
+      runtimeMin: 136,
       seasons: [],
     });
+  });
+
+  // TMDB answers 0 rather than omitting a running time it does not know.
+  it('reads a running time of zero as none', async () => {
+    const { tmdb } = client({ title: 'Untimed', release_date: '2026-01-01', runtime: 0 });
+
+    expect((await tmdb.details('movie', '1')).runtimeMin).toBeNull();
   });
 
   it('does not carry a tvdb id the show does not have', async () => {

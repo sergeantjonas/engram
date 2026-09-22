@@ -68,7 +68,7 @@ export async function backfillMetadata(
       continue;
     }
 
-    const { posterPath, backdropPath, overview } = details;
+    const { posterPath, backdropPath, overview, runtimeMin } = details;
     if (!options.dryRun) {
       await db
         .update(titleTable)
@@ -81,6 +81,7 @@ export async function backfillMetadata(
           ...(posterPath === null ? {} : { posterPath }),
           ...(backdropPath === null ? {} : { backdropPath }),
           ...(overview === null ? {} : { overview }),
+          ...(runtimeMin === null ? {} : { runtimeMin }),
           // The one group written null and all: a status changes, and a next
           // episode is gone once it has aired. TMDB's answer today is the fact,
           // and a null kept from last run would say an episode is still coming.

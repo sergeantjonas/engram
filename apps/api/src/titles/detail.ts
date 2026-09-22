@@ -86,6 +86,13 @@ export interface TitleFigures {
    * whole-title undo would retract.
    */
   manualPlays: number;
+  /**
+   * Minutes of the seen set that carry a running time — each episode once,
+   * however often it was played, and a film's own runtime. `untimed` is how
+   * many seen rows had none, so the figure can say it is a floor.
+   */
+  watchedMin: number;
+  untimed: number;
   firstWatchedAt: string | null;
   firstWatchedPrecision: WatchPrecision | null;
   /**
@@ -223,6 +230,8 @@ interface IdentityRow extends Record<string, unknown> {
   plays: number;
   rewatched: number;
   manual_plays: number;
+  watched_min: number;
+  untimed: number;
   first_watched_at: string | null;
   first_watched_precision: WatchPrecision | null;
   last_watched_at: string | null;
@@ -284,6 +293,8 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
         coalesce(f.plays, 0)::int as plays,
         coalesce(f.rewatched, 0)::int as rewatched,
         coalesce(m.manual_plays, 0)::int as manual_plays,
+        coalesce(f.watched_min, 0)::int as watched_min,
+        coalesce(f.untimed, 0)::int as untimed,
         -- to_json for the same reason listTitles uses it: Postgres prints a
         -- timestamptz with a space and no milliseconds, and a raw execute
         -- leaves no mapping layer to fix it afterwards.
@@ -297,6 +308,14 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
             ws.title_id,
             sum(ws.play_count) as plays,
             count(*) filter (where ws.play_count > 1) as rewatched,
+            -- An episode's own runtime, or the title's for a film's one row.
+            -- TMDB writes 0 for a runtime it does not know, and 0 is stored
+            -- as given for an episode, so it reads as untimed here.
+            sum(nullif(coalesce(ep.runtime_min, tt.runtime_min), 0)) filter (where ws.seen)
+              as watched_min,
+            count(*) filter (
+              where ws.seen and nullif(coalesce(ep.runtime_min, tt.runtime_min), 0) is null
+            ) as untimed,
             min(ws.first_watched_at) as first_watched_at,
             -- The precision belonging to that same boundary. Taking max() of
             -- the precision column instead would pair the earliest instant
@@ -464,6 +483,8 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
       plays: identity?.plays ?? 0,
       rewatched: identity?.rewatched ?? 0,
       manualPlays: identity?.manual_plays ?? 0,
+      watchedMin: identity?.watched_min ?? 0,
+      untimed: identity?.untimed ?? 0,
       firstWatchedAt: identity?.first_watched_at ?? null,
       firstWatchedPrecision: identity?.first_watched_precision ?? null,
       lastWatchedAt: identity?.last_watched_at ?? null,

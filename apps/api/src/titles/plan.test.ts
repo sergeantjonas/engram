@@ -13,6 +13,7 @@ const witcher: TmdbTitleDetails = {
   status: 'Returning Series',
   lastAirDate: '2021-12-17',
   nextEpisode: { season: 3, number: 1, airDate: '2023-06-29' },
+  runtimeMin: null,
   seasons: [
     { season: 1, episodeCount: 8 },
     { season: 2, episodeCount: 8 },
@@ -30,6 +31,7 @@ const matrix: TmdbTitleDetails = {
   status: 'Released',
   lastAirDate: null,
   nextEpisode: null,
+  runtimeMin: 136,
   seasons: [],
 };
 
@@ -67,6 +69,7 @@ describe('planTitle', () => {
         nextAirDate: '2023-06-29',
         nextEpisodeSeason: 3,
         nextEpisodeNumber: 1,
+        runtimeMin: null,
       },
       seasons: [1, 2],
     });
@@ -84,7 +87,10 @@ describe('planTitle', () => {
   it('keys a movie on tmdb, which has no tvdb id to key on', () => {
     const plan = planTitle(matrix);
 
-    expect(plan).toMatchObject({ ok: true, title: { key: 'movie:tmdb:603', tvdbId: null } });
+    expect(plan).toMatchObject({
+      ok: true,
+      title: { key: 'movie:tmdb:603', tvdbId: null, runtimeMin: 136 },
+    });
   });
 
   it('refuses a show with no tvdb id rather than keying it on something else', () => {

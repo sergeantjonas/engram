@@ -52,6 +52,7 @@ const details = (
     status: string | null;
     lastAirDate: string | null;
     nextEpisode: { season: number; number: number; airDate: string | null } | null;
+    runtimeMin: number | null;
   }> = {},
 ) => ({
   kind: 'show' as const,
@@ -64,6 +65,7 @@ const details = (
   status: 'Returning Series',
   lastAirDate: '2026-09-15',
   nextEpisode: { season: 2, number: 5, airDate: '2026-09-29' },
+  runtimeMin: null,
   seasons: [],
   ...over,
 });
@@ -131,7 +133,16 @@ describe('backfillMetadata', () => {
 
     expect(updates[0]?.values).not.toHaveProperty('posterPath');
     expect(updates[0]?.values).not.toHaveProperty('overview');
+    expect(updates[0]?.values).not.toHaveProperty('runtimeMin');
     expect(updates[0]?.values).toMatchObject({ backdropPath: '/backdrop.jpg' });
+  });
+
+  it('writes a film’s running time when TMDB has one', async () => {
+    const { db, updates } = stubDb();
+
+    await backfillMetadata(db, stubTmdb({ details: async () => details({ runtimeMin: 136 }) }));
+
+    expect(updates[0]?.values).toMatchObject({ runtimeMin: 136 });
   });
 
   it('writes the status and next episode as answered', async () => {

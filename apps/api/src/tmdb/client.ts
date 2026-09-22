@@ -68,6 +68,8 @@ export interface TmdbTitleDetails {
   lastAirDate: string | null;
   /** What TMDB expects next, or null when nothing is scheduled. */
   nextEpisode: TmdbNextEpisode | null;
+  /** A movie's running time in minutes. Null for a show, which has it per episode. */
+  runtimeMin: number | null;
   /** Empty for a movie. Includes season 0, which is where specials live. */
   seasons: TmdbSeason[];
 }
@@ -122,6 +124,8 @@ interface DetailsBody {
   imdb_id?: string | null;
   status?: string | null;
   last_air_date?: string | null;
+  /** A movie's field; a show carries `episode_run_time`, a list that is usually empty. */
+  runtime?: number | null;
   next_episode_to_air?: {
     season_number?: number;
     episode_number?: number;
@@ -237,6 +241,11 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
         status: body.status || null,
         lastAirDate: body.last_air_date || null,
         nextEpisode: nextEpisodeOf(body.next_episode_to_air),
+        // TMDB writes 0 for a runtime it does not know.
+        runtimeMin:
+          kind === 'movie' && typeof body.runtime === 'number' && body.runtime > 0
+            ? body.runtime
+            : null,
         seasons: (body.seasons ?? [])
           .filter((s) => typeof s.season_number === 'number' && (s.episode_count ?? 0) > 0)
           .map((s) => ({ season: s.season_number as number, episodeCount: s.episode_count ?? 0 })),

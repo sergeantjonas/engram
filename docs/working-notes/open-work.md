@@ -262,7 +262,9 @@ the viewer wants of a title. The SPA calls all four.
    header — deployed and refreshed on the box the same day. Chunk 2 landed
    2026-09-22: a closed run is drifting whatever its dates, a run with a dated
    episode ahead is not, label unchanged; not yet deployed. Chunk 3, *Hours as
-   a figure*, is next.
+   a figure*, has its storage half landed 2026-09-22 (migration 0013, a
+   film's `runtime_min`, the watched-minutes figures on the detail route);
+   the header cell is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

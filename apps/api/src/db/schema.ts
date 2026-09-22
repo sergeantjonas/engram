@@ -91,6 +91,11 @@ export const titles = pgTable('title', {
   nextAirDate: date('next_air_date'),
   nextEpisodeSeason: integer('next_episode_season'),
   nextEpisodeNumber: integer('next_episode_number'),
+  /**
+   * A film's running time in minutes. Null for a show, whose time is the sum
+   * of its episodes' `runtime_min`, and for a film TMDB has no figure for.
+   */
+  runtimeMin: integer('runtime_min'),
 
   metadataFetchedAt: timestamp('metadata_fetched_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

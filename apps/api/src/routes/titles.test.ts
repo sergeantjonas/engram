@@ -16,6 +16,7 @@ const witcher: TmdbTitleDetails = {
   status: null,
   lastAirDate: null,
   nextEpisode: null,
+  runtimeMin: null,
   seasons: [],
 };
 

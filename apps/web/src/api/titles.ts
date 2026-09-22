@@ -98,6 +98,9 @@ export interface TitleFigures {
   rewatched: number;
   /** Of those plays, the ones entered by hand: what a whole-title undo covers. */
   manualPlays: number;
+  /** Minutes of the seen set that carry a runtime, each row once; `untimed` is how many seen rows had none. */
+  watchedMin: number;
+  untimed: number;
   firstWatchedAt: string | null;
   firstWatchedPrecision: WatchPrecision | null;
   lastWatchedAt: string | null;

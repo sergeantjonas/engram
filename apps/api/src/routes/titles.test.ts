@@ -188,6 +188,16 @@ describe('GET /titles', () => {
     expect(titles[1]).toMatchObject({ hasGap: false });
   });
 
+  it('carries TMDB’s status on the card, null until it has been fetched', async () => {
+    const rows = [
+      listRow({ status: 'Ended' }),
+      listRow({ id: 'b7a1c0e9-7701-4c5f-8a0e-0f7c2c3a9f6b', status: null }),
+    ];
+    const titles = (await list('', rows)).json().titles;
+
+    expect(titles.map((title: { status: string | null }) => title.status)).toEqual(['Ended', null]);
+  });
+
   it('rejects a state nothing can be in', async () => {
     const response = await list('?state=abandoned');
 

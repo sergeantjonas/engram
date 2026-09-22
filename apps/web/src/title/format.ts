@@ -212,3 +212,16 @@ export function formatAirDate(airDate: string | null): string {
     timeZone: 'UTC',
   }).format(new Date(`${airDate}T00:00:00Z`));
 }
+
+/**
+ * An air date as a day in a line of prose — `12 Oct`, with the year only when
+ * it is not the current one. `today` is the page's `YYYY-MM-DD` clock.
+ */
+export function formatAirDay(airDate: string, today: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(airDate.slice(0, 4) === today.slice(0, 4) ? {} : { year: 'numeric' }),
+    timeZone: 'UTC',
+  }).format(new Date(`${airDate}T00:00:00Z`));
+}

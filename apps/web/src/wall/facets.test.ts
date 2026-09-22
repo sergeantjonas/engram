@@ -20,6 +20,7 @@ const title = (over: Partial<TitleSummary> = {}): TitleSummary => ({
   name: 'Untitled',
   year: 2020,
   posterPath: null,
+  status: null,
   state: 'in_progress',
   episodes: { total: 10, seen: 5 },
   want: false,

@@ -140,6 +140,7 @@ const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
   name: 'Untitled',
   year: 2020,
   posterPath: null,
+  status: null,
   state: 'unwatched',
   episodes: { total: 0, seen: 0 },
   want: false,
@@ -235,6 +236,7 @@ describe('the title pane', () => {
               title: { ...library[0], onDisk: null },
               ids: {},
               backdropPath: null,
+              airing: { lastAirDate: null, next: null, fetchedAt: null },
               figures: {
                 plays: 0,
                 rewatched: 0,
@@ -270,6 +272,7 @@ describe('the title pane', () => {
               title: { ...library[1], onDisk: null },
               ids: {},
               backdropPath: null,
+              airing: { lastAirDate: null, next: null, fetchedAt: null },
               figures: {
                 plays: 0,
                 rewatched: 0,
@@ -488,6 +491,7 @@ describe('the wall', () => {
               name: 'Fallout',
               posterPath: null,
               backdropPath: null,
+              airing: { lastAirDate: null, next: null, fetchedAt: null },
               stoppedAfter: {
                 season: 2,
                 number: 8,
@@ -641,6 +645,8 @@ describe('the title page', () => {
   /** In the URL and in the body of every mark, so it is named once. */
   const TITLE_ID = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
   const daysBeforeNow = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+  const daysFromNow = (days: number) =>
+    new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
   const hole = episode({ number: 5, name: 'WAX ON, WAX OFF', airDate: '2026-03-10' });
   const OVERVIEW = 'Gold Roger was known as the Pirate King, the strongest and most infamous.';
   const detail = (): TitleDetail => ({
@@ -657,6 +663,13 @@ describe('the title page', () => {
     ids: { tmdb: '111110', tvdb: '392276', imdb: 'tt11737520' },
     backdropPath: '/backdrop.jpg',
     overview: OVERVIEW,
+    // Fetched today and ahead of today, so the header claims it without an
+    // "as of": the stale case is exercised on its own.
+    airing: {
+      lastAirDate: null,
+      next: { season: 3, number: 1, airDate: daysFromNow(23) },
+      fetchedAt: new Date().toISOString(),
+    },
     // Relative to today, or the twelve-month strip these are drawn on would
     // stop finding them once the wall clock moves past the window.
     recentActivity: [
@@ -1244,6 +1257,68 @@ describe('the title page', () => {
     );
   });
 
+  it('says where the run stands after where the record does', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.status = 'Returning Series';
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    const header = heading.closest('header')?.textContent ?? '';
+    // The next date in the viewer's own short form; the claim is fresh, so
+    // no fetch date is stated beside it.
+    const next = new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    }).format(new Date(`${detail().airing.next?.airDate}T00:00:00Z`));
+    expect(header).toContain(`In progress·Returning·next ${next}`);
+    expect(header).not.toContain('as of');
+  });
+
+  it('dates an ended run and drops a next episode that has passed', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.status = 'Ended';
+        body.airing = {
+          lastAirDate: '2015-05-08',
+          next: { season: 9, number: 1, airDate: '2015-05-08' },
+          fetchedAt: '2026-01-01T00:00:00+00:00',
+        };
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    const header = heading.closest('header')?.textContent ?? '';
+    expect(header).toContain('Ended 2015');
+    expect(header).not.toContain('next');
+  });
+
+  it('states how old a next-airs claim is once the fetch is more than a day old', async () => {
+    stubApi((url) => {
+      if (url.includes('/titles/')) {
+        const body = detail();
+        body.title.status = 'Returning Series';
+        body.airing.fetchedAt = daysBeforeNow(3);
+        return json(body);
+      }
+      return elsewhere(url);
+    });
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const heading = await screen.findByRole('heading', { name: 'ONE PIECE' });
+    expect(heading.closest('header')?.textContent).toMatch(/next .+as of /);
+  });
+
   it('draws no identity line for a title with no ids', async () => {
     stubApi((url) => {
       if (url.includes('/titles/')) {
@@ -1573,6 +1648,7 @@ describe('adding a title', () => {
           // TMDB has a poster for nearly everything and a backdrop for rather
           // less, so the header has to read without one.
           backdropPath: null,
+          airing: { lastAirDate: null, next: null, fetchedAt: null },
           // Two plays the API did not send with this response: nothing on the
           // page may assume the feed accounts for the figures beside it.
           recentActivity: [],

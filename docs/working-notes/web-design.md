@@ -233,6 +233,10 @@ Around it:
   state earn the space beside the year more than the ids do, and the ids read
   better as a block that can be scanned for one source than as the tail of a
   sentence. Canonical id first — tvdb for a show, tmdb for a film. Since
+  2026-09-22 the first line also says where the run stands after where the
+  record does — `Returning · next 12 Oct`, `Ended 2015` — from TMDB's status
+  cached on the title; [web-depth.md](web-depth.md) arc 2 chunk 1 has the
+  words and the staleness rule. Since
   2026-09-22 each id is a link to its catalogue page, underlined on hover only,
   and a **Find in Plex** link opens the owner's action row: a search by name
   in Plex's hosted client, which is what "play in Plex" can honestly be

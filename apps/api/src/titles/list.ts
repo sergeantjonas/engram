@@ -11,6 +11,12 @@ export interface TitleSummary {
   name: string;
   year: number | null;
   posterPath: string | null;
+  /**
+   * TMDB's word for where the run stands — `Returning Series`, `Ended`,
+   * `Canceled`, `Released` — or null until the metadata backfill has been.
+   * A fact about the show, where `state` is a fact about the record.
+   */
+  status: string | null;
   state: TitleState;
   /**
    * Counts specials out of both halves, the way `deriveState` does. Always
@@ -74,6 +80,7 @@ interface Row extends Record<string, unknown> {
   name: string;
   year: number | null;
   poster_path: string | null;
+  status: string | null;
   want: boolean | null;
   dropped_at: string | null;
   excluded_at: string | null;
@@ -104,7 +111,7 @@ interface Row extends Record<string, unknown> {
 export async function listTitles(db: Database, filter: TitleListFilter = {}) {
   const rows = await db.execute<Row>(sql`
     select
-      t.id, t.key, t.kind, t.name, t.year, t.poster_path,
+      t.id, t.key, t.kind, t.name, t.year, t.poster_path, t.status,
       i.want, i.dropped_at, i.excluded_at,
       lp.present,
       coalesce(e.total, 0)::int as episode_total,
@@ -188,6 +195,7 @@ export async function listTitles(db: Database, filter: TitleListFilter = {}) {
       name: row.name,
       year: row.year,
       posterPath: row.poster_path,
+      status: row.status,
       state: deriveState({
         kind: row.kind,
         episodeTotal: row.episode_total,

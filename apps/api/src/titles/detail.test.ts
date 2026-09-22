@@ -45,6 +45,11 @@ const identityRow = {
   tvdb_id: '392276',
   imdb_id: 'tt11737520',
   overview: 'Gold Roger was known as the Pirate King.',
+  last_air_date: '2026-09-14',
+  next_air_date: '2026-10-15',
+  next_episode_season: 3,
+  next_episode_number: 1,
+  metadata_fetched_at: '2026-09-22T08:00:00+00:00',
   plays: 19,
   rewatched: 4,
   first_watched_at: '2026-03-14T20:00:00+00:00',
@@ -192,6 +197,29 @@ describe('titleDetail', () => {
       firstWatchedPrecision: 'day',
       lastWatchedPrecision: 'exact',
     });
+  });
+
+  it('carries where the run stands on TMDB’s calendar', async () => {
+    const result = await detail([episodeRow()]);
+
+    expect(result?.airing).toEqual({
+      lastAirDate: '2026-09-14',
+      next: { season: 3, number: 1, airDate: '2026-10-15' },
+      fetchedAt: '2026-09-22T08:00:00+00:00',
+    });
+  });
+
+  // A next episode is a season and a number; a date on its own is not one to
+  // point at, and the backfill never writes one without the other two.
+  it('has no next episode when TMDB has none scheduled, whatever the date column holds', async () => {
+    const result = await detail(
+      [episodeRow()],
+      [titleRow],
+      [{ ...identityRow, next_episode_season: null, next_episode_number: null }],
+    );
+
+    expect(result?.airing.next).toBeNull();
+    expect(result?.airing.lastAirDate).toBe('2026-09-14');
   });
 
   // A show keyed on tvdb can be missing the other two, and a title resolved

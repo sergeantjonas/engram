@@ -120,6 +120,23 @@ export interface WatchMoment {
 /** How many events the detail route will send, newest first. */
 export const ACTIVITY_LIMIT = 400;
 
+/**
+ * Where the run stands on TMDB's calendar, beside `title.status`. The dates
+ * and `next` are null for a film; all three are null until the metadata
+ * backfill has reached the title.
+ */
+export interface Airing {
+  /** The most recent aired episode's date, `YYYY-MM-DD`. */
+  lastAirDate: string | null;
+  /** The episode TMDB expects next. Its date may be null while it is only announced. */
+  next: { season: number; number: number; airDate: string | null } | null;
+  /**
+   * When these were last fetched. A refresh is a manual run today, so a reader
+   * saying "next airs 12 Oct" has to be able to say how old that claim is.
+   */
+  fetchedAt: string | null;
+}
+
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
@@ -131,6 +148,7 @@ export interface TitleDetail {
   backdropPath: string | null;
   /** TMDB's synopsis, as stored. Null for a title added before it was fetched. */
   overview: string | null;
+  airing: Airing;
   figures: TitleFigures;
   /**
    * What has happened to this title, as against what it adds up to — newest
@@ -173,6 +191,8 @@ export function asStranger(detail: TitleDetail): TitleDetail {
     ids: detail.ids,
     backdropPath: detail.backdropPath,
     overview: detail.overview,
+    // TMDB's calendar, not the owner's: nothing here was written by hand.
+    airing: detail.airing,
     // Whole, `manualPlays` included. How much of the record was typed rather
     // than observed is already public: `recentActivity` carries each event's
     // source, and the wall's "added by hand" facet counts titles by it.
@@ -195,6 +215,11 @@ interface IdentityRow extends Record<string, unknown> {
   imdb_id: string | null;
   backdrop_path: string | null;
   overview: string | null;
+  last_air_date: string | null;
+  next_air_date: string | null;
+  next_episode_season: number | null;
+  next_episode_number: number | null;
+  metadata_fetched_at: string | null;
   plays: number;
   rewatched: number;
   manual_plays: number;
@@ -254,6 +279,8 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     ...(await db.execute<IdentityRow>(sql`
       select
         t.tmdb_id, t.tvdb_id, t.imdb_id, t.backdrop_path, t.overview,
+        t.last_air_date, t.next_air_date, t.next_episode_season, t.next_episode_number,
+        to_json(t.metadata_fetched_at) as metadata_fetched_at,
         coalesce(f.plays, 0)::int as plays,
         coalesce(f.rewatched, 0)::int as rewatched,
         coalesce(m.manual_plays, 0)::int as manual_plays,
@@ -420,6 +447,19 @@ export async function titleDetail(db: Database, titleId: string): Promise<TitleD
     },
     backdropPath: identity?.backdrop_path ?? null,
     overview: identity?.overview ?? null,
+    airing: {
+      lastAirDate: identity?.last_air_date ?? null,
+      // Numbered or nothing: a date alone is not an episode to point at.
+      next:
+        identity?.next_episode_season != null && identity.next_episode_number != null
+          ? {
+              season: identity.next_episode_season,
+              number: identity.next_episode_number,
+              airDate: identity.next_air_date ?? null,
+            }
+          : null,
+      fetchedAt: identity?.metadata_fetched_at ?? null,
+    },
     figures: {
       plays: identity?.plays ?? 0,
       rewatched: identity?.rewatched ?? 0,

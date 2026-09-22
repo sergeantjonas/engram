@@ -17,6 +17,8 @@ export interface TitleSummary extends Intent {
   name: string;
   year: number | null;
   posterPath: string | null;
+  /** TMDB's word for the run — `Returning Series`, `Ended`, `Canceled`, `Released` — or null until fetched. */
+  status: string | null;
   state: TitleState;
   /** Always `0 / 0` for a movie, which is "not applicable", not "0 of 0". */
   episodes: { total: number; seen: number };
@@ -114,6 +116,15 @@ export interface WatchMoment {
   rewatch: boolean;
 }
 
+/** Where the run stands on TMDB's calendar. Dates and `next` are null for a film; all three before the backfill. */
+export interface Airing {
+  lastAirDate: string | null;
+  /** The episode TMDB expects next; its date may be null while it is only announced. */
+  next: { season: number; number: number; airDate: string | null } | null;
+  /** When these were fetched, so a "next airs" claim can say how old it is. */
+  fetchedAt: string | null;
+}
+
 export interface TitleDetail {
   title: TitleSummary;
   ids: ExternalIds;
@@ -121,6 +132,7 @@ export interface TitleDetail {
   backdropPath: string | null;
   /** TMDB's synopsis. Null until the metadata backfill has run for this title. */
   overview: string | null;
+  airing: Airing;
   figures: TitleFigures;
   /**
    * Newest first, and capped by the API. `figures.plays` counts the same set

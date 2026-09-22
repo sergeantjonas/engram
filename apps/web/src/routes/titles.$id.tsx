@@ -60,7 +60,7 @@ function TitlePage() {
       <TitleList titles={inLibrary} currentId={id} kind={kind} />
 
       <div className="min-w-0 space-y-5 p-[18px]">
-        <TitleHeader {...data} />
+        <TitleHeader {...data} today={today} />
 
         {/* What was watched and what was meant, on one row. The marking half
           disappears when it has nothing to offer; the intent half is always

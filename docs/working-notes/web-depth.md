@@ -2,8 +2,9 @@
 
 **Status:** In progress — scoped 2026-09-21 from a review of the three built
 screens against [web-design.md](web-design.md). Arc 1 is complete: chunks 1
-and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 is
-underway: its storage half landed 2026-09-22, the browser half is next. Arcs are ordered; chunks inside an arc are one commit each, and each one
+and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
+2026-09-22 in two commits and carries migration 0012, not yet deployed; chunk
+2 is next. Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,
@@ -187,15 +188,15 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
 
 ## Arc 2 · Facts the state vocabulary is missing
 
-1. **Show status and next air date.** Columns on `title`: `status` (TMDB's
-   string, stored as given), `next_air_date`, `next_episode` as
-   `{season, number}` or two integer columns. Filled by `backfill:metadata`,
-   which then has to run nightly rather than after a walk, and belongs in the
-   reconcile timer on the box that open-work.md's walk item already plans. The header's meta
-   line gains `Ended 2015` or `Returning · next 12 Oct`; the next-up band
-   gains "next airs 12 Oct" when the run is caught up.
+1. ~~**Show status and next air date.**~~ Landed 2026-09-22 in two commits.
+   Planned as columns on `title` — `status` as TMDB's string, `next_air_date`,
+   the next episode as two integers — filled by `backfill:metadata`, which
+   then has to run nightly rather than after a walk and belongs in the
+   reconcile timer on the box that open-work.md's walk item already plans; the
+   header's meta line gaining `Ended 2015` or `Returning · next 12 Oct`, and
+   the next-up band "next airs 12 Oct" when the run is caught up.
 
-   Storage landed 2026-09-22 as migration 0012: five nullable columns on
+   Storage landed first as migration 0012: five nullable columns on
    `title` — `status` as TMDB words it, `last_air_date`, and `next_air_date`
    with `next_episode_season` and `next_episode_number` — read off the details
    call the client already makes, carried through `planTitle`, written by
@@ -205,7 +206,32 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    it is coming. Rehearsed locally with `backfill:metadata --refresh` over the
    82 titles: every row got a status (22 ended, 21 returning, 10 cancelled,
    29 released), four carry a next air date, none is undated or in the past.
-   Not yet sent to the browser; that is the next commit.
+
+   The browser half followed. `status` rides on `TitleSummary`, so the wall
+   has it for chunk 2 without a second query, and `GET /titles/:id` adds an
+   `airing` block — `lastAirDate`, `next` as `{season, number, airDate}`,
+   `fetchedAt` — that `asStranger` passes whole, since nothing in it was
+   written by hand. `airingLine` in
+   [apps/web/src/title/airing.ts](../../apps/web/src/title/airing.ts) is the
+   pure derivation, `today` passed in, unit-tested on plain inputs; the header
+   draws its answer after the record's state, the dates in mono. The words:
+   `Returning`, `Ended`, `Cancelled` (TMDB spells it *Canceled*), anything else
+   as TMDB says it in sentence case; `Released` draws nothing, because a
+   film's year already says so. A closed run is dated by its last episode —
+   `Ended 2015` — unless that is the year the title already carries, when the
+   year would print twice. `next 12 Oct` is claimed only while the date is
+   today or ahead; a next episode that has passed without a refresh is a fact
+   the record no longer holds, and the line says nothing rather than "next"
+   about a day gone by. Per Shipping against production, while the refresh is
+   a manual run a claim not fetched today is followed by `as of 20 Sep` — only
+   a same-day fetch is certain to be under a day old.
+   Departures: the next-up band was left alone. It offers the next *unseen
+   aired* episode, so a caught-up show is never in it, and putting "next
+   airs" there would change what the band means; the header is where a
+   caught-up show is looked at, and that is where the date went. And the
+   episode's number is stored but not drawn: `next 12 Oct` was the sentence
+   planned, and `S3E1` beside it is a claim TMDB revises more often than the
+   date.
 2. **Ended resolves drifting.** The open decision on `DRIFTING_AFTER_DAYS`
    ([open-work.md](open-work.md) § Decisions still open) has nothing to tune
    against. A half-watched show whose status is Ended is not drifting, it is

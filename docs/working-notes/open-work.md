@@ -257,8 +257,10 @@ the viewer wants of a title. The SPA calls all four.
    size and seen state from the cells, and every external id links to its
    catalogue page and the owner gets a Plex search link that needs no `ratingKey`. Chunk 2
    carried migration 0011; deployed and backfilled on the box 2026-09-22.
-   Chunks 3 and 4 are not yet deployed. Arc 2 chunk 1 is underway: its
-   storage half landed 2026-09-22 as migration 0012, the browser half is next.
+   Chunks 3 and 4 are not yet deployed. Arc 2 chunk 1 landed 2026-09-22 —
+   TMDB's status and next air date stored (migration 0012) and drawn on the
+   header — also not yet deployed; the box needs `backfill:metadata --refresh`
+   after that deploy. Chunk 2, *Ended resolves drifting*, is next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

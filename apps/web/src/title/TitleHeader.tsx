@@ -2,7 +2,8 @@ import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { backdropUrl, posterUrl } from '../api/titles.ts';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
-import { formatSince, formatWatchedShort } from './format.ts';
+import { airingLine } from './airing.ts';
+import { formatAirDay, formatSince, formatWatchedShort } from './format.ts';
 
 /**
  * One cell of the stat box: the figure large in mono, its name small and
@@ -152,11 +153,17 @@ export function TitleHeader({
   ids,
   backdropPath,
   overview,
+  airing,
   figures,
-}: Pick<TitleDetail, 'title' | 'ids' | 'backdropPath' | 'overview' | 'figures'>) {
+  today,
+}: Pick<TitleDetail, 'title' | 'ids' | 'backdropPath' | 'overview' | 'airing' | 'figures'> & {
+  /** Today as `YYYY-MM-DD`, the page's one clock. */
+  today: string;
+}) {
   const poster = posterUrl(title.posterPath, 'w500');
   const backdrop = backdropUrl(backdropPath);
   const isShow = title.kind === 'show';
+  const run = airingLine(title, airing, today);
   const { plays, rewatched, firstWatchedAt, firstWatchedPrecision, lastWatchedPrecision } = figures;
 
   const since = formatSince(figures.lastWatchedAt, lastWatchedPrecision);
@@ -225,6 +232,35 @@ export function TitleHeader({
               <span className="text-xs text-dim">{isShow ? 'Series' : 'Film'}</span>
               <span className="text-xs text-faint">·</span>
               <span className="text-xs text-dim">{STATE_LABEL[title.state]}</span>
+              {/* Where the run stands, after where the record stands: a fact
+                  about the show rather than about the viewer. */}
+              {run.status !== null ? (
+                <>
+                  <span className="text-xs text-faint">·</span>
+                  <span className="text-xs text-dim">
+                    {run.status}
+                    {run.endedYear !== null ? (
+                      <>
+                        {' '}
+                        <span className="font-mono">{run.endedYear}</span>
+                      </>
+                    ) : null}
+                  </span>
+                </>
+              ) : null}
+              {run.nextAirDate !== null ? (
+                <>
+                  <span className="text-xs text-faint">·</span>
+                  <span className="text-xs text-dim">
+                    next <span className="font-mono">{formatAirDay(run.nextAirDate, today)}</span>
+                  </span>
+                  {run.asOf !== null ? (
+                    <span className="text-xs text-faint">
+                      as of <span className="font-mono">{formatAirDay(run.asOf, today)}</span>
+                    </span>
+                  ) : null}
+                </>
+              ) : null}
               <Presence onDisk={title.onDisk} />
             </div>
             <Identity ids={ids} kind={title.kind} />

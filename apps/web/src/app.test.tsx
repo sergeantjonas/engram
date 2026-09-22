@@ -1053,6 +1053,59 @@ describe('the title page', () => {
     });
   });
 
+  // One tab stop per season: ONE PIECE must not be 1100 of them. The arrows
+  // move the stop, and the focus with it.
+  it('walks a season with the arrow keys from one tab stop', async () => {
+    stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    const four = await screen.findByRole('button', { name: /^Episode 4\b/ });
+    const five = screen.getByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' });
+    expect(four.tabIndex).toBe(0);
+    expect(five.tabIndex).toBe(-1);
+
+    four.focus();
+    fireEvent.keyDown(four, { key: 'ArrowRight' });
+
+    expect(document.activeElement).toBe(five);
+    expect(five.tabIndex).toBe(0);
+    expect(four.tabIndex).toBe(-1);
+    // The line has ends: holding an arrow stops rather than wraps.
+    fireEvent.keyDown(five, { key: 'ArrowLeft' });
+    fireEvent.keyDown(four, { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(four);
+  });
+
+  // Reading a season is holding an arrow: the open panel moves to the
+  // neighbour rather than closing and needing the next cell clicked.
+  it('moves an open popover to the neighbour on an arrow without closing it', async () => {
+    stubTitle();
+    await renderAt(`/titles/${TITLE_ID}`);
+
+    (await screen.findByRole('button', { name: 'Episode 5: WAX ON, WAX OFF, not seen' })).click();
+    const facts = await screen.findByText(/^S2E5/);
+
+    fireEvent.keyDown(facts, { key: 'ArrowRight' });
+
+    expect(await screen.findByText(/^S2E6/)).toBeDefined();
+    expect(screen.queryByText(/^S2E5/)).toBeNull();
+    // Inside the date field the arrows are the caret's.
+    fireEvent.keyDown(screen.getByText(/^S2E6/), { key: 'ArrowLeft' });
+    fireEvent.keyDown(screen.getByRole('textbox', { name: /When\?/ }), { key: 'ArrowRight' });
+    expect(screen.queryByText(/^S2E6/)).toBeNull();
+    expect(screen.getByText(/^S2E5/)).toBeDefined();
+
+    // At the season's end there is nothing to hand on, and closing afterwards
+    // still returns focus to the cell rather than dropping it on the page.
+    fireEvent.keyDown(screen.getByText(/^S2E5/), { key: 'End' });
+    fireEvent.keyDown(screen.getByText(/^S2E6/), { key: 'ArrowRight' });
+    fireEvent.keyDown(screen.getByText(/^S2E6/), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByText(/^S2E6/)).toBeNull());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: /^Episode 6\b/ })),
+    );
+  });
+
   // A season entered cell by cell is one year typed thirty times, so the next
   // form on the page opens with the last date written.
   it('opens the next mark form with the date the last one was written with', async () => {

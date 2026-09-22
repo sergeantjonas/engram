@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { type KeyboardEvent, useId, useState } from 'react';
 import {
   type EpisodeCell as Cell,
   clearGap,
@@ -61,6 +61,11 @@ export function EpisodeCell({
   isOwner,
   today,
   rangeFrom,
+  tabStop,
+  open,
+  onOpenChange,
+  onWalk,
+  onCloseAutoFocus,
 }: {
   episode: Cell;
   /** Not on the cell itself: a mark names the episode by season and number. */
@@ -71,8 +76,17 @@ export function EpisodeCell({
   today: string;
   /** Where a shift-click's range starts: the cell after the last seen one before this. */
   rangeFrom: number;
+  /** Whether this is the season's one cell in the tab order; the arrows move it. */
+  tabStop: boolean;
+  /** Owned by the season, which moves an open popover to the neighbour on an arrow. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** An arrow, Home or End pressed on the cell or inside its popover. */
+  onWalk: (event: KeyboardEvent) => void;
+  /** Where the popover's focus goes on close; the season prevents it while handing the panel on. */
+  onCloseAutoFocus: (event: Event) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const close = () => onOpenChange(false);
   // A shift-click asks for everything from the last seen cell through this
   // one, the shape a backfill actually has — "season 4 up to episode 7" —
   // rather than one cell at a time. Forgotten when the popover closes, so the
@@ -100,7 +114,7 @@ export function EpisodeCell({
     <Popover.Root
       open={open}
       onOpenChange={(next) => {
-        setOpen(next);
+        onOpenChange(next);
         if (!next) setRange(false);
       }}
     >
@@ -115,7 +129,10 @@ export function EpisodeCell({
       >
         <Popover.Trigger
           aria-label={label}
+          data-episode={episode.number}
+          tabIndex={tabStop ? 0 : -1}
           onClick={(event) => setRange(event.shiftKey)}
+          onKeyDown={onWalk}
           className={`grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
         >
           {episode.number}
@@ -130,6 +147,15 @@ export function EpisodeCell({
           // three lines of synopsis and both forms open, the controls must
           // stay reachable on a laptop rather than slide under the fold.
           className="max-h-[var(--radix-popover-content-available-height)] w-80 overflow-y-auto rounded border border-line bg-surf p-4 text-sm text-tx shadow-lg"
+          onCloseAutoFocus={onCloseAutoFocus}
+          // The arrows walk from inside the panel too, so a season is read
+          // without closing and reopening it — except inside a field, where
+          // they are the caret's and a radio group's.
+          onKeyDown={(event) => {
+            const target = event.target;
+            if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+            onWalk(event);
+          }}
         >
           {/* A card, not a label: this is the page built for backfilling by
               hand, and people remember a scene before they remember a number.
@@ -180,7 +206,7 @@ export function EpisodeCell({
                     ? `S${season}E${rangeFrom}–E${episode.number}`
                     : `S${season}E${episode.number}`
                 }
-                onDone={() => setOpen(false)}
+                onDone={close}
               />
             </div>
           ) : null}
@@ -194,7 +220,7 @@ export function EpisodeCell({
                 titleId={titleId}
                 scope={{ season, episode: episode.number }}
                 entered={episode.manualPlays}
-                onDone={() => setOpen(false)}
+                onDone={close}
               />
             </div>
           ) : null}
@@ -202,7 +228,7 @@ export function EpisodeCell({
               it to clear, and nobody but the owner gets it at all: a stranger
               reads the grid from the colours and this popover's facts. */}
           {isOwner && status !== 'unaired' && (!episode.seen || episode.gap) ? (
-            <GapForm episode={episode} titleId={titleId} onDone={() => setOpen(false)} />
+            <GapForm episode={episode} titleId={titleId} onDone={close} />
           ) : null}
           <Popover.Arrow className="fill-line" />
         </Popover.Content>

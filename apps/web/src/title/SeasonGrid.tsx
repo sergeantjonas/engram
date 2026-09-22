@@ -1,8 +1,10 @@
+import { type KeyboardEvent, useRef, useState } from 'react';
 import type { EpisodeCell as Episode, SeasonGrid as Season } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { EpisodeCell } from './EpisodeCell.tsx';
 import { MarkWatchedButton } from './MarkWatched.tsx';
 import { seasonFacts } from './season-facts.ts';
+import { stepAcross, stepAlong } from './walk.ts';
 
 const HEADING = 'font-mono text-[10px] tracking-[.08em] uppercase text-dim';
 
@@ -40,6 +42,54 @@ export function SeasonGrid({
   // episodes, and that many subscriptions to the same query is a thousand
   // observers doing the same bookkeeping for one answer.
   const isOwner = useIsOwner();
+  // One tab stop per season, not one per cell: ONE PIECE is 1100 buttons, and
+  // a reader tabbing past it should pass it in one step. The active cell is
+  // the season's tab stop and the arrows move it; a popover, once open, is
+  // moved by the same keys to the neighbour rather than closed and reopened,
+  // so reading a season is holding an arrow. Held here because a cell cannot
+  // know its neighbours, and the open popover has to follow the focus.
+  const [active, setActive] = useState<number | null>(null);
+  const [opened, setOpened] = useState<number | null>(null);
+  // Set while an open popover is being handed to the neighbour. The closing
+  // panel would otherwise return focus to its own cell a tick later, and the
+  // panel just opened would read that as focus leaving it and dismiss itself.
+  const handing = useRef(false);
+  const frame = useRef<HTMLElement | null>(null);
+  // A callback rather than the object: the frame is a `section` for a season
+  // and a `details` for the specials, and one ref object cannot be typed as both.
+  const setFrame = (element: HTMLElement | null) => {
+    frame.current = element;
+  };
+  const numbers = season.episodes.map((episode) => episode.number);
+  const tabStop = active ?? numbers[0] ?? null;
+
+  const walk = (from: number, event: KeyboardEvent) => {
+    const cells = [...(frame.current?.querySelectorAll<HTMLElement>('[data-episode]') ?? [])];
+    const here = cells.find((cell) => Number(cell.dataset.episode) === from);
+    const across = here ? stepAcross(cells, here, event.key) : null;
+    const to = across ? Number(across.dataset.episode) : stepAlong(numbers, from, event.key);
+    if (to === null) return;
+    // Swallowed even at the ends, or Home and End scroll the page; but there
+    // is nothing to hand on, and a flag set now would block the next close.
+    event.preventDefault();
+    if (to === from) return;
+    setActive(to);
+    if (opened !== null) {
+      handing.current = true;
+      setOpened(to);
+    } else {
+      // Focus follows straight away rather than after a render: the key was
+      // pressed on a button, and the next one is already in the document.
+      cells.find((cell) => Number(cell.dataset.episode) === to)?.focus();
+    }
+  };
+
+  const onCloseAutoFocus = (event: Event) => {
+    if (!handing.current) return;
+    event.preventDefault();
+    handing.current = false;
+  };
+
   const facts = seasonFacts(season.episodes, today);
   const { seen } = facts;
   const heading = season.season === 0 ? 'Specials' : `Season ${season.season}`;
@@ -67,6 +117,18 @@ export function SeasonGrid({
             isOwner={isOwner}
             today={today}
             rangeFrom={rangeStart(episode)}
+            tabStop={tabStop === episode.number}
+            open={opened === episode.number}
+            onOpenChange={(next) => {
+              // A close only clears the cell that is open: a late dismissal
+              // from the cell just left must not shut the one just opened.
+              setOpened((current) =>
+                next ? episode.number : current === episode.number ? null : current,
+              );
+              if (next) setActive(episode.number);
+            }}
+            onWalk={(event) => walk(episode.number, event)}
+            onCloseAutoFocus={onCloseAutoFocus}
           />
         </li>
       ))}
@@ -116,7 +178,7 @@ export function SeasonGrid({
   // The page also puts them last — see the order the seasons are drawn in.
   if (season.season === 0) {
     return (
-      <details className="space-y-1.5">
+      <details ref={setFrame} className="space-y-1.5">
         <summary className={HEADING}>
           {heading} · {seen} of {season.episodes.length}
         </summary>
@@ -129,7 +191,7 @@ export function SeasonGrid({
   }
 
   return (
-    <section aria-label={heading} className="space-y-1.5">
+    <section ref={setFrame} aria-label={heading} className="space-y-1.5">
       <div className="flex items-baseline gap-3">
         {/* Under the page's Episodes heading, not beside it. */}
         {/* Derived from the cells, since no season row exists to hold it: the

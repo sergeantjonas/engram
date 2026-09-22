@@ -4,7 +4,7 @@
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
-Arc 3 chunks 1 and 2 landed 2026-09-22, not yet deployed; chunk 3 is next.
+Arc 3 chunks 1 to 3 landed 2026-09-22, not yet deployed; chunk 4 is next.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -364,11 +364,22 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    success, and the add screen, which has no provider, is blank every time.
    Nothing is drawn beyond the prefilled field, and the notice does not name
    the date, so the prefill is read in the field before it is written.
-3. **Keyboard walk.** Cells are buttons, so ONE PIECE is 1100 tab stops. One
-   tab stop per season with a roving `tabindex`; arrow keys move between
+3. ~~**Keyboard walk.**~~ Landed 2026-09-22. Cells are buttons, so ONE PIECE
+   is 1100 tab stops. One tab stop per season with a roving `tabindex`; arrow keys move between
    cells, Enter opens the popover, and while a popover is open the arrows move
    it to the neighbour without closing. Reading a season becomes holding an
    arrow. Radix Popover's `onOpenAutoFocus` and a controlled `open` are enough.
+
+   Landed with the season owning the walk: which cell is the tab stop and
+   which popover is open are the season's state, since a cell cannot know its
+   neighbours. Left, Right, Home and End step along the episode numbers and
+   stop at the ends rather than wrap; Up and Down read the layout, since the
+   cells wrap to the width and a year row breaks a line wherever it falls, and
+   go to the nearest cell on the adjacent line. Inside the popover the same
+   keys move it, except in a field, where they are the caret's. One thing
+   `onOpenAutoFocus` did not cover: the closing panel returns focus to its
+   cell a tick later, which the panel just opened reads as focus leaving it,
+   so the season prevents `onCloseAutoFocus` while handing a panel on.
 4. **Rewatches in the grid.** A cell is binary and Bleach's two real rewatches
    are visible only in the feed. A corner tick, or `2×` in the cell's top
    right at 7px, on `playCount > 1`. Not a colour: jade is "seen" and a second

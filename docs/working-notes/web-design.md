@@ -384,6 +384,10 @@ Three rules that come with it:
   belongs on the page, or in the popover that opens on click.
 - **Hide it while the thing it labels is open.** A cell that opens a popover
   passes `hidden`, or the tip hangs over the panel repeating itself.
+- **One tab stop per season.** The grid's cells are buttons, and a season is
+  one stop in the tab order with a roving `tabindex`; the arrows, Home and End
+  move it, and move an open popover to the neighbour rather than closing it.
+  Since 2026-09-22 — [web-depth.md](web-depth.md) arc 3 chunk 3.
 
 One `TooltipHost` sits in the root route and holds the timing: 250ms to open,
 and none at all when moving between neighbours, because reading along a row of

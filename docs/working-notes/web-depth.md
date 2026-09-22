@@ -5,9 +5,8 @@ screens against [web-design.md](web-design.md). Arc 1 is complete: chunks 1
 and 2 landed 2026-09-21, chunks 3 and 4 on 2026-09-22. Arc 2 chunk 1 landed
 2026-09-22 in two commits with migration 0012, deployed and refreshed on the
 box the same day; chunks 2 and 3 landed 2026-09-22, chunk 3 in two commits
-with migration 0013. Neither is deployed yet, and the box needs
-`backfill:metadata --refresh` after that deploy for films' runtimes. Chunk 4
-is next. Arcs are ordered; chunks inside an arc are one commit each, and each
+with migration 0013, and both were deployed and refreshed on the box the same
+day. Chunk 4 is next. Arcs are ordered; chunks inside an arc are one commit each, and each
 one deploys to a live record — see Shipping against production.
 
 The three screens the design names are built and the system holds: palette,

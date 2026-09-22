@@ -264,8 +264,7 @@ the viewer wants of a title. The SPA calls all four.
    episode ahead is not, label unchanged; not yet deployed. Chunk 3, *Hours as
    a figure*, landed 2026-09-22 in two commits (migration 0013, a
    film's `runtime_min`, a `watched` cell in the header's stat box); chunks 2
-   and 3 are not yet deployed, and the box needs `backfill:metadata --refresh`
-   after that deploy for films' runtimes. Chunk 4, *A film's run*, is next
+   and 3 deployed and refreshed on the box 2026-09-22. Chunk 4, *A film's run*, is next
    and is the first to spend a new TMDB call.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live

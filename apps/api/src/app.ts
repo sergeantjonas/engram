@@ -6,6 +6,7 @@ import type { Database } from './db/client.js';
 import type { GithubClient } from './github/client.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerEpisodeRoutes } from './routes/episodes.js';
+import { registerExportRoutes } from './routes/export.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerTitleRoutes } from './routes/titles.js';
 import { registerWatchEventRoutes } from './routes/watch-events.js';
@@ -87,6 +88,7 @@ export function buildApp({ config, db, tmdb, github }: AppDeps): FastifyInstance
 
   registerAuthRoutes(app, db, config, github);
   registerEpisodeRoutes(app, db);
+  registerExportRoutes(app, db);
   registerSearchRoutes(app, db, tmdb);
   registerTitleRoutes(app, db, tmdb);
   registerWatchEventRoutes(app, db);

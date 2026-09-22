@@ -7,7 +7,8 @@ with migrations 0012 to 0014, each refreshed on the box the day it shipped.
 Arc 3 landed 2026-09-22 in five commits. Arc 4 is in progress: chunks 1 to
 3 landed 2026-09-22. Both deployed the same day with no migration, and
 `GET /history` answered on the box as the rehearsal had — 461 plays over 24
-titles, all exact, 116 KB.
+titles, all exact, 116 KB. Chunk 4's routes landed the same day, not yet
+deployed.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -545,6 +546,40 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    titles being its first block — with a download of the full record as JSON
    and as CSV, `source` on every row, and a count of manual claims stated
    before the download. Owner-only, streamed from the API.
+
+   The routes landed first, 2026-09-22, owner-only by being off the guard's
+   open list: `GET /export` answers the counts — titles, events, and the
+   events entered by hand — and `GET /export/record.csv` and
+   `/export/record.json` are the files, sent as attachments and written as
+   each page of 1000 events comes back from Postgres, so the file costs the
+   API one page of memory however long the record grows. Every event is in,
+   stops a per-play source saw short of the end included and marked, each
+   with its `source` and `source_event_id`. Titles are named by their
+   external key and episodes by season and number, never by Engram's ids,
+   since the file exists to outlive this database. A coarse date is written
+   as it would be entered — `2019`, `2019-06` — which is what the mark form
+   reads, so the file is something Engram could take back in. Oldest first,
+   undated first as the feed reads them, and within one instant by title key
+   and episode, so a season entered by hand reads in order; the key rather
+   than the name, since a refetch rewrites the name and a sort key that moved
+   mid-export would move rows past the cursor. The pages are a keyset on
+   those same columns, with `-infinity` for no date and -1 for a missing
+   episode, so a row written mid-export cannot land twice. Each page is still
+   a sort over the whole table — the order spans three — which at this size
+   is milliseconds; the pages are for the memory, not the plan. The JSON adds
+   every title, excluded ones included and flagged, with its intent, note and
+   explained holes, read before the first byte so a failure there is an error
+   rather than a file; the CSV is one row per event. What comes from TMDB in
+   the CSV — names and the IMDb id — is kept from reading as a spreadsheet
+   formula with a leading apostrophe, since it is anyone's to edit. No HEAD
+   route for the files, which Fastify would answer by running the export and
+   throwing it away, and a failure mid-stream is logged, since past the
+   headers nothing else can say it. Left out: the raw payload, the Plex
+   account id, the player and the platform, which are Plex's internals and
+   the device rather than the watching — the nightly dump keeps them.
+   Rehearsed against the local record: 82 titles, 1109 events of which 648
+   are manual, 175 KB of CSV and 405 KB of JSON, the same 1109 in the same
+   order when paged seven at a time.
 5. **Type steps.** Settle mono at two sizes, 10px for anything read and 9px
    for landmarks and tick labels, and remove the other five. The review
    counted the call sites; do this as one commit against the running app, not

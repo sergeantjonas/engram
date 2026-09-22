@@ -282,7 +282,9 @@ the viewer wants of a title. The SPA calls all four.
    the same day in three commits — YEAR, the whole dated record as one
    calendar per year over a new `GET /history`, with the year's figures and
    a picked day's plays beside it; deployed 2026-09-22, no migration.
-   Chunks 4 and 5, export and the type steps, are next.
+   Chunk 4, export, begun the same day with the owner-only routes — the
+   counts, and the whole record streamed as CSV and JSON — not yet deployed.
+   Chunk 5, the type steps, follows.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

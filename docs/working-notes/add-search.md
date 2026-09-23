@@ -1,6 +1,6 @@
 # Add search
 
-**Status:** In progress — chunks 1 to 3 landed 2026-09-23, not yet deployed.
+**Status:** In progress — chunks 1 to 4 landed 2026-09-23, not yet deployed.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
 endpoints accept. Seven chunks, one commit each, in order; chunk 7 is
 optional. No chunk carries a migration.
@@ -141,16 +141,24 @@ being two rows told apart by the year alone. Null draws nothing.
 
 ## Chunk 4 · Want from the results
 
-Every candidate the record does not hold gets *Want* beside *Add*:
+Landed 2026-09-23, web only: the intent route already existed. Every
+candidate the record does not hold gets *Want* under *Add*, quiet where Add is
+jade, since what the screen is for is saying what was watched:
 `POST /titles`, then `setIntent(id, { want: true })`. Nothing was watched, so
 nothing opens the backfill screen — the row moves into the held-back group as
 an add does, and a toast names the title. The batch bar offers both verbs over
 one selection, sequential like the batch add.
 
 The two writes are not one transaction. A failure between them leaves the
-title stored and not wanted, which is reported as exactly that; both writes
-are idempotent (`POST /titles` answers 200 for a stored title), so the retry
-is the same button.
+title stored and not wanted, which is reported as exactly that on the row —
+"Added, but not marked as wanted" — and the row is not moved to the held-back
+group, so it keeps its buttons; both writes are idempotent (`POST /titles`
+answers 200 for a stored title), so the retry is the same button. A batch
+that stops partway keeps the rest of its selection ticked: what landed has
+left it by being recorded as stored, so what is still ticked is exactly what
+the retry has to do. The title it stopped at carries the error on its row as
+well as in the toast, since it may be stored and not wanted and the toast is
+gone in five seconds.
 
 ## Chunk 5 · Paste an id or a link
 

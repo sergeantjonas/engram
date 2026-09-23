@@ -408,8 +408,10 @@ label, then the wall's own kind control, All / Series / Movies, in the slot
 beside it — the kind picks which search TMDB runs, so it is part of the
 question, not a filter under the answer. A year field joins the bar once a
 kind is chosen and is not there under All, because TMDB's mixed search takes
-no year. Search is a quiet chip, not jade: on this screen jade is for what
-writes to the record. The screen stops at 48rem. Since 2026-09-23;
+no year. Search is a quiet chip, not jade: on this screen jade is for its
+main write, saying what was watched. *Want* sits quiet under each result's
+jade *Add* for the same reason — it records an intention, and nothing opens
+the backfill after it. The screen stops at 48rem. Since 2026-09-23;
 [add-search.md](add-search.md) holds the rest of that arc.
 
 This screen is why `watched_precision` exists. "Breaking Bad, sometime around

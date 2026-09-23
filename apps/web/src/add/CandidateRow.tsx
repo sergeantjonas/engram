@@ -6,7 +6,8 @@ export function CandidateRow({
   selected,
   onSelect,
   onAdd,
-  adding,
+  onWant,
+  pending,
   disabled,
   error,
 }: {
@@ -14,8 +15,9 @@ export function CandidateRow({
   selected: boolean;
   onSelect: () => void;
   onAdd: () => void;
-  /** This row is the one being added, so it says so rather than just greying out. */
-  adding: boolean;
+  onWant: () => void;
+  /** What this row is being written as, so it says so rather than just greying out. */
+  pending: 'add' | 'want' | null;
   disabled: boolean;
   error: string | null;
 }) {
@@ -73,15 +75,28 @@ export function CandidateRow({
         ) : null}
       </div>
       {stored === null ? (
-        <button
-          type="button"
-          onClick={onAdd}
-          disabled={disabled}
-          aria-label={`Add ${candidate.name}`}
-          className="h-fit shrink-0 rounded bg-jade px-3 py-1 text-sm font-medium text-on-jade disabled:opacity-50"
-        >
-          {adding ? 'Adding…' : 'Add'}
-        </button>
+        // Add is the jade one because it is what this screen is for: saying
+        // what was watched. Want records an intention and nothing else.
+        <div className="flex shrink-0 flex-col items-stretch gap-1.5">
+          <button
+            type="button"
+            onClick={onAdd}
+            disabled={disabled}
+            aria-label={`Add ${candidate.name}`}
+            className="rounded bg-jade px-3 py-1 text-sm font-medium text-on-jade disabled:opacity-50"
+          >
+            {pending === 'add' ? 'Adding…' : 'Add'}
+          </button>
+          <button
+            type="button"
+            onClick={onWant}
+            disabled={disabled}
+            aria-label={`Want ${candidate.name}`}
+            className="rounded border border-line px-3 py-1 text-sm hover:border-dim disabled:opacity-50"
+          >
+            {pending === 'want' ? 'Saving…' : 'Want'}
+          </button>
+        </div>
       ) : (
         // A title already held is one click from where the search was heading
         // anyway, so the row points at it rather than offering to add it twice.

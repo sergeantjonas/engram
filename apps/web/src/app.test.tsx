@@ -2300,6 +2300,127 @@ describe('adding a title', () => {
     expect(screen.getByText('進撃の巨人').getAttribute('lang')).toBe('ja');
   });
 
+  it('wants a title straight from the results, with nothing to mark watched', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({})] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json({ title: { id: 'title-949', name: 'Heat' }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        return json({ intent: { want: true, dropped: false, excluded: false } });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Want Heat' }));
+
+    await screen.findByText('Heat is on the record as wanted.');
+    const put = calls.find((call) => call.url.endsWith('/intent'));
+    expect(put?.url).toBe('http://localhost:2012/titles/title-949/intent');
+    expect(JSON.parse(String(put?.init?.body))).toEqual({ want: true });
+    // Still on the results, the title held back with the rest of the record.
+    expect(screen.getByText(/1 result already on the record/)).toBeDefined();
+    expect(screen.queryByRole('heading', { name: /Seen any of it/ })).toBeNull();
+  });
+
+  // Stored and not wanted is a real state after the second write fails, and
+  // pressing the same button again has to be what finishes it.
+  it('says a title was added but not wanted, and finishes on a second press', async () => {
+    let intentFails = true;
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({})] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json(
+          { title: { id: 'title-949', name: 'Heat' }, seasons: [] },
+          intentFails ? 201 : 200,
+        );
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        if (intentFails) return json({ error: 'internal' }, 500);
+        return json({ intent: { want: true, dropped: false, excluded: false } });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Want Heat' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /^Added, but not marked as wanted/,
+    );
+
+    intentFails = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Want Heat' }));
+
+    await screen.findByText('Heat is on the record as wanted.');
+    expect(calls.filter((call) => call.url.endsWith('/intent'))).toHaveLength(2);
+  });
+
+  it('wants a selection in one pass', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [candidate({}), candidate({ tmdbId: '10138', name: 'Iron Man 2' })],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { tmdbId: string };
+        return json({ title: { id: `title-${body.tmdbId}`, name: 'x' }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        return json({ intent: { want: true, dropped: false, excluded: false } });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Iron Man 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Want 2' }));
+
+    await screen.findByText('2 titles on the record as wanted.');
+    expect(calls.filter((call) => call.url.endsWith('/intent')).map((call) => call.url)).toEqual([
+      'http://localhost:2012/titles/title-949/intent',
+      'http://localhost:2012/titles/title-10138/intent',
+    ]);
+    expect(screen.queryByText(/selected$/)).toBeNull();
+  });
+
+  it('keeps what a stopped batch did not finish ticked, and names where it stopped', async () => {
+    let secondFails = true;
+    stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [candidate({}), candidate({ tmdbId: '10138', name: 'Iron Man 2' })],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { tmdbId: string };
+        return json({ title: { id: `title-${body.tmdbId}`, name: 'x' }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        if (secondFails && url.includes('title-10138')) return json({ error: 'internal' }, 500);
+        return json({ intent: { want: true, dropped: false, excluded: false } });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Iron Man 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Want 2' }));
+
+    await screen.findByText(/^Marked 1 title of 2 as wanted, then stopped/);
+    expect(screen.getByRole('alert').textContent).toMatch(/^Added, but not marked as wanted/);
+    expect(screen.getByText(/1 result already on the record/)).toBeDefined();
+    expect(screen.getByText('1 title selected')).toBeDefined();
+
+    secondFails = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Want 1' }));
+
+    await screen.findByText('1 title on the record as wanted.');
+  });
+
   it('asks nothing for a query it cannot read', async () => {
     const calls = stubApi((url) =>
       url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),

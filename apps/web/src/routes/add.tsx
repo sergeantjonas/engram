@@ -18,6 +18,7 @@ import {
   candidateKey,
   type SearchPage,
   searchQuery,
+  setIntent,
   type TmdbCandidate,
 } from '../api/titles.ts';
 import { useToast } from '../shell/Toasts.tsx';
@@ -214,6 +215,70 @@ function Add() {
     },
   });
 
+  /**
+   * Stores a title and flags it as wanted, which is the whole of what the
+   * viewer means by it: nothing was watched, so nothing opens the backfill.
+   *
+   * Two writes and not one transaction. When the second fails the title is
+   * stored and not wanted, and the error says exactly that; `POST /titles`
+   * answers 200 for a title it already holds, so the same button finishes it.
+   */
+  const addWanted = async (candidate: TmdbCandidate): Promise<AddedTitle> => {
+    const result = await addTitle(candidate);
+    try {
+      await setIntent(result.title.id, { want: true });
+    } catch (error) {
+      throw new Error(`Added, but not marked as wanted: ${describe(error)}`, { cause: error });
+    }
+    return result;
+  };
+
+  const want = useMutation({
+    mutationFn: addWanted,
+    onMutate: () => setFailed(null),
+    onSuccess: (result, candidate) => {
+      recordStored([{ added: result, kind: candidate.kind, candidate }]);
+      toast({ message: `${candidate.name} is on the record as wanted.` });
+    },
+    onError: (error, candidate) =>
+      setFailed({ key: candidateKey(candidate), message: describe(error) }),
+    // Either way: a failure between the two writes still stored the title.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['titles'] }),
+  });
+
+  const wantSelected = useMutation({
+    // One at a time, for the same reason the batch add is.
+    mutationFn: async (candidates: TmdbCandidate[]) => {
+      landed.current = [];
+      for (const candidate of candidates) {
+        const result = await addWanted(candidate);
+        landed.current.push({ added: result, kind: candidate.kind, candidate });
+      }
+      return landed.current;
+    },
+    onMutate: () => setFailed(null),
+    onSuccess: (items) => {
+      setChosen(new Set());
+      toast({ message: `${count(items.length, 'title')} on the record as wanted.` });
+    },
+    // The selection stays: what landed has left it by being recorded as
+    // stored, so what is still ticked is exactly what the retry has to do.
+    // The one it stopped at says why on its row, where it outlasts the toast
+    // — it may be on the record already, not yet wanted.
+    onError: (error, candidates) => {
+      const stopped = candidates[landed.current.length];
+      if (stopped) setFailed({ key: candidateKey(stopped), message: describe(error) });
+      toast({
+        message: `Marked ${count(landed.current.length, 'title')} of ${candidates.length} as wanted, then stopped: ${describe(error)}`,
+      });
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['titles'] });
+      recordStored(landed.current);
+      landed.current = [];
+    },
+  });
+
   if (batch && batch.length > 0) {
     return (
       <Batch
@@ -244,7 +309,7 @@ function Add() {
   const picked = found.filter(
     (candidate) => candidate.storedTitleId === null && chosen.has(candidateKey(candidate)),
   );
-  const busy = add.isPending || addSelected.isPending;
+  const busy = add.isPending || addSelected.isPending || want.isPending || wantSelected.isPending;
 
   return (
     // Past 48rem a result row is a poster at one edge and its button at the
@@ -332,8 +397,9 @@ function Add() {
               />
             </Tip>
           ) : null}
-          {/* Quiet rather than jade: jade on this screen is for what writes to
-              the record, and a search writes nothing. Enter does the same. */}
+          {/* Quiet rather than jade: jade on this screen is for its main
+              write, saying what was watched, and a search writes nothing.
+              Enter does the same. */}
           <button
             type="submit"
             disabled={yearUnreadable}
@@ -361,7 +427,14 @@ function Add() {
           })
         }
         onAdd={(candidate) => add.mutate(candidate)}
-        pending={add.isPending ? candidateKey(add.variables) : null}
+        onWant={(candidate) => want.mutate(candidate)}
+        pending={
+          add.isPending
+            ? { key: candidateKey(add.variables), verb: 'add' }
+            : want.isPending
+              ? { key: candidateKey(want.variables), verb: 'want' }
+              : null
+        }
         busy={busy}
         failed={failed}
       />
@@ -378,6 +451,14 @@ function Add() {
             className="rounded bg-jade px-3 py-1 text-sm font-medium text-on-jade disabled:opacity-50"
           >
             {addSelected.isPending ? 'Adding…' : `Add ${picked.length}`}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => wantSelected.mutate(picked)}
+            className="rounded border border-line px-3 py-1 text-sm hover:border-dim disabled:opacity-50"
+          >
+            {wantSelected.isPending ? 'Saving…' : `Want ${picked.length}`}
           </button>
           <button
             type="button"
@@ -413,6 +494,7 @@ function Results({
   chosen,
   onSelect,
   onAdd,
+  onWant,
   pending,
   busy,
   failed,
@@ -428,7 +510,9 @@ function Results({
   chosen: ReadonlySet<string>;
   onSelect: (candidate: TmdbCandidate) => void;
   onAdd: (candidate: TmdbCandidate) => void;
-  pending: string | null;
+  onWant: (candidate: TmdbCandidate) => void;
+  /** The row a single add or want is writing, and which of the two it is. */
+  pending: { key: string; verb: 'add' | 'want' } | null;
   busy: boolean;
   failed: { key: string; message: string } | null;
 }) {
@@ -492,7 +576,8 @@ function Results({
                   selected={chosen.has(key)}
                   onSelect={() => onSelect(candidate)}
                   onAdd={() => onAdd(candidate)}
-                  adding={pending === key}
+                  onWant={() => onWant(candidate)}
+                  pending={pending?.key === key ? pending.verb : null}
                   // Every row waits on whatever is in flight: two adds in
                   // parallel would race to navigate, and the loser's page is
                   // not the one that was asked for.

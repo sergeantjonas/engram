@@ -2550,6 +2550,161 @@ describe('adding a title', () => {
     ]);
   });
 
+  it('searches as the owner types, one history entry for each burst of it', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search')
+        ? json({ results: [], page: 1, hasMore: false })
+        : json({ isOwner: true }),
+    );
+    const router = await renderAt('/add');
+    const box = screen.getByRole<HTMLInputElement>('textbox', { name: 'Search TMDB' });
+    const searched = () =>
+      calls
+        .filter((call) => call.url.includes('/search'))
+        .map((call) => new URL(call.url).searchParams.get('q'));
+
+    // Two letters is a search for nearly everything; Enter is still there for "Up".
+    fireEvent.change(box, { target: { value: 'du' } });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(searched()).toEqual([]);
+
+    fireEvent.change(box, { target: { value: 'dune' } });
+    await screen.findByText('TMDB has nothing for “dune”.');
+    fireEvent.change(box, { target: { value: 'dune part' } });
+    await screen.findByText('TMDB has nothing for “dune part”.');
+    // Enter settles it, so the next burst is an entry of its own.
+    fireEvent.submit(screen.getByRole('button', { name: 'Search' }));
+    fireEvent.change(box, { target: { value: 'arrival' } });
+    await screen.findByText('TMDB has nothing for “arrival”.');
+    expect(searched()).toEqual(['dune', 'dune part', 'arrival']);
+
+    // "dune" was a prefix on the way to "dune part", and Back skips it.
+    router.history.back();
+    await screen.findByText('TMDB has nothing for “dune part”.');
+    expect(box.value).toBe('dune part');
+    router.history.back();
+    await screen.findByText('Search TMDB for something to put on the record.');
+    expect(box.value).toBe('');
+
+    // Forward to a query the box itself once sent still sets the box.
+    router.history.forward();
+    await screen.findByText('TMDB has nothing for “dune part”.');
+    router.history.forward();
+    await screen.findByText('TMDB has nothing for “arrival”.');
+    expect(box.value).toBe('arrival');
+  });
+
+  it('keeps a space typed before the next word when the search goes out', async () => {
+    stubApi((url) =>
+      url.includes('/search')
+        ? json({ results: [], page: 1, hasMore: false })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add');
+    const box = screen.getByRole<HTMLInputElement>('textbox', { name: 'Search TMDB' });
+
+    fireEvent.change(box, { target: { value: 'breaking ' } });
+
+    await screen.findByText('TMDB has nothing for “breaking”.');
+    expect(box.value).toBe('breaking ');
+  });
+
+  it('keeps ticks through a new query, and the last results up while the next load', async () => {
+    let answer: (() => void) | undefined;
+    stubApi((url) => {
+      if (!url.includes('/search')) return json({ isOwner: true });
+      if (url.includes('q=heat%20wave')) {
+        const body = {
+          results: [candidate({}), candidate({ tmdbId: '2', name: 'Heat Wave' })],
+          page: 1,
+          hasMore: false,
+        };
+        return new Promise<Response>((resolve) => {
+          answer = () => resolve(json(body));
+        }) as unknown as Response;
+      }
+      return json({ results: [candidate({})], page: 1, hasMore: true });
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    expect(screen.getByRole('button', { name: 'more from TMDB' })).toBeDefined();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search TMDB' }), {
+      target: { value: 'heat wave' },
+    });
+    await waitFor(() => expect(answer).toBeDefined());
+
+    // The last answer stands in, marked busy, rather than a "Searching…" —
+    // and without its next page, which would be the last query's.
+    expect(screen.getByRole('heading', { name: /^Heat/ })).toBeDefined();
+    expect(screen.queryByText('Searching…')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'more from TMDB' })).toBeNull();
+
+    await act(async () => answer?.());
+
+    await screen.findByRole('heading', { name: /^Heat Wave/ });
+    expect(screen.getByRole<HTMLInputElement>('checkbox', { name: 'Select Heat' }).checked).toBe(
+      true,
+    );
+    expect(screen.getByText('1 title selected')).toBeDefined();
+  });
+
+  // Standing in, an answer with nothing to list says nothing about the query
+  // it stands in for.
+  it('says it is searching, not that TMDB has nothing, while the next answer loads', async () => {
+    stubApi((url) => {
+      if (!url.includes('/search')) return json({ isOwner: true });
+      if (url.includes('q=dune%20part'))
+        return new Promise<Response>(() => {}) as unknown as Response;
+      return json({ results: [], page: 1, hasMore: false });
+    });
+    await renderAt('/add?q=dune');
+    await screen.findByText('TMDB has nothing for “dune”.');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search TMDB' }), {
+      target: { value: 'dune part' },
+    });
+
+    await screen.findByText('Searching…');
+    expect(screen.queryByText(/TMDB has nothing for/)).toBeNull();
+  });
+
+  it('lets the selection go with the query when the box is emptied', async () => {
+    stubApi((url) =>
+      url.includes('/search')
+        ? json({ results: [candidate({})], page: 1, hasMore: false })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    expect(screen.getByText('1 title selected')).toBeDefined();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search TMDB' }), {
+      target: { value: '' },
+    });
+
+    await screen.findByText('Search TMDB for something to put on the record.');
+    expect(screen.queryByText('1 title selected')).toBeNull();
+  });
+
+  it('keeps a kind chosen while a pause was still to come', async () => {
+    stubApi((url) =>
+      url.includes('/search')
+        ? json({ results: [], page: 1, hasMore: false })
+        : json({ isOwner: true }),
+    );
+    const router = await renderAt('/add?q=heat');
+    await screen.findByText('TMDB has nothing for “heat”.');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search TMDB' }), {
+      target: { value: 'heat wave' },
+    });
+    fireEvent.click(screen.getByRole('link', { name: 'Movies' }));
+
+    await screen.findByText('TMDB has nothing for “heat wave” among films.');
+    expect(router.state.location.search).toEqual({ q: 'heat wave', kind: 'movie' });
+  });
+
   it('asks nothing for a query it cannot read', async () => {
     const calls = stubApi((url) =>
       url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),

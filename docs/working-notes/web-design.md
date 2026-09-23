@@ -408,13 +408,16 @@ label, then the wall's own kind control, All / Series / Movies, in the slot
 beside it — the kind picks which search TMDB runs, so it is part of the
 question, not a filter under the answer. A fourth position, *Collections*,
 searches film series instead; opening one lists its films under it with
-every one the record does not hold ticked. A year field joins the bar once a
-kind is chosen and is not there under All, because TMDB's mixed search takes
-no year. Search is a quiet chip, not jade: on this screen jade is for its
-main write, saying what was watched. *Want* sits quiet under each result's
+every one the record does not hold ticked. A year field joins the bar under
+Series or Movies and is not there under All or Collections, because nothing
+else TMDB searches takes a year. Search is a quiet chip, not jade: on this
+screen jade is for its main write, saying what was watched. *Want* sits quiet under each result's
 jade *Add* for the same reason — it records an intention, and nothing opens
-the backfill after it. The screen stops at 48rem. Since 2026-09-23;
-[add-search.md](add-search.md) holds the rest of that arc.
+the backfill after it. The screen stops at 48rem. It searches as the owner
+types, once they pause, and keeps the last results up and dimmed while the
+next ones load; Enter still searches, and settles the search into the
+history. Since 2026-09-23, and searching as the owner types since
+2026-09-24; [add-search.md](add-search.md) holds the rest of that arc.
 
 This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 2019" has no timestamp, and the alternative — a nullable `watched_at` — would

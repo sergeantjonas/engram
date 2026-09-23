@@ -1,13 +1,14 @@
 import { parseTitleReference } from '@engram/shared';
 import {
   type InfiniteData,
+  keepPreviousData,
   type UseInfiniteQueryResult,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect, useNavigate, useRouter } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { Backfill } from '../add/Backfill.tsx';
 import { Batch, type BatchItem } from '../add/Batch.tsx';
@@ -95,7 +96,12 @@ export const Route = createFileRoute('/add')({
    * cannot press, so there is no narrower version of it to show — only the
    * sign-in that would make it work, with the way back to here attached.
    */
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async ({ context, location, cause }) => {
+    // Asked on the way in and not again as the search params change under
+    // it: the screen is already drawn by then, and every pause in the typing
+    // is a navigation that would otherwise wait on the round trip. A session
+    // that ends mid-search surfaces as the API's 401 on the search itself.
+    if (cause === 'stay') return;
     // `fetchQuery`, not the root's `ensureQueryData`: that one is happy with
     // whatever is cached, and a session that expired while the tab sat open
     // would let this screen render on the strength of an old answer.
@@ -132,6 +138,36 @@ function Add() {
   // has since been closed or passed over cannot tick its films.
   const opening = useRef<number | null>(null);
 
+  // The query the box has sent by itself and the URL has not yet answered
+  // with, or null. The `q` that answers it came from the box and is not
+  // written back into it: the owner may have typed on since, and the URL's
+  // copy is trimmed, so a space typed before the next word would vanish.
+  // Cleared as soon as it arrives, so Back and Forward to the same query later
+  // still set the box.
+  const [sentQ, setSentQ] = useState<string | undefined | null>(null);
+  // Whether the current history entry is the one this burst of typing made,
+  // and so the one the next pause's search replaces. State, because a search
+  // arriving from elsewhere ends the burst during render; mirrored into a ref
+  // so that the pause reads it without re-arming on it.
+  const [burst, setBurst] = useState(false);
+  const burstRef = useRef(false);
+  useEffect(() => {
+    burstRef.current = burst;
+  }, [burst]);
+  const typing = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // A navigation to a new address — Back, a kind, Enter — outranks a pause
+  // that has not fired yet, which would otherwise land on top of it with the
+  // old kind. One to the same address changes nothing the pause reads, so the
+  // pause stands: it would not be armed again.
+  const router = useRouter();
+  useEffect(
+    () =>
+      router.subscribe('onBeforeNavigate', ({ hrefChanged }) => {
+        if (hrefChanged) clearTimeout(typing.current);
+      }),
+    [router],
+  );
+
   // Only the search params change between one search and the next, so the
   // component is never remounted and the initializer above runs once. Without
   // this, going Back leaves the box holding a query the results no longer
@@ -142,15 +178,54 @@ function Add() {
     // Each box follows only its own key: switching kind keeps a query typed
     // and not yet searched for. The year's is emptied under All too, where it
     // is not drawn and would otherwise come back holding what the URL does not.
-    if (q !== last.q) setDraft(q ?? '');
+    if (q !== last.q) {
+      if (q === sentQ) {
+        setSentQ(null);
+      } else {
+        // From anywhere but the box — Back, a link, Enter — so it sets the
+        // box, and the next keystroke is a new entry.
+        setDraft(q ?? '');
+        setBurst(false);
+      }
+    }
     if (year !== last.year || yearKindOf(kind) === undefined) {
       setYearDraft(year === undefined ? '' : String(year));
     }
-    // A selection belongs to the results it was made over; carrying it to the
-    // next search would add titles nobody is looking at any more.
-    setChosen(new Set());
+    // A new kind or year is a different search, and its selection starts
+    // empty. A new query is not cleared, since typing is a stream of new
+    // queries and a tick made three letters ago is still meant; `picked` only
+    // ever counts ticks the results on screen show.
+    if (kind !== last.kind || year !== last.year) {
+      setChosen(new Set());
+      setBurst(false);
+    }
     setOpened(null);
   }
+
+  /**
+   * Searches as the owner types, once they pause. Three letters at least:
+   * fewer is a search for nearly everything, and a two-letter title is what
+   * Enter is still for.
+   */
+  useEffect(() => {
+    const next = draft.trim() || undefined;
+    // What Enter would send, and nothing when Enter would be refused.
+    const typedYear = yearKindOf(kind) ? readYear(yearDraft) : undefined;
+    const unreadable = yearKindOf(kind) !== undefined && yearDraft.trim() !== '' && !typedYear;
+    if (unreadable || (next === q && typedYear === year)) return;
+    // The floor is for the text: a year typed under a short query still goes.
+    if (next !== q && next !== undefined && next.length < 3) return;
+    typing.current = setTimeout(() => {
+      const replace = burstRef.current;
+      setSentQ(next);
+      setBurst(true);
+      burstRef.current = true;
+      // One entry per burst of typing: Back returns to the last search the
+      // owner settled on, not to every prefix of it.
+      void navigate({ to: '/add', search: { q: next, kind, year: typedYear }, replace });
+    }, 300);
+    return () => clearTimeout(typing.current);
+  }, [draft, yearDraft, q, kind, year, navigate]);
   // Kept in step with what is open, however it closed — a new search closes
   // it during render, where a ref is not to be written.
   useEffect(() => {
@@ -162,14 +237,21 @@ function Add() {
   // included, so it goes to the title search.
   const collectionMode = kind === 'collection' && q !== undefined && !parseTitleReference(q);
   const asked = { q: q ?? '', kind: yearKind, year };
+  // The last answer stays up while the next query's loads, dimmed: typing
+  // would otherwise flash "Searching…" between every pause.
   const results = useInfiniteQuery({
     ...searchQuery(asked),
     enabled: asked.q !== '' && !collectionMode,
+    placeholderData: keepPreviousData,
   });
-  const found = unique(results.data?.pages.flatMap((page) => page.results) ?? []);
+  // Nothing when there is no query: a disabled query still hands back the
+  // last answer it kept, and ticks on it would be counted under an empty box.
+  const found =
+    asked.q === '' ? [] : unique(results.data?.pages.flatMap((page) => page.results) ?? []);
   const collections = useInfiniteQuery({
     ...collectionSearchQuery(q ?? ''),
     enabled: collectionMode,
+    placeholderData: keepPreviousData,
   });
   const parts = useQuery({
     ...collectionTitlesQuery(opened ?? 0),
@@ -413,6 +495,9 @@ function Add() {
         onSubmit={(event) => {
           event.preventDefault();
           if (yearUnreadable) return;
+          clearTimeout(typing.current);
+          // Enter settles the search: it takes over the entry typing made
+          // rather than adding a second, and the next keystroke starts anew.
           void navigate({
             to: '/add',
             search: {
@@ -420,7 +505,10 @@ function Add() {
               kind,
               year: yearKind ? readYear(yearDraft) : undefined,
             },
+            replace: burstRef.current,
           });
+          setBurst(false);
+          burstRef.current = false;
         }}
       >
         <span className="font-mono text-[9px] tracking-[.1em] text-faint">TMDB</span>
@@ -641,6 +729,10 @@ function Results({
       </p>
     );
   }
+  // An answer that is the last query's, standing in: nothing it lacks can be
+  // said of this one yet.
+  const stale = results.isPlaceholderData;
+  if (stale && found.length === 0) return <p className="text-dim">Searching…</p>;
   if (found.length === 0 && !results.hasNextPage) {
     return (
       <p className="text-dim">
@@ -655,9 +747,10 @@ function Results({
 
   const stored = found.filter((candidate) => candidate.storedTitleId !== null);
   const listed = showStored ? found : found.filter((candidate) => candidate.storedTitleId === null);
+  if (stale && listed.length === 0) return <p className="text-dim">Searching…</p>;
 
   return (
-    <div className="space-y-5">
+    <div aria-busy={stale} className={`space-y-5 transition-opacity ${stale ? 'opacity-60' : ''}`}>
       {/* Said rather than done quietly: a search that answers four of twenty
           hits and explains none of it looks broken rather than tidy. */}
       {stored.length > 0 ? (
@@ -709,7 +802,7 @@ function Results({
       {/* A button rather than loading on scroll: every page is a call against
           the owner's key, and the sticky selection bar sits where a scroll
           trigger would have to be. */}
-      {results.hasNextPage ? (
+      {results.hasNextPage && !stale ? (
         <button
           type="button"
           disabled={results.isFetchingNextPage}

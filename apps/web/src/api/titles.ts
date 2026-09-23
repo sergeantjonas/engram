@@ -392,6 +392,10 @@ export function searchQuery({ q, kind, year }: SearchParams) {
   const narrowed = `${kind ? `&kind=${kind}` : ''}${year === undefined ? '' : `&year=${year}`}`;
   return infiniteQueryOptions({
     queryKey: ['search', q, kind ?? null, year ?? null],
+    // No abort signal, on purpose. A request typing has moved past has cost
+    // its TMDB call already, and the API makes it either way; left to finish,
+    // its answer is cached for when the query comes back, where a cancelled one
+    // is thrown away and paid for again.
     queryFn: ({ pageParam }) =>
       apiFetch<SearchPage>(
         `/search?q=${encodeURIComponent(q)}${narrowed}${pageParam > 1 ? `&page=${pageParam}` : ''}`,

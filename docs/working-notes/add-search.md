@@ -1,9 +1,9 @@
 # Add search
 
-**Status:** In progress — chunks 1 to 6 landed 2026-09-23, not yet deployed; chunk 7, the optional one, is not started.
+**Status:** Built 2026-09-24 — chunks 1 to 6 landed 2026-09-23 and chunk 7 on 2026-09-24; none of it deployed yet.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
-endpoints accept. Seven chunks, one commit each, in order; chunk 7 is
-optional. No chunk carries a migration.
+endpoints accept. Seven chunks, one commit each, in order. No chunk carries a
+migration.
 
 `/add` found a title by name and nothing else. `GET /search` sent TMDB's
 `/search/multi` a `query` and no other parameter, so every search was one page
@@ -215,25 +215,48 @@ also finds *Legally Blonde* and *The Princess Diaries*. A part carries
 `media_type: 'movie'` and the fields of a film search row, and a collection
 can hold a film not yet released: *Dune: Part Three*, dated 2026-12-15.
 
-## Chunk 7 · Search as the owner types (optional)
+## Chunk 7 · Search as the owner types
 
-Quota is not what stands in the way; the rate above allows it many times
-over, and with a 300ms debounce, a three-character floor and the five-minute
-cache, typing "breaking bad" costs a handful of calls. What does:
+Landed 2026-09-24. Quota was never what stood in the way; the rate above
+allows it many times over, and with a 300ms pause, a three-letter floor and
+the five-minute cache, typing "breaking bad" costs a handful of calls. Enter
+still searches anything, which is what a two-letter title like *Up* is for.
+What did stand in the way, and how each went:
 
-- **The selection is cleared whenever `q`, `kind` or `year` changes**
-  ([add.tsx:114](../../apps/web/src/routes/add.tsx#L114)). Fixing a typo after
-  ticking two titles would drop both. The selection has to outlive a query
-  change, which `picked` already makes safe — it only adds ticks the current
-  results show.
-- **History.** Every debounced navigation is an entry unless it replaces, and
-  Back should return to the last search, not the last keystroke: replace while
-  typing, push on Enter.
-- **Flicker.** "Searching…" replaces the list today. The previous results have
-  to stay up while the next query loads (`placeholderData`).
-- **Superseded requests run to the end.** `searchQuery` does not forward
-  TanStack's `signal`. Harmless for correctness — answers are keyed by query —
-  but a request the owner typed past still spends a call.
+- **The selection was cleared whenever `q` changed.** Fixing a typo after
+  ticking two titles would have dropped both. A new query now keeps the
+  ticks; a new kind or year still clears them, being a different search.
+  `picked` only ever counts ticks the results on screen show, so a tick on a
+  title typed past is held, not added.
+- **History.** One entry per burst of typing: the first pause's search pushes,
+  the next ones replace it, and Enter, Back, a link or a new kind or year ends
+  the burst. Back returns to the last search the owner settled on, not to
+  every prefix of it. A navigation to a new address clears a pause that has
+  not fired yet, so a kind clicked or Back pressed a moment before it cannot
+  be undone by it; one to the same address leaves it to fire.
+  The pause sends what Enter would — the typed year included, under a short
+  query too — and nothing when Enter would be refused.
+- **The auth check.** `/add`'s `beforeLoad` asks `/auth/me` on the way in and
+  not on a `stay` — its own search params changing — since every pause is a
+  navigation that would otherwise wait on that round trip, and the window it
+  opened is where a Back could land under a pause still in flight. The screen
+  is already drawn by then; a session that ends mid-search is the API's 401
+  on the search itself.
+- **The box and the URL.** A `q` the box sent itself is not written back into
+  it — the URL's copy is trimmed, so a space typed before the next word would
+  vanish mid-typing. It is marked as arrived the moment it does, so Back and
+  Forward to the same query later still set the box.
+- **Flicker.** The last answer stays up, dimmed and `aria-busy`, while the
+  next query's loads (`keepPreviousData`), and *more from TMDB* waits for the
+  real answer. A stand-in with nothing to list says "Searching…" rather than
+  anything about the new query, and a stand-in list of collections is inert,
+  since one opened from it may not be in the answer that replaces it. An
+  emptied box lists nothing, though the disabled query still holds its last
+  answer, so no tick on it can be counted.
+- **Superseded requests run to the end, on purpose.** A request typing has
+  moved past cost its TMDB call when the API made it; cancelling the browser's
+  side saves nothing, and throws away an answer that, left to finish, is cached
+  for when the query comes back.
 
 ## Not planned
 

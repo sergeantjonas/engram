@@ -43,12 +43,21 @@ export function CollectionResults({
     .flatMap((page) => page.results)
     .filter((hit) => !seen.has(hit.id) && seen.add(hit.id));
 
+  // The last query's answer, standing in while this one's loads.
+  const stale = collections.isPlaceholderData;
+  if (stale && found.length === 0) return <p className="text-dim">Searching…</p>;
   if (found.length === 0 && !collections.hasNextPage) {
     return <p className="text-dim">TMDB has no collection for “{q}”.</p>;
   }
 
   return (
-    <div className="space-y-5">
+    // Inert while it stands in: opening a collection the next answer may not
+    // hold would tick films nothing on screen shows.
+    <div
+      aria-busy={stale}
+      inert={stale}
+      className={`space-y-5 transition-opacity ${stale ? 'opacity-60' : ''}`}
+    >
       <ul className="space-y-5">
         {found.map((hit) => {
           const poster = posterUrl(hit.posterPath);
@@ -103,7 +112,7 @@ export function CollectionResults({
         })}
       </ul>
 
-      {collections.hasNextPage ? (
+      {collections.hasNextPage && !stale ? (
         <button
           type="button"
           disabled={collections.isFetchingNextPage}

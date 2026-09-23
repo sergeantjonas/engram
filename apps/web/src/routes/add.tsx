@@ -18,12 +18,14 @@ import { useToast } from '../shell/Toasts.tsx';
 const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
 
 interface AddSearch {
-  q?: string;
+  q?: string | undefined;
 }
 
 export const Route = createFileRoute('/add')({
-  validateSearch: (search: Record<string, unknown>): AddSearch =>
-    typeof search.q === 'string' && search.q.trim() !== '' ? { q: search.q.trim() } : {},
+  // Every key answered, as the wall's are: one left out keeps its raw value.
+  validateSearch: (search: Record<string, unknown>): AddSearch => ({
+    q: typeof search.q === 'string' && search.q.trim() !== '' ? search.q.trim() : undefined,
+  }),
   /**
    * The one screen with nothing on it to read. Its results come from a search
    * the API will not run for a stranger and every row ends in a button they

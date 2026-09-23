@@ -12,8 +12,8 @@ const EXPLANATIONS: Record<DenyReason, string> = {
 };
 
 interface LoginSearch {
-  error?: DenyReason;
-  next?: string;
+  error?: DenyReason | undefined;
+  next?: string | undefined;
 }
 
 function isDenyReason(value: unknown): value is DenyReason {
@@ -21,13 +21,12 @@ function isDenyReason(value: unknown): value is DenyReason {
 }
 
 export const Route = createFileRoute('/login')({
+  // Every key answered, as the wall's are: one left out keeps its raw value.
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
-    ...(isDenyReason(search.error) ? { error: search.error } : {}),
+    error: isDenyReason(search.error) ? search.error : undefined,
     // The API re-clamps `next` before it signs it, so an unsafe value here
     // costs nothing more than a redirect home.
-    ...(typeof search.next === 'string' && search.next.startsWith('/')
-      ? { next: search.next }
-      : {}),
+    next: typeof search.next === 'string' && search.next.startsWith('/') ? search.next : undefined,
   }),
   component: Login,
 });

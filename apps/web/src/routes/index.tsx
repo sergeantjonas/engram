@@ -18,11 +18,18 @@ const toFilter = (search: WallSearch): TitleListFilter => ({
 });
 
 export const Route = createFileRoute('/')({
+  /**
+   * Every key answered, and `undefined` when it does not read: the router
+   * spreads this over the address as written, so a key left out keeps its raw
+   * value — `?q=5` would reach the wall as a number. Undefined is never
+   * written into a URL, and on first load the router rewrites an address
+   * holding a key that did not read, so a bad one is corrected, not kept.
+   */
   validateSearch: (search: Record<string, unknown>): WallSearch => ({
-    ...(isFacet(search.facet) ? { facet: search.facet } : {}),
-    ...(isKind(search.kind) ? { kind: search.kind } : {}),
-    ...(typeof search.q === 'string' && search.q.trim() !== '' ? { q: search.q.trim() } : {}),
-    ...(search.excluded === true ? { excluded: true } : {}),
+    facet: isFacet(search.facet) ? search.facet : undefined,
+    kind: isKind(search.kind) ? search.kind : undefined,
+    q: typeof search.q === 'string' && search.q.trim() !== '' ? search.q.trim() : undefined,
+    excluded: search.excluded === true ? true : undefined,
   }),
   /**
    * `?kind=movie&facet=going` is an address the wall never writes: the chip is

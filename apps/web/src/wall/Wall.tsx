@@ -18,12 +18,12 @@ import { TitleCard } from './TitleCard.tsx';
 
 /** The wall's URL state. `excluded` is `true` or absent: `false` is the default and never written. */
 export interface WallSearch {
-  facet?: Facet;
+  facet?: Facet | undefined;
   /** Series or movies. Absent is both, and is what the wall opens on. */
-  kind?: KindFilter;
+  kind?: KindFilter | undefined;
   /** A name to narrow by, from the chrome's search box. Trimmed and never empty. */
-  q?: string;
-  excluded?: true;
+  q?: string | undefined;
+  excluded?: true | undefined;
 }
 
 /**

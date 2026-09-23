@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, type ErrorComponentProps, redirect } from '@tanstack/react-router';
 import { meQuery } from '../api/auth.ts';
 import { exportQuery } from '../api/export.ts';
 import { titlesQuery } from '../api/titles.ts';
@@ -23,6 +23,7 @@ export const Route = createFileRoute('/settings')({
       context.queryClient.ensureQueryData(titlesQuery({ includeExcluded: true })),
       context.queryClient.ensureQueryData(exportQuery),
     ]),
+  errorComponent: SettingsError,
   component: Settings,
 });
 
@@ -33,5 +34,13 @@ function Settings() {
       <Excluded />
       <Export />
     </div>
+  );
+}
+
+function SettingsError({ error }: ErrorComponentProps) {
+  return (
+    <p role="alert" className="text-gap-tx">
+      Settings could not be loaded: {error instanceof Error ? error.message : String(error)}
+    </p>
   );
 }

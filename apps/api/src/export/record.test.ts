@@ -199,7 +199,8 @@ describe('recordTitles and recordJson', () => {
           tvdb_id: '362696',
           imdb_id: 'tt5180504',
           want: null,
-          dropped_at: '2026-01-01T00:00:00+00:00',
+          // As Postgres prints it, in its session's zone.
+          dropped_at: '2026-01-01T02:00:00.359087+02:00',
           excluded_at: null,
           note: 'lost the thread',
         },
@@ -226,7 +227,7 @@ describe('recordTitles and recordJson', () => {
         ids: { tmdb: '71912', tvdb: '362696', imdb: 'tt5180504' },
         intent: {
           want: false,
-          droppedAt: '2026-01-01T00:00:00+00:00',
+          droppedAt: '2026-01-01T00:00:00.359Z',
           excludedAt: null,
           note: 'lost the thread',
         },

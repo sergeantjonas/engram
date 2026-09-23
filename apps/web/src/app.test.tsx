@@ -133,6 +133,15 @@ describe('the shell', () => {
     const continueLink = screen.getByRole('link', { name: 'Continue with GitHub' });
     expect(continueLink.getAttribute('href')).toContain('next=%2Ftitles%2F3');
   });
+
+  it('says nothing for a reason it does not know', async () => {
+    stubApi(() => json({ isOwner: false }));
+    await renderAt('/login?error=bogus&next=https%3A%2F%2Felsewhere.example');
+
+    const continueLink = await screen.findByRole('link', { name: 'Continue with GitHub' });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(continueLink.getAttribute('href')).not.toContain('elsewhere');
+  });
 });
 
 const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
@@ -229,35 +238,36 @@ describe('the title pane', () => {
     title({ id: 'show-1', name: 'Bleach', state: 'in_progress' }),
     title({ id: 'film-1', kind: 'movie', key: 'movie:tmdb:2', name: 'Heat', state: 'seen' }),
   ];
+  const detail = (summary: TitleSummary | undefined) => ({
+    title: { ...summary, onDisk: null },
+    ids: {},
+    backdropPath: null,
+    runtimeMin: null,
+    director: null,
+    cast: [],
+    collection: null,
+    airing: { lastAirDate: null, next: null, fetchedAt: null },
+    figures: {
+      plays: 0,
+      rewatched: 0,
+      manualPlays: 0,
+      watchedMin: 0,
+      untimed: 0,
+      firstWatchedAt: null,
+      firstWatchedPrecision: null,
+      lastWatchedAt: null,
+      lastWatchedPrecision: null,
+    },
+    recentActivity: [],
+    seasons: [],
+  });
 
   it('narrows the pane to one kind without leaving the title', async () => {
     stubApi((url) =>
       url.endsWith('/titles')
         ? json({ titles: library })
         : url.includes('/titles/')
-          ? json({
-              title: { ...library[0], onDisk: null },
-              ids: {},
-              backdropPath: null,
-              runtimeMin: null,
-              director: null,
-              cast: [],
-              collection: null,
-              airing: { lastAirDate: null, next: null, fetchedAt: null },
-              figures: {
-                plays: 0,
-                rewatched: 0,
-                manualPlays: 0,
-                watchedMin: 0,
-                untimed: 0,
-                firstWatchedAt: null,
-                firstWatchedPrecision: null,
-                lastWatchedAt: null,
-                lastWatchedPrecision: null,
-              },
-              recentActivity: [],
-              seasons: [],
-            })
+          ? json(detail(library[0]))
           : json({ isOwner: true }),
     );
     await renderAt('/titles/show-1?kind=show');
@@ -277,29 +287,7 @@ describe('the title pane', () => {
       url.endsWith('/titles')
         ? json({ titles: library })
         : url.includes('/titles/')
-          ? json({
-              title: { ...library[1], onDisk: null },
-              ids: {},
-              backdropPath: null,
-              runtimeMin: null,
-              director: null,
-              cast: [],
-              collection: null,
-              airing: { lastAirDate: null, next: null, fetchedAt: null },
-              figures: {
-                plays: 0,
-                rewatched: 0,
-                manualPlays: 0,
-                watchedMin: 0,
-                untimed: 0,
-                firstWatchedAt: null,
-                firstWatchedPrecision: null,
-                lastWatchedAt: null,
-                lastWatchedPrecision: null,
-              },
-              recentActivity: [],
-              seasons: [],
-            })
+          ? json(detail(library[1]))
           : json({ isOwner: true }),
     );
     // A bookmark can name a kind that excludes the title it points at, and a
@@ -312,6 +300,23 @@ describe('the title pane', () => {
       'page',
     );
     expect(within(pane).getByRole('link', { name: /Bleach/ })).toBeDefined();
+  });
+
+  it('shows every kind for one it cannot read', async () => {
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({ titles: library })
+        : url.includes('/titles/')
+          ? json(detail(library[0]))
+          : json({ isOwner: true }),
+    );
+    await renderAt('/titles/show-1?kind=bogus');
+
+    const pane = await screen.findByRole('navigation', { name: 'Every title' });
+    expect(within(pane).getByRole('link', { name: /Heat/ })).toBeDefined();
+    expect(within(pane).getByRole('link', { name: 'All' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
   });
 });
 
@@ -468,15 +473,25 @@ describe('the wall', () => {
     // A URL the wall never writes. Honouring it would answer a plausible
     // bookmark with an empty wall and nothing lit to explain it, because the
     // chip is not drawn under Movies.
-    const router = await renderAt('/?kind=movie&facet=going');
-    console.log(
-      'SEARCH',
-      JSON.stringify(router.state.location.search),
-      'MATCH',
-      JSON.stringify(router.state.matches.at(-1)?.search),
-    );
+    await renderAt('/?kind=movie&facet=going');
 
     await screen.findByRole('heading', { name: 'Heat' });
+    expect(screen.getByRole('link', { name: /Any state 1/ }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+  });
+
+  it('ignores what it cannot read in its address', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({ titles: [title({ name: 'Bleach' })] })
+        : json({ isOwner: true }),
+    );
+    // No such facet, and a number where a name goes — the router parses `5`
+    // as one.
+    await renderAt('/?facet=bogus&q=5');
+
+    await screen.findByRole('heading', { name: 'Bleach' });
     expect(screen.getByRole('link', { name: /Any state 1/ }).getAttribute('aria-current')).toBe(
       'page',
     );
@@ -2060,6 +2075,18 @@ describe('adding a title', () => {
     expect(screen.getByRole('heading', { name: /Breaking Bad/ }).textContent).toContain('series');
   });
 
+  it('asks nothing for a query it cannot read', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),
+    );
+    // The router parses `5` as a number, and a search box holds text.
+    await renderAt('/add?q=5');
+
+    const box = await screen.findByRole<HTMLInputElement>('textbox', { name: 'Search TMDB' });
+    expect(box.value).toBe('');
+    expect(calls.some((call) => call.url.includes('/search'))).toBe(false);
+  });
+
   it('puts the typed query in the URL so the search is a place', async () => {
     const calls = stubApi((url) =>
       url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),
@@ -2513,6 +2540,22 @@ describe('settings', () => {
     expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
     // Turned away before the excluded listing was asked for on their behalf.
     expect(calls.some((call) => call.url.includes('includeExcluded'))).toBe(false);
+  });
+
+  it('says so when a block cannot be loaded, and keeps the chrome', async () => {
+    stubApi((url) =>
+      url.includes('/export')
+        ? json({ error: 'internal', message: 'the request could not be completed' }, 500)
+        : url.includes('/titles?includeExcluded=true')
+          ? json({ titles: [excluded] })
+          : elsewhere(url),
+    );
+    await renderAt('/settings');
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('Settings could not be loaded'),
+    );
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeDefined();
   });
 
   it('lists only the excluded titles, each leading to its page', async () => {

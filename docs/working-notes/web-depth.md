@@ -8,7 +8,9 @@ Arc 3 landed 2026-09-22 in five commits. Arc 4 is complete, all of it
 landed 2026-09-22. Arc 3 and arc 4's first three chunks deployed the same
 day with no migration, and `GET /history` answered on the box as the
 rehearsal had — 461 plays over 24 titles, all exact, 116 KB. Chunks 4 and
-5 are not yet deployed and carry no migration. Arc 5 is next.
+5 deployed 2026-09-23, no migration, and the export downloaded from the box
+matched the local rehearsal's shape; its intent timestamps are written in
+UTC since, not yet deployed. Arc 5 is next.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 

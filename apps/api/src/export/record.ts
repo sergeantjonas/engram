@@ -282,6 +282,12 @@ interface GapRow extends Record<string, unknown> {
 }
 
 /**
+ * In UTC, as `watchedAt` is written: Postgres prints a timestamp in its
+ * session's zone, which is the server's business and not the record's.
+ */
+const instant = (value: string | null) => (value === null ? null : new Date(value).toISOString());
+
+/**
  * Every title, excluded ones included — "not mine" is part of the record, and
  * the flag says so on the row — with its intent and its explained holes. Two
  * statements rather than a page at a time: a library is hundreds of rows where
@@ -319,8 +325,8 @@ export async function recordTitles(db: Database): Promise<ExportTitle[]> {
     ids: { tmdb: row.tmdb_id, tvdb: row.tvdb_id, imdb: row.imdb_id },
     intent: {
       want: row.want ?? false,
-      droppedAt: row.dropped_at,
-      excludedAt: row.excluded_at,
+      droppedAt: instant(row.dropped_at),
+      excludedAt: instant(row.excluded_at),
       note: row.note,
     },
     gaps: byTitle.get(row.key) ?? [],

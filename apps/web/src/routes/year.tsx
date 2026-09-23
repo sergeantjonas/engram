@@ -19,8 +19,8 @@ import {
 /** The selection, in the URL: a day is a place, and the back button should return to it. */
 interface YearSearch {
   /** The year the pane reads, when no day is picked. A day implies its own year. */
-  year?: number;
-  day?: Day;
+  year?: number | undefined;
+  day?: Day | undefined;
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -29,15 +29,14 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const isDay = (value: unknown): value is Day =>
   typeof value === 'string' && DAY.test(value) && addDays(value, 0) === value;
 
-const readSearch = (search: Record<string, unknown>): YearSearch => ({
-  ...(isDay(search.day) ? { day: search.day } : {}),
-  ...(typeof search.year === 'number' && Number.isInteger(search.year)
-    ? { year: search.year }
-    : {}),
-});
-
 export const Route = createFileRoute('/year')({
-  validateSearch: readSearch,
+  // Every key answered, as the wall's are: one left out keeps its raw value,
+  // and `?day=2025-02-30` would still be read.
+  validateSearch: (search: Record<string, unknown>): YearSearch => ({
+    day: isDay(search.day) ? search.day : undefined,
+    year:
+      typeof search.year === 'number' && Number.isInteger(search.year) ? search.year : undefined,
+  }),
   loader: ({ context }) => context.queryClient.ensureQueryData(historyQuery),
   errorComponent: YearError,
   component: YearPage,
@@ -53,10 +52,7 @@ export const Route = createFileRoute('/year')({
  * on.
  */
 function YearPage() {
-  // Read through the check again: the router merges this route's search over
-  // the root's, which is the address as written, so a key the validator
-  // dropped — `?day=2025-02-30` — is still there to be read.
-  const search = readSearch(Route.useSearch());
+  const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data } = useSuspenseQuery(historyQuery);
 

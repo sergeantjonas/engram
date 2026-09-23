@@ -18,10 +18,12 @@ import { isKind, type KindFilter } from '../wall/facets.ts';
 export const Route = createFileRoute('/titles/$id')({
   /**
    * The pane's kind filter, in the URL for the same reason the wall's is: a
-   * filter is a place, and the back button should return to it.
+   * filter is a place, and the back button should return to it. Answered
+   * even when it does not read, as the wall's keys are.
    */
-  validateSearch: (search: Record<string, unknown>): { kind?: KindFilter } =>
-    isKind(search.kind) ? { kind: search.kind } : {},
+  validateSearch: (search: Record<string, unknown>): { kind?: KindFilter | undefined } => ({
+    kind: isKind(search.kind) ? search.kind : undefined,
+  }),
   // Both, in parallel: the page is the title and the pane beside it is the
   // whole library, and waiting for one after the other would show the split
   // half-drawn.

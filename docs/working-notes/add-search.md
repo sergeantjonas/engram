@@ -88,15 +88,17 @@ below the route either: `show` asks `/search/tv` with `first_air_date_year`,
 carries no `media_type`.
 
 On `/add`, the wall's kind control — All / Series / Movies, its chip classes
-moved to `wall/chips.ts` so both screens draw one control — and a year field
-beside the box, all in the URL as `?kind=&year=`. A kind is a link, so it
-searches again at once over the query already in the URL; All drops the year,
-and `validateSearch` drops a year that arrives without a kind rather than
-sending it to be refused. The year field is labelled *First aired* or
-*Released* by kind, and anything in it but a four-digit year disables Search
-rather than being quietly left out. Switching kind keeps a query typed and not yet
-searched for; a new query, kind or year clears the selection, which belongs
-to the results it was made over. A title added is patched into every cached
+moved to `wall/chips.ts` so both screens draw one control — and a year field,
+both inside the search bar and in the URL as `?kind=&year=`. The bar is the
+mockup's — the `TMDB` label, then the kind beside it — and Search is a quiet
+chip rather than jade (see [web-design.md](web-design.md) § 03). A kind is a
+link, so it searches again at once over the query already in the URL; All
+drops the year, and `validateSearch` drops a year that arrives without a kind
+rather than sending it to be refused. The year field is labelled *First
+aired* or *Released* by kind, and anything in it but a four-digit year
+disables Search rather than being quietly left out. Switching kind keeps a
+query typed and not yet searched for; a new query, kind or year clears the
+selection, which belongs to the results it was made over. A title added is patched into every cached
 search rather than only the one it was added from, since the same query under
 All or the other kind holds the same candidate for five minutes and would
 offer it again. The empty answer names what narrowed it — "TMDB has nothing

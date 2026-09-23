@@ -403,9 +403,13 @@ held under instead of offering to add it twice. `GET /search` answers which
 those are, because a show is keyed by its tvdb id and the browser never sees
 both ids for the same title.
 
-A search narrows by kind with the wall's own control, All / Series / Movies,
-under the box, and by year once a kind is chosen — the field is not there
-under All, because TMDB's mixed search takes no year. Since 2026-09-23;
+The search is the mockup's one bar: squared on `--surf`, the mono `TMDB`
+label, then the wall's own kind control, All / Series / Movies, in the slot
+beside it — the kind picks which search TMDB runs, so it is part of the
+question, not a filter under the answer. A year field joins the bar once a
+kind is chosen and is not there under All, because TMDB's mixed search takes
+no year. Search is a quiet chip, not jade: on this screen jade is for what
+writes to the record. The screen stops at 48rem. Since 2026-09-23;
 [add-search.md](add-search.md) holds the rest of that arc.
 
 This screen is why `watched_precision` exists. "Breaking Bad, sometime around

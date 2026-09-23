@@ -15,7 +15,7 @@ import {
 } from '../api/titles.ts';
 import { useToast } from '../shell/Toasts.tsx';
 import { Tip } from '../shell/Tooltip.tsx';
-import { ACTIVE_SEG, SEG } from '../wall/chips.ts';
+import { ACTIVE_SEG, CHIP, SEG } from '../wall/chips.ts';
 import { isKind, KIND_LABEL, KINDS, type KindFilter } from '../wall/facets.ts';
 
 const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
@@ -223,11 +223,17 @@ function Add() {
   const busy = add.isPending || addSelected.isPending;
 
   return (
-    <div className="space-y-6">
+    // Past 48rem a result row is a poster at one edge and its button at the
+    // other, with a screen's width of nothing between them.
+    <div className="max-w-3xl space-y-6">
       <h1 className="text-2xl font-semibold">Add a title</h1>
 
+      {/* One bar, as the mockup draws it — the TMDB label, then the kind
+          beside it: the kind picks which search TMDB runs, so it belongs to
+          the question rather than filtering the answer. On a phone the
+          query wraps under the kind, since one line cannot hold it all. */}
       <form
-        className="flex gap-2"
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 border border-line bg-surf px-3 py-2 has-[input:focus]:border-dim"
         onSubmit={(event) => {
           event.preventDefault();
           if (yearUnreadable) return;
@@ -241,45 +247,11 @@ function Add() {
           });
         }}
       >
-        <input
-          aria-label="Search TMDB"
-          placeholder={`Search for a ${kind === 'show' ? 'series' : kind === 'movie' ? 'film' : 'film or series'}`}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          className="min-w-0 flex-1 rounded border border-line bg-bg px-3 py-2"
-        />
-        {/* Only beside a kind, the one search TMDB takes a year on: a field
-            that did nothing under All would be worse than no field. Labelled
-            by what the year is of, since a series matches on its first air
-            date and not on any later season's. */}
-        {kind ? (
-          <Tip label={kind === 'show' ? 'First aired' : 'Released'}>
-            <input
-              aria-label={kind === 'show' ? 'First aired' : 'Released'}
-              aria-invalid={yearUnreadable}
-              placeholder="Year"
-              inputMode="numeric"
-              maxLength={4}
-              value={yearDraft}
-              onChange={(event) => setYearDraft(event.target.value)}
-              className="w-20 rounded border border-line bg-bg px-3 py-2 font-mono aria-invalid:border-gap-tx"
-            />
-          </Tip>
-        ) : null}
-        <button
-          type="submit"
-          disabled={yearUnreadable}
-          className="rounded bg-jade px-4 py-2 font-medium text-on-jade disabled:opacity-50"
-        >
-          Search
-        </button>
-      </form>
-
-      {/* Links, as the wall's kind is: a narrowed search is a place too. A
-          kind searches again at once over the query already in the URL, and
-          All drops the year, which nothing searching both kinds can take. */}
-      <nav aria-label="Narrow the search" className="flex">
-        <span className="isolate flex items-center">
+        <span className="font-mono text-[9px] tracking-[.1em] text-faint">TMDB</span>
+        {/* Links, as the wall's kind is: a narrowed search is a place too. A
+            kind searches again at once over the query already in the URL, and
+            All drops the year, which nothing searching both kinds can take. */}
+        <nav aria-label="Narrow the search" className="isolate flex items-center">
           <Link
             to="/add"
             search={{ q }}
@@ -301,8 +273,52 @@ function Add() {
               {KIND_LABEL[option]}
             </Link>
           ))}
-        </span>
-      </nav>
+        </nav>
+        {/* Wraps as one piece, so a narrow screen breaks the bar between the
+            kind and the query rather than leaving the query a sliver beside
+            the kind and the year stranded on a line of its own. */}
+        <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
+          {/* The outline goes because the bar's border takes focus instead:
+              the box is borderless inside it, and a ring would draw a second
+              box. Hidden rather than none, so forced colours, which paint both
+              of the bar's borders one colour, still get a ring. */}
+          <input
+            aria-label="Search TMDB"
+            placeholder={`Search for a ${kind === 'show' ? 'series' : kind === 'movie' ? 'film' : 'film or series'}`}
+            enterKeyHint="search"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            className="min-w-0 flex-1 bg-transparent py-1 text-[15px] text-tx outline-hidden placeholder:text-dim"
+          />
+          {/* Only beside a kind, the one search TMDB takes a year on: a field
+              that did nothing under All would be worse than no field. Labelled
+              by what the year is of, since a series matches on its first air
+              date and not on any later season's. */}
+          {kind ? (
+            <Tip label={kind === 'show' ? 'First aired' : 'Released'}>
+              <input
+                aria-label={kind === 'show' ? 'First aired' : 'Released'}
+                aria-invalid={yearUnreadable}
+                placeholder="Year"
+                inputMode="numeric"
+                maxLength={4}
+                value={yearDraft}
+                onChange={(event) => setYearDraft(event.target.value)}
+                className="w-14 border-l border-line bg-transparent py-1 pl-3 font-mono text-sm text-tx outline-hidden placeholder:text-dim aria-invalid:border-gap-tx aria-invalid:text-gap-tx"
+              />
+            </Tip>
+          ) : null}
+          {/* Quiet rather than jade: jade on this screen is for what writes to
+              the record, and a search writes nothing. Enter does the same. */}
+          <button
+            type="submit"
+            disabled={yearUnreadable}
+            className={`${CHIP} disabled:opacity-50 disabled:hover:border-line`}
+          >
+            Search
+          </button>
+        </div>
+      </form>
 
       <Results
         q={q}

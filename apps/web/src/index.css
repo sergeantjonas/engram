@@ -59,6 +59,23 @@
   view-transition-name: poster;
 }
 
+/* A title page takes its poster's colour (title/tint.ts): its ground a
+   little and its surfaces more, which is about the least that reads as a cast
+   rather than as nothing; at five percent on the surfaces alone the change
+   measured under a just-noticeable difference. Only where `color-mix` is
+   supported, since Tailwind's fallback for a mix with a variable in it is the
+   variable itself — every surface painted solid in the poster's colour. */
+@supports (color: color-mix(in oklab, red, red)) {
+  [data-tint] {
+    /* biome-ignore-start lint/correctness/noMissingVarFunction: `--theme()` takes a token's bare name and inlines its value, which is what keeps these from referring to themselves. */
+    --color-bg: color-mix(in oklab, var(--tint) 6%, --theme(--color-bg inline));
+    --color-surf: color-mix(in oklab, var(--tint) 15%, --theme(--color-surf inline));
+    --color-raise: color-mix(in oklab, var(--tint) 15%, --theme(--color-raise inline));
+    /* biome-ignore-end lint/correctness/noMissingVarFunction: as above. */
+    background-color: var(--color-bg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),

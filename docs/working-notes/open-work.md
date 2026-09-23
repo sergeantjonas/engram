@@ -289,8 +289,9 @@ the viewer wants of a title. The SPA calls all four.
    landmarks and ticks. Arc 4 is complete and deployed, chunks 4 and 5 on
    2026-09-23. Arc 5, the visual pass: chunk 1 landed 2026-09-23 — a
    series' state bar is its progress, jade for the share seen — and chunk 2
-   the same day, a wall tile growing into the title page's poster; neither
-   deployed yet. Ambient tint next.
+   the same day, a wall tile growing into the title page's poster, and
+   chunk 3, a title page tinted by its poster; none deployed yet. Empty and
+   first-run states next.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

@@ -1,5 +1,6 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, type ErrorComponentProps, Link } from '@tanstack/react-router';
+import type { CSSProperties } from 'react';
 import { ApiError } from '../api/client.ts';
 import { type TitleDetail, titleQuery, titlesQuery } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
@@ -12,6 +13,7 @@ import { SeasonGrid } from '../title/SeasonGrid.tsx';
 import { Section } from '../title/Section.tsx';
 import { TitleHeader } from '../title/TitleHeader.tsx';
 import { TitleList } from '../title/TitleList.tsx';
+import { tintQuery } from '../title/tint.ts';
 import { YearBar } from '../title/YearBar.tsx';
 import { isKind, type KindFilter } from '../wall/facets.ts';
 
@@ -27,11 +29,16 @@ export const Route = createFileRoute('/titles/$id')({
   // Both, in parallel: the page is the title and the pane beside it is the
   // whole library, and waiting for one after the other would show the split
   // half-drawn.
-  loader: ({ context, params }) =>
-    Promise.all([
+  loader: async ({ context, params }) => {
+    const [detail] = await Promise.all([
       context.queryClient.ensureQueryData(titleQuery(params.id)),
       context.queryClient.ensureQueryData(titlesQuery()),
-    ]),
+    ]);
+    // Started, not waited for: the page draws without its tint rather than
+    // later. Loaders also run on hover, so the colour is usually read before
+    // the click that opens the page.
+    void context.queryClient.prefetchQuery(tintQuery(detail.title.posterPath));
+  },
   errorComponent: TitleError,
   component: TitlePage,
 });
@@ -55,6 +62,7 @@ function TitlePage() {
   // what has aired. Compared as `YYYY-MM-DD` against an air date in the same
   // shape, the way the API does it.
   const today = new Date().toISOString().slice(0, 10);
+  const { data: tint } = useQuery(tintQuery(title.posterPath));
 
   return (
     // Out of the layout's padding so the pane can sit flush against the rail
@@ -66,7 +74,14 @@ function TitlePage() {
       {/* Keyed on the title: the date remembered for one page must not open
           the next title's form. */}
       <LastDateProvider key={id}>
-        <div className="min-w-0 space-y-5 p-[18px]">
+        {/* The column and not the pane: the list down the left is the whole
+            library, and this title's colour is not its business. The ground
+            eases in, since the colour can arrive a few frames after the page. */}
+        <div
+          data-tint={tint ? '' : undefined}
+          style={tint ? ({ '--tint': tint } as CSSProperties) : undefined}
+          className="min-w-0 space-y-5 p-[18px] transition-colors duration-500"
+        >
           <TitleHeader {...data} today={today} />
 
           {/* What was watched and what was meant, on one row. The marking half

@@ -85,6 +85,13 @@ which is the whole reason the affirmative accent is green rather than the
 warmer colour a media app would reach for first. On jade fills, text is
 `#0B1713`, not black.
 
+A title page takes a cast from its poster: the column's ground mixes in 6%
+of the poster's dominant colour and `--surf` and `--raise` 15%, while the
+library pane beside it stays espresso, and so do popovers and tips, which are
+drawn over the whole page rather than inside the column. A colour too light
+to sit under text is darkened first. Added 2026-09-23; see
+[web-depth.md](web-depth.md) arc 5 chunk 3.
+
 **Type.** Two families split by job rather than by size, both from Google
 Fonts.
 

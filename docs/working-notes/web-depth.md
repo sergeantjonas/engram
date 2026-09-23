@@ -10,9 +10,9 @@ day with no migration, and `GET /history` answered on the box as the
 rehearsal had — 461 plays over 24 titles, all exact, 116 KB. Chunks 4 and
 5 deployed 2026-09-23, no migration, and the export downloaded from the box
 matched the local rehearsal's shape; its intent timestamps are written in
-UTC since, not yet deployed. Arc 5 chunks 1 and 2, the progress bar and
-the view transition, landed 2026-09-23 and are not yet deployed; chunk 3
-is next.
+UTC since, not yet deployed. Arc 5 chunks 1 to 3, the progress bar, the
+view transition and the ambient tint, landed 2026-09-23 and are not yet
+deployed; chunk 4 is next.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -646,11 +646,30 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    page is pictured, and back to the wall restored to where it was
    scrolled. With reduced motion emulated the same transition is over in
    79ms, against 2.5s for the slowed one.
-3. **Ambient tint.** A dominant colour per title, extracted client-side from
-   the poster with a canvas once it loads and cached in memory, mixed into
-   the title page's `--surf` and `--raise` with `color-mix()` at four to six
-   percent. Stored server-side by `backfill:metadata` only if the client
-   extraction visibly flashes.
+3. ~~**Ambient tint.**~~ Landed 2026-09-23. A dominant colour per title,
+   read client-side from the poster with a canvas and kept in the query
+   cache for the session, mixed into the title column with `color-mix()`.
+   Not at the four to six percent planned: on `--surf` and `--raise` alone
+   that measured ΔE ≈ 0.009 in OKLab, under a just-noticeable difference,
+   and screenshots with and without it could not be told apart — the
+   column is mostly ground, and surfaces are the year bar and the unseen
+   cells. Chosen with the owner from rendered variants: 15% on the surfaces
+   and 6% on the column's ground, which reads as a cast; at 20% and 8% the
+   edge against the untinted pane starts to show.
+
+   Read from TMDB's w92 poster, not the drawn w342: TMDB sends CORS headers
+   only to a request with an Origin and does not `Vary` on it, so a canvas
+   read of a poster the wall had already fetched would be refused. The
+   colour is the heaviest of 512 coarse buckets weighted by chroma, with
+   black, white and grey weighing nothing, so a colourless poster leaves the
+   page alone. The route's loader starts the read without waiting, and
+   loaders run on hover: in headless Chrome the tint landed in the same
+   frame as the heading after a hover, 100ms after it on a click with none,
+   and 37ms after on a cold direct load. The ground eases in over 500ms and
+   the surfaces, a few small areas, change at once; nothing is stored
+   server-side. A tint lighter than OKLab L 0.75 is darkened to it, hue
+   kept: uncapped, a cream poster took the dim numbers on an unseen cell to
+   4.1:1, and capped the worst of any colour is 4.6:1.
 4. **Empty and first-run states.** A title with no events shows a header and
    nothing else; the wall with no titles shows nothing. Both point at "Add
    watched" in a sentence, and the title page says "Nothing on record yet.

@@ -322,6 +322,36 @@ describe('the title pane', () => {
   });
 });
 
+describe('the tint', () => {
+  it("tints a title's column, not the pane beside it, with its poster's colour", async () => {
+    const lost = title({ id: 'show-2', key: 'show:tvdb:2', name: 'Lost', posterPath: '/lost.jpg' });
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({ titles: [lost] })
+        : url.includes('/titles/show-2')
+          ? json(detail(lost))
+          : json({ isOwner: true }),
+    );
+    // happy-dom has no canvas; this stands in for a poster that is one red
+    // pixel.
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: () => {},
+      getImageData: () => ({ data: new Uint8ClampedArray([200, 40, 30, 255]) }),
+    } as never);
+    try {
+      await renderAt('/titles/show-2');
+
+      await waitFor(() => expect(document.querySelector('[data-tint]')).not.toBeNull());
+      const column = document.querySelector<HTMLElement>('[data-tint]');
+      expect(column?.style.getPropertyValue('--tint')).toBe('rgb(200 40 30)');
+      expect(column?.contains(screen.getByRole('heading', { level: 1, name: 'Lost' }))).toBe(true);
+      expect(column?.contains(screen.getByRole('navigation', { name: 'Every title' }))).toBe(false);
+    } finally {
+      getContext.mockRestore();
+    }
+  });
+});
+
 describe('the wall', () => {
   it('draws a card per title and narrows to the facet the URL names', async () => {
     const calls = stubApi((url) =>

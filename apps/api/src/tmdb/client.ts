@@ -1,4 +1,4 @@
-import type { ExternalIds, TitleKind } from '@engram/shared';
+import type { ExternalIds, TitleKind, TitleReference } from '@engram/shared';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 const TIMEOUT_MS = 8000;
@@ -139,6 +139,8 @@ export interface TmdbSearchPage {
 
 export interface TmdbClient {
   search(query: string, filter?: TmdbSearchFilter, page?: number): Promise<TmdbSearchPage>;
+  /** What a pasted id or link names: usually one title, none when TMDB has no such id. */
+  find(reference: TitleReference): Promise<TmdbCandidate[]>;
   details(kind: TitleKind, tmdbId: string): Promise<TmdbTitleDetails>;
   seasonEpisodes(tmdbId: string, season: number): Promise<TmdbEpisode[]>;
   collection(id: number): Promise<TmdbCollection>;
@@ -189,6 +191,14 @@ interface DetailsBody {
   } | null;
   external_ids?: { tvdb_id?: number | null; imdb_id?: string | null };
   seasons?: { season_number?: number; episode_count?: number }[];
+}
+
+/** `/find`, which sorts what an external id names by what kind of thing it is. */
+interface FindBody {
+  movie_results?: SearchRow[];
+  tv_results?: SearchRow[];
+  tv_episode_results?: { show_id?: number }[];
+  tv_season_results?: { show_id?: number }[];
 }
 
 interface CollectionBody {
@@ -314,6 +324,21 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
     }
   }
 
+  /**
+   * One title as a candidate, from its details: the body carries every field a
+   * search row does. A 404 is TMDB not having that id, which is an answer.
+   */
+  async function lookup(kind: TitleKind, tmdbId: string): Promise<TmdbCandidate[]> {
+    try {
+      const body = (await get(`/${kind === 'show' ? 'tv' : 'movie'}/${tmdbId}`, {})) as SearchRow;
+      const candidate = candidateOf(body, kind);
+      return candidate ? [candidate] : [];
+    } catch (error) {
+      if (error instanceof TmdbError && error.upstreamStatus === 404) return [];
+      throw error;
+    }
+  }
+
   return {
     async search(query, filter, page = 1) {
       const narrowed = filter ? KIND_SEARCH[filter.kind] : null;
@@ -335,6 +360,26 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
         // A body that does not say is the last page, not the first of many.
         totalPages: typeof body?.total_pages === 'number' ? body.total_pages : page,
       };
+    },
+
+    async find(reference) {
+      if (reference.source === 'tmdb') return lookup(reference.kind, reference.id);
+
+      const body = (await get(`/find/${reference.id}`, {
+        external_source: 'imdb_id',
+      })) as FindBody | null;
+      // The list a row arrives in already says its kind.
+      const titles = [
+        ...(body?.movie_results ?? []).map((row) => candidateOf(row, 'movie')),
+        ...(body?.tv_results ?? []).map((row) => candidateOf(row, 'show')),
+      ].filter((c): c is TmdbCandidate => c !== null);
+      if (titles.length > 0) return titles;
+
+      // An episode's or a season's id names the series it belongs to, which
+      // is the thing that can be added.
+      const showId =
+        body?.tv_episode_results?.[0]?.show_id ?? body?.tv_season_results?.[0]?.show_id;
+      return typeof showId === 'number' ? lookup('show', String(showId)) : [];
     },
 
     async details(kind, tmdbId) {

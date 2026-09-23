@@ -2421,6 +2421,20 @@ describe('adding a title', () => {
     await screen.findByText('1 title on the record as wanted.');
   });
 
+  it('says a pasted id names nothing TMDB has, without the narrowing it ignored', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search')
+        ? json({ results: [], page: 1, hasMore: false })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=tt9999999999&kind=movie');
+
+    await screen.findByText('TMDB has no title under “tt9999999999”.');
+    expect(calls.find((call) => call.url.includes('/search'))?.url).toBe(
+      'http://localhost:2012/search?q=tt9999999999&kind=movie',
+    );
+  });
+
   it('asks nothing for a query it cannot read', async () => {
     const calls = stubApi((url) =>
       url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),

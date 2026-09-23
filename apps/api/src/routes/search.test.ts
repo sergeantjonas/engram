@@ -35,9 +35,15 @@ const finding =
   (...results: TmdbCandidate[]): TmdbClient['search'] =>
   async (_query, _filter, page = 1) => ({ results, page, totalPages: page });
 
-/** Only `search` is ever exercised here; the rest satisfy the interface. */
-const searching = (search: TmdbClient['search']): TmdbClient => ({
+/** Only `search` and `find` are ever exercised here; the rest satisfy the interface. */
+const searching = (
+  search: TmdbClient['search'],
+  find: TmdbClient['find'] = async () => {
+    throw new Error('not reached');
+  },
+): TmdbClient => ({
   search,
+  find,
   details: async () => {
     throw new Error('not reached');
   },
@@ -176,6 +182,30 @@ describe('GET /search', () => {
 
     expect(last.json().hasMore).toBe(false);
     expect(past.statusCode).toBe(400);
+  });
+
+  it('answers a pasted id with the title it names, whatever kind is chosen', async () => {
+    const asked: Parameters<TmdbClient['find']>[] = [];
+    const server = start(
+      searching(finding(), async (...args) => {
+        asked.push(args);
+        return [witcher];
+      }),
+    );
+    storing([{ id: 'title-1', kind: 'show', tmdbId: witcher.tmdbId }]);
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=tt5180504&kind=movie&year=1999',
+      headers: signedIn,
+    });
+
+    expect(asked).toEqual([[{ source: 'imdb', id: 'tt5180504' }]]);
+    expect(response.json()).toEqual({
+      results: [{ ...witcher, storedTitleId: 'title-1' }],
+      page: 1,
+      hasMore: false,
+    });
   });
 
   // `/search/multi` takes no year, so there is no search a year alone could ask.

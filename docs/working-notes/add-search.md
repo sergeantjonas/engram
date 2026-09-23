@@ -1,6 +1,6 @@
 # Add search
 
-**Status:** In progress — chunks 1 to 4 landed 2026-09-23, not yet deployed.
+**Status:** In progress — chunks 1 to 5 landed 2026-09-23, not yet deployed.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
 endpoints accept. Seven chunks, one commit each, in order; chunk 7 is
 optional. No chunk carries a migration.
@@ -12,7 +12,7 @@ arrived. There was no way to say *the film*, no way to say *the 1984 one*, and
 no way to see a twenty-first result. A remake, a franchise or a common word
 buried the title being looked for, and the only way out was guessing a better
 query. The search itself is `TmdbClient.search`
-([client.ts:301](../../apps/api/src/tmdb/client.ts#L301)).
+([client.ts:343](../../apps/api/src/tmdb/client.ts#L343)).
 
 ## Constraints that carry over
 
@@ -38,7 +38,7 @@ are verified against a live key by the chunk that first calls them.
 | `/search/multi` | `query`, `page` — no year | All |
 | `/search/movie` | `query`, `page`, `year`, `primary_release_year`, `region` | chunks 1–2 |
 | `/search/tv` | `query`, `page`, `year`, `first_air_date_year` | chunks 1–2 |
-| `/find/{id}` | `external_source=imdb_id` (reference only) | chunk 5 |
+| `/find/{id}` | `external_source=imdb_id` — measured, see chunk 5 | chunk 5 |
 | `/search/collection` | `query`, `page` (reference only) | chunk 6 |
 
 Two year parameters each, and the difference matters. A film's `year` matches
@@ -162,14 +162,26 @@ gone in five seconds.
 
 ## Chunk 5 · Paste an id or a link
 
-An IMDb id (`tt0903747`), an IMDb title URL or a themoviedb.org
-`/movie/603` or `/tv/1396` URL answers with the one title it names. The parser
-belongs in `packages/shared` next to `parseGuid`: identity is external, and
-the browser may want the same test later. `/search` detects it itself, so the
-answer is still a candidate list and the screen changes nothing but its
-placeholder. A TMDB URL costs a details call; an IMDb id costs `/find`. An
-IMDb id naming an episode resolves to its show or answers nothing — decided
-in the chunk, once `/find` has been looked at with a live key.
+Landed 2026-09-23. An IMDb id (`tt0903747`), an IMDb title page — localised
+or mobile, whatever follows the id — or a themoviedb.org `/movie/603` or
+`/tv/1396` page answers with the one title it names. `parseTitleReference`
+lives in `packages/shared` beside `parseGuid`: identity is external, and the
+browser uses it too. Only the whole input counts, so a query with a space in
+it is always a search. `/search` detects it itself and asks
+`TmdbClient.find` instead, so the answer is still a candidate list — one
+page, no more after it — and the kind and year are not applied, since they
+narrow a search and this is not one. A TMDB page costs its details call,
+whose body carries every field a search row does; an IMDb id costs `/find`.
+A 404 or an empty `/find` is TMDB not having the id, answered as no results.
+
+Measured against the live API 2026-09-23: `/find` sorts an id into
+`movie_results`, `tv_results`, `tv_episode_results` and `tv_season_results`,
+the first two with `media_type` set, and an unknown or malformed id answers
+200 with all four empty. An episode's IMDb id comes back as an episode row
+carrying `show_id` and nothing under `tv_results`, so it resolves to its
+series with one details call — the series is what can be added. The screen
+changes its placeholder, and an empty answer to a pasted id says TMDB has no
+title under it rather than naming a kind and year that were not applied.
 
 ## Chunk 6 · A collection in one tick
 

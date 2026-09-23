@@ -1,3 +1,4 @@
+import { parseTitleReference } from '@engram/shared';
 import { inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -80,6 +81,17 @@ export function registerSearchRoutes(
 
     const { q, kind, year, page } = parsed.data;
     try {
+      // A pasted id or link names its title outright. The kind and year are
+      // not applied to it: they narrow a search, and this is not one.
+      const reference = parseTitleReference(q);
+      if (reference) {
+        return {
+          results: await markStored(db, await tmdb.find(reference)),
+          page: 1,
+          hasMore: false,
+        };
+      }
+
       const found = await tmdb.search(q, kind ? { kind, year } : undefined, page);
       return {
         results: await markStored(db, found.results),

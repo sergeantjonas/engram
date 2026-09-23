@@ -1,3 +1,4 @@
+import { parseTitleReference } from '@engram/shared';
 import {
   type InfiniteData,
   type UseInfiniteQueryResult,
@@ -373,7 +374,7 @@ function Add() {
               of the bar's borders one colour, still get a ring. */}
           <input
             aria-label="Search TMDB"
-            placeholder={`Search for a ${kind === 'show' ? 'series' : kind === 'movie' ? 'film' : 'film or series'}`}
+            placeholder={`Search for a ${kind === 'show' ? 'series' : kind === 'movie' ? 'film' : 'film or series'}, or paste a link`}
             enterKeyHint="search"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
@@ -532,7 +533,11 @@ function Results({
   if (found.length === 0 && !results.hasNextPage) {
     return (
       <p className="text-dim">
-        TMDB has nothing for “{q}”{among(kind, year)}.
+        {/* A pasted id is looked up rather than searched, and the kind and
+            year are not applied to it, so they are not named either. */}
+        {parseTitleReference(q)
+          ? `TMDB has no title under “${q}”.`
+          : `TMDB has nothing for “${q}”${among(kind, year)}.`}
       </p>
     );
   }

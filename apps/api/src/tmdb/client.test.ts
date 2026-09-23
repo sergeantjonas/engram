@@ -194,6 +194,60 @@ describe('createTmdbClient', () => {
     expect(found).toEqual({ results: [], page: 2, totalPages: 7 });
   });
 
+  it('finds what an IMDb id names, whichever kind it turns out to be', async () => {
+    const { tmdb, calls } = client({ movie_results: [matrix], tv_results: [] });
+
+    const found = await tmdb.find({ source: 'imdb', id: 'tt0133093' });
+
+    const url = firstCall(calls);
+    expect(url.pathname).toBe('/3/find/tt0133093');
+    expect(url.searchParams.get('external_source')).toBe('imdb_id');
+    expect(found.map((c) => [c.kind, c.tmdbId])).toEqual([['movie', '603']]);
+  });
+
+  // Measured 2026-09-23: an episode's IMDb id comes back as an episode row
+  // carrying `show_id`, and nothing under `tv_results`.
+  it('answers an episode id with the series it belongs to', async () => {
+    const calls: string[] = [];
+    const fetch = (async (url: Parameters<typeof globalThis.fetch>[0]) => {
+      calls.push(String(url));
+      const body = String(url).includes('/find/')
+        ? { movie_results: [], tv_results: [], tv_episode_results: [{ id: 62085, show_id: 1396 }] }
+        : { id: 1396, name: 'Breaking Bad', first_air_date: '2008-01-20', origin_country: ['US'] };
+      return new Response(JSON.stringify(body), {
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof globalThis.fetch;
+    const tmdb = createTmdbClient({ apiKey: 'test-key', fetch });
+
+    const found = await tmdb.find({ source: 'imdb', id: 'tt0959621' });
+
+    expect(calls).toHaveLength(2);
+    expect(new URL(calls[1] ?? '').pathname).toBe('/3/tv/1396');
+    expect(found).toEqual([
+      expect.objectContaining({ kind: 'show', tmdbId: '1396', name: 'Breaking Bad', year: 2008 }),
+    ]);
+  });
+
+  it('reads a TMDB page from its details, and an id TMDB does not have as nothing', async () => {
+    const film = client({ ...matrix, media_type: undefined });
+    const missing = client({ status_message: 'not found' }, 404);
+
+    const found = await film.tmdb.find({ source: 'tmdb', kind: 'movie', id: '603' });
+
+    expect(firstCall(film.calls).pathname).toBe('/3/movie/603');
+    expect(found).toEqual([expect.objectContaining({ kind: 'movie', name: 'The Matrix' })]);
+    expect(await missing.tmdb.find({ source: 'tmdb', kind: 'show', id: '99999999' })).toEqual([]);
+    // Measured: an IMDb id TMDB does not know is a 200 with every list empty.
+    const unknown = client({
+      movie_results: [],
+      tv_results: [],
+      tv_episode_results: [],
+      tv_season_results: [],
+    });
+    expect(await unknown.tmdb.find({ source: 'imdb', id: 'tt9999999999' })).toEqual([]);
+  });
+
   it('raises a TmdbError carrying the upstream status', async () => {
     const { tmdb } = client({ status_message: 'Invalid API key' }, 401);
 

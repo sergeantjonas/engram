@@ -63,6 +63,11 @@ function TitlePage() {
   // shape, the way the API does it.
   const today = new Date().toISOString().slice(0, 10);
   const { data: tint } = useQuery(tintQuery(title.posterPath));
+  // The feed as well as the grid: the feed leaves specials out, so a show
+  // whose only plays are specials has nothing in it and a lit cell below.
+  const nothingOnRecord =
+    data.recentActivity.length === 0 &&
+    !seasons.some((season) => season.episodes.some((episode) => episode.seen));
 
   return (
     // Out of the layout's padding so the pane can sit flush against the rail
@@ -83,6 +88,17 @@ function TitlePage() {
           className="min-w-0 space-y-5 p-[18px] transition-colors duration-500"
         >
           <TitleHeader {...data} today={today} />
+
+          {/* A title just added has a header and nothing under it, which reads
+              as a page that failed to finish. This says the record is what is
+              empty, and to the owner, who has the controls below, how to fill
+              it. */}
+          {nothingOnRecord ? (
+            <p className="text-sm text-dim">
+              Nothing on record yet.
+              {isOwner ? <span> Mark what you have seen below.</span> : null}
+            </p>
+          ) : null}
 
           {/* What was watched and what was meant, on one row. The marking half
           disappears when it has nothing to offer; the intent half is always

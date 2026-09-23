@@ -1,6 +1,7 @@
 # Web depth
 
-**Status:** In progress — scoped 2026-09-21 from a review of the three built
+**Status:** Built 2026-09-23; arc 5 and the export's UTC intent timestamps
+are not yet deployed — scoped 2026-09-21 from a review of the three built
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
@@ -10,9 +11,10 @@ day with no migration, and `GET /history` answered on the box as the
 rehearsal had — 461 plays over 24 titles, all exact, 116 KB. Chunks 4 and
 5 deployed 2026-09-23, no migration, and the export downloaded from the box
 matched the local rehearsal's shape; its intent timestamps are written in
-UTC since, not yet deployed. Arc 5 chunks 1 to 3, the progress bar, the
-view transition and the ambient tint, landed 2026-09-23 and are not yet
-deployed; chunk 4 is next.
+UTC since, not yet deployed. Arc 5 is complete, all four chunks landed
+2026-09-23 — the progress bar, the view transition, the ambient tint and
+the first-run states — none of it deployed yet and none of it carrying a
+migration. Once they are on the box, every arc here is done.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -670,10 +672,17 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    server-side. A tint lighter than OKLab L 0.75 is darkened to it, hue
    kept: uncapped, a cream poster took the dim numbers on an unseen cell to
    4.1:1, and capped the worst of any colour is 4.6:1.
-4. **Empty and first-run states.** A title with no events shows a header and
-   nothing else; the wall with no titles shows nothing. Both point at "Add
-   watched" in a sentence, and the title page says "Nothing on record yet.
-   Mark what you have seen below." above the grid.
+4. ~~**Empty and first-run states.**~~ Landed 2026-09-23. A title with no
+   events showed a header and nothing else, and the wall with no titles
+   showed only "Nothing on record yet." The wall's sentence now goes on,
+   for the owner, to name "Add watched" in a link that names the chrome's
+   button rather than repeating it, so it says where the way in lives from
+   then on. The title page says "Nothing on record yet. Mark what you have seen
+   below." under the header, above the controls and the grid, unless the
+   grid has a lit cell: the feed leaves specials out, so a show whose only
+   plays are specials would otherwise say it has none. Anyone else
+   gets the first sentence alone on both: the second names controls they do
+   not have.
 
 ## Idea pool, not planned
 

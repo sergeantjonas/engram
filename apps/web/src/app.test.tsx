@@ -322,6 +322,51 @@ describe('the title pane', () => {
   });
 });
 
+describe('a title with nothing on record', () => {
+  const lost = title({ id: 'show-2', key: 'show:tvdb:2', name: 'Lost' });
+  const answer = (isOwner: boolean) => (url: string) =>
+    url.endsWith('/titles')
+      ? json({ titles: [lost] })
+      : url.includes('/titles/show-2')
+        ? json(detail(lost))
+        : json({ isOwner });
+
+  it('says so, and tells the owner how to change it', async () => {
+    stubApi(answer(true));
+    await renderAt('/titles/show-2');
+
+    const said = await screen.findByText('Nothing on record yet.');
+    expect(said.textContent).toBe('Nothing on record yet. Mark what you have seen below.');
+  });
+
+  it('says nothing of the kind when all that is seen is a special', async () => {
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({ titles: [lost] })
+        : url.includes('/titles/show-2')
+          ? json({
+              ...detail(lost),
+              seasons: [
+                { season: 0, episodes: [episode({ number: 1, name: 'Recap', seen: true })] },
+              ],
+            })
+          : json({ isOwner: true }),
+    );
+    await renderAt('/titles/show-2');
+
+    await screen.findByRole('heading', { level: 1, name: 'Lost' });
+    expect(screen.queryByText('Nothing on record yet.')).toBeNull();
+  });
+
+  it('only says so to anyone else, who has nothing below to mark with', async () => {
+    stubApi(answer(false));
+    await renderAt('/titles/show-2');
+
+    const said = await screen.findByText('Nothing on record yet.');
+    expect(said.textContent).toBe('Nothing on record yet.');
+  });
+});
+
 describe('the tint', () => {
   it("tints a title's column, not the pane beside it, with its poster's colour", async () => {
     const lost = title({ id: 'show-2', key: 'show:tvdb:2', name: 'Lost', posterPath: '/lost.jpg' });
@@ -770,11 +815,23 @@ describe('the wall', () => {
     );
   });
 
-  it('says when nothing is on record', async () => {
+  it('says when nothing is on record, and to the owner where to start', async () => {
     stubApi((url) => (url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: true })));
     await renderAt('/');
 
+    const said = await screen.findByText('Nothing on record yet.');
+    expect(said.textContent).toBe(
+      'Nothing on record yet. Start it with Add watched, above: find a title, then mark what you have seen of it.',
+    );
+    expect(screen.getByRole('link', { name: 'Add watched' }).getAttribute('href')).toBe('/add');
+  });
+
+  it('points no one but the owner at adding', async () => {
+    stubApi((url) => (url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: false })));
+    await renderAt('/');
+
     await screen.findByText('Nothing on record yet.');
+    expect(screen.queryByRole('link', { name: 'Add watched' })).toBeNull();
   });
 
   // The record reads for anyone; what it does not do for them is offer a way

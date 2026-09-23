@@ -196,6 +196,20 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
               : kind
                 ? `No ${KIND_LABEL[kind].toLocaleLowerCase()} on record yet.`
                 : 'Nothing on record yet.'}
+          {/* The first run, for the one who can end it: an empty wall is
+              otherwise a page with nothing to do on it. The chrome's button
+              is named rather than repeated, so the sentence says where the
+              way in lives from then on. */}
+          {isOwner && search.q === undefined && !facet && !kind ? (
+            <span>
+              {' '}
+              Start it with{' '}
+              <Link to="/add" className="text-tx underline underline-offset-4">
+                Add watched
+              </Link>
+              , above: find a title, then mark what you have seen of it.
+            </span>
+          ) : null}
         </p>
       ) : (
         <ul className={GRID}>

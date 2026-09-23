@@ -114,6 +114,33 @@ describe('createTmdbClient', () => {
     expect(url.searchParams.get('query')).toBe('dune');
   });
 
+  it('asks a kind its own search, with the year that tells same-named titles apart', async () => {
+    const series = client({ results: [] });
+    const film = client({ results: [] });
+
+    await series.tmdb.search('dune', { kind: 'show', year: 1984 });
+    await film.tmdb.search('dune', { kind: 'movie', year: 1984 });
+
+    const seriesUrl = firstCall(series.calls);
+    expect(seriesUrl.pathname).toBe('/3/search/tv');
+    expect(seriesUrl.searchParams.get('first_air_date_year')).toBe('1984');
+    const filmUrl = firstCall(film.calls);
+    expect(filmUrl.pathname).toBe('/3/search/movie');
+    expect(filmUrl.searchParams.get('primary_release_year')).toBe('1984');
+    expect(filmUrl.searchParams.has('year')).toBe(false);
+  });
+
+  // A kind's own search sends no `media_type`, so the kind asked for is the
+  // only place the row's kind can come from.
+  it('takes the kind of a narrowed search from the search itself', async () => {
+    const { media_type: _, ...row } = matrix;
+    const { tmdb } = client({ results: [row] });
+
+    const [result] = await tmdb.search('matrix', { kind: 'movie' });
+
+    expect(result).toMatchObject({ kind: 'movie', tmdbId: '603', year: 1999 });
+  });
+
   it('raises a TmdbError carrying the upstream status', async () => {
     const { tmdb } = client({ status_message: 'Invalid API key' }, 401);
 

@@ -403,6 +403,11 @@ held under instead of offering to add it twice. `GET /search` answers which
 those are, because a show is keyed by its tvdb id and the browser never sees
 both ids for the same title.
 
+A search narrows by kind with the wall's own control, All / Series / Movies,
+under the box, and by year once a kind is chosen — the field is not there
+under All, because TMDB's mixed search takes no year. Since 2026-09-23;
+[add-search.md](add-search.md) holds the rest of that arc.
+
 This screen is why `watched_precision` exists. "Breaking Bad, sometime around
 2019" has no timestamp, and the alternative — a nullable `watched_at` — would
 have pushed the null handling into `watch_state` and every sort. See

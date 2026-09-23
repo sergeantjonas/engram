@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
 import { Backfill } from '../add/Backfill.tsx';
 import { Batch, type BatchItem } from '../add/Batch.tsx';
@@ -14,18 +14,39 @@ import {
   type TmdbCandidate,
 } from '../api/titles.ts';
 import { useToast } from '../shell/Toasts.tsx';
+import { Tip } from '../shell/Tooltip.tsx';
+import { ACTIVE_SEG, SEG } from '../wall/chips.ts';
+import { isKind, KIND_LABEL, KINDS, type KindFilter } from '../wall/facets.ts';
 
 const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
 
 interface AddSearch {
   q?: string | undefined;
+  /** Absent searches both kinds, and is what the screen opens on. */
+  kind?: KindFilter | undefined;
+  /** Only ever beside a kind: `/search/multi` takes no year. */
+  year?: number | undefined;
 }
+
+/** A year TMDB will search on. The router has already parsed `1984` as a number. */
+const isYear = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 1000 && value <= 9999;
+
+/** Four digits typed into the year field, or undefined for anything else. */
+const readYear = (text: string): number | undefined =>
+  /^[1-9]\d{3}$/.test(text.trim()) ? Number(text.trim()) : undefined;
 
 export const Route = createFileRoute('/add')({
   // Every key answered, as the wall's are: one left out keeps its raw value.
-  validateSearch: (search: Record<string, unknown>): AddSearch => ({
-    q: typeof search.q === 'string' && search.q.trim() !== '' ? search.q.trim() : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): AddSearch => {
+    const kind = isKind(search.kind) ? search.kind : undefined;
+    return {
+      q: typeof search.q === 'string' && search.q.trim() !== '' ? search.q.trim() : undefined,
+      kind,
+      // Dropped rather than passed on without a kind, which the API refuses.
+      year: kind && isYear(search.year) ? search.year : undefined,
+    };
+  },
   /**
    * The one screen with nothing on it to read. Its results come from a search
    * the API will not run for a stranger and every row ends in a button they
@@ -50,11 +71,12 @@ export const Route = createFileRoute('/add')({
  * trip.
  */
 function Add() {
-  const { q } = Route.useSearch();
+  const { q, kind, year } = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [draft, setDraft] = useState(q ?? '');
+  const [yearDraft, setYearDraft] = useState(year === undefined ? '' : String(year));
   const [failed, setFailed] = useState<{ key: string; message: string } | null>(null);
   // The kind comes with the candidate, not with the response: `POST /titles`
   // answers with seasons, and a film's empty list is indistinguishable from a
@@ -68,26 +90,38 @@ function Add() {
   // component is never remounted and the initializer above runs once. Without
   // this, going Back leaves the box holding a query the results no longer
   // match.
-  const [lastQ, setLastQ] = useState(q);
-  if (q !== lastQ) {
-    setLastQ(q);
-    setDraft(q ?? '');
+  const [last, setLast] = useState({ q, kind, year });
+  if (q !== last.q || kind !== last.kind || year !== last.year) {
+    setLast({ q, kind, year });
+    // Each box follows only its own key: switching kind keeps a query typed
+    // and not yet searched for. The year's is emptied under All too, where it
+    // is not drawn and would otherwise come back holding what the URL does not.
+    if (q !== last.q) setDraft(q ?? '');
+    if (year !== last.year || kind === undefined) {
+      setYearDraft(year === undefined ? '' : String(year));
+    }
     // A selection belongs to the results it was made over; carrying it to the
     // next search would add titles nobody is looking at any more.
     setChosen(new Set());
   }
 
-  const results = useQuery(searchQuery(q ?? ''));
+  const asked = { q: q ?? '', kind, year };
+  const results = useQuery(searchQuery(asked));
+  // Refused rather than dropped from the search: a search the owner narrowed
+  // and TMDB did not would read as TMDB not having the title.
+  const yearUnreadable = kind !== undefined && yearDraft.trim() !== '' && !readYear(yearDraft);
 
   /**
-   * Moves what was just added into the results' already-stored group, in place.
+   * Moves what was just added into the already-stored group of every cached
+   * search, in place. Every one and not only this one: the same query under
+   * All or the other kind holds the same candidate, and would offer it again.
    *
    * Patched rather than invalidated: a refetch here is another call against the
    * owner's TMDB key to learn one thing this already knows.
    */
   const recordStored = (items: BatchItem[]) => {
     const byKey = new Map(items.map((item) => [candidateKey(item.candidate), item.added.title.id]));
-    queryClient.setQueryData(searchQuery(q ?? '').queryKey, (old) =>
+    queryClient.setQueriesData<{ results: TmdbCandidate[] }>({ queryKey: ['search'] }, (old) =>
       old === undefined
         ? old
         : {
@@ -196,23 +230,84 @@ function Add() {
         className="flex gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          void navigate({ to: '/add', search: draft.trim() ? { q: draft.trim() } : {} });
+          if (yearUnreadable) return;
+          void navigate({
+            to: '/add',
+            search: {
+              q: draft.trim() || undefined,
+              kind,
+              year: kind ? readYear(yearDraft) : undefined,
+            },
+          });
         }}
       >
         <input
           aria-label="Search TMDB"
-          placeholder="Search for a film or series"
+          placeholder={`Search for a ${kind === 'show' ? 'series' : kind === 'movie' ? 'film' : 'film or series'}`}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="flex-1 rounded border border-line bg-bg px-3 py-2"
+          className="min-w-0 flex-1 rounded border border-line bg-bg px-3 py-2"
         />
-        <button type="submit" className="rounded bg-jade px-4 py-2 font-medium text-on-jade">
+        {/* Only beside a kind, the one search TMDB takes a year on: a field
+            that did nothing under All would be worse than no field. Labelled
+            by what the year is of, since a series matches on its first air
+            date and not on any later season's. */}
+        {kind ? (
+          <Tip label={kind === 'show' ? 'First aired' : 'Released'}>
+            <input
+              aria-label={kind === 'show' ? 'First aired' : 'Released'}
+              aria-invalid={yearUnreadable}
+              placeholder="Year"
+              inputMode="numeric"
+              maxLength={4}
+              value={yearDraft}
+              onChange={(event) => setYearDraft(event.target.value)}
+              className="w-20 rounded border border-line bg-bg px-3 py-2 font-mono aria-invalid:border-gap-tx"
+            />
+          </Tip>
+        ) : null}
+        <button
+          type="submit"
+          disabled={yearUnreadable}
+          className="rounded bg-jade px-4 py-2 font-medium text-on-jade disabled:opacity-50"
+        >
           Search
         </button>
       </form>
 
+      {/* Links, as the wall's kind is: a narrowed search is a place too. A
+          kind searches again at once over the query already in the URL, and
+          All drops the year, which nothing searching both kinds can take. */}
+      <nav aria-label="Narrow the search" className="flex">
+        <span className="isolate flex items-center">
+          <Link
+            to="/add"
+            search={{ q }}
+            activeOptions={{ exact: true, includeSearch: true }}
+            className={SEG}
+            activeProps={{ className: ACTIVE_SEG }}
+          >
+            All
+          </Link>
+          {KINDS.map((option) => (
+            <Link
+              key={option}
+              to="/add"
+              search={{ q, kind: option, year }}
+              activeOptions={{ exact: true, includeSearch: true }}
+              className={`${SEG} -ml-px`}
+              activeProps={{ className: ACTIVE_SEG }}
+            >
+              {KIND_LABEL[option]}
+            </Link>
+          ))}
+        </span>
+      </nav>
+
       <Results
         q={q}
+        kind={kind}
+        year={year}
         results={results}
         showStored={showStored}
         onToggleStored={() => setShowStored(!showStored)}
@@ -256,8 +351,20 @@ function Add() {
   );
 }
 
+/**
+ * What narrowed a search, said where it came back empty: otherwise a filtered
+ * search that found nothing reads as TMDB not knowing the title at all.
+ */
+function among(kind: KindFilter | undefined, year: number | undefined): string {
+  if (kind === 'show') return ` among series${year ? ` first aired in ${year}` : ''}`;
+  if (kind === 'movie') return ` among films${year ? ` released in ${year}` : ''}`;
+  return '';
+}
+
 function Results({
   q,
+  kind,
+  year,
   results,
   showStored,
   onToggleStored,
@@ -269,6 +376,8 @@ function Results({
   failed,
 }: {
   q: string | undefined;
+  kind: KindFilter | undefined;
+  year: number | undefined;
   results: ReturnType<typeof useQuery<{ results: TmdbCandidate[] }>>;
   showStored: boolean;
   onToggleStored: () => void;
@@ -291,7 +400,11 @@ function Results({
     );
   }
   if (results.data.results.length === 0) {
-    return <p className="text-dim">TMDB has nothing for “{q}”.</p>;
+    return (
+      <p className="text-dim">
+        TMDB has nothing for “{q}”{among(kind, year)}.
+      </p>
+    );
   }
 
   const stored = results.data.results.filter((candidate) => candidate.storedTitleId !== null);

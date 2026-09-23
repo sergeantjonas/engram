@@ -103,6 +103,54 @@ describe('GET /search', () => {
     expect(response.json().results[0].storedTitleId).toBeNull();
   });
 
+  it('narrows the search to the kind and year asked for', async () => {
+    const asked: Parameters<TmdbClient['search']>[] = [];
+    const server = start(
+      searching(async (...args) => {
+        asked.push(args);
+        return [];
+      }),
+    );
+
+    await server.inject({ method: 'GET', url: '/search?q=dune', headers: signedIn });
+    await server.inject({
+      method: 'GET',
+      url: '/search?q=dune&kind=movie&year=1984',
+      headers: signedIn,
+    });
+
+    expect(asked).toEqual([
+      ['dune', undefined],
+      ['dune', { kind: 'movie', year: 1984 }],
+    ]);
+  });
+
+  // `/search/multi` takes no year, so there is no search a year alone could ask.
+  it('refuses a year without a kind', async () => {
+    const server = start(searching(async () => [witcher]));
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=dune&year=1984',
+      headers: signedIn,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: 'bad_request', message: 'year needs a kind' });
+  });
+
+  it('refuses a year TMDB would not search on', async () => {
+    const server = start(searching(async () => [witcher]));
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search?q=dune&kind=movie&year=999',
+      headers: signedIn,
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
   it('caps the results at the requested limit', async () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ ...witcher, tmdbId: String(i) }));
     const server = start(searching(async () => many));

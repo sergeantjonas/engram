@@ -8,12 +8,18 @@ import { type TmdbCandidate, type TmdbClient, TmdbError } from '../tmdb/client.j
 /**
  * One request is one TMDB page, and a page is 20 results, so a larger limit
  * would promise more than it can return. Fewer than `limit` can still come
- * back: people are filtered out of the page after it arrives.
+ * back: a search across both kinds has its people filtered out of the page
+ * after it arrives.
  */
-const querySchema = z.object({
-  q: z.string().trim().min(1, 'q is required'),
-  limit: z.coerce.number().int().min(1).max(20).default(20),
-});
+const querySchema = z
+  .object({
+    q: z.string().trim().min(1, 'q is required'),
+    limit: z.coerce.number().int().min(1).max(20).default(20),
+    kind: z.enum(['show', 'movie']).optional(),
+    // The range TMDB accepts, which is wider than anything it holds a title for.
+    year: z.coerce.number().int().min(1000).max(9999).optional(),
+  })
+  .refine((query) => query.year === undefined || query.kind !== undefined, 'year needs a kind');
 
 /** A candidate with the id of the title already holding it, when there is one. */
 export interface SearchResult extends TmdbCandidate {
@@ -70,8 +76,9 @@ export function registerSearchRoutes(
       return reply.code(400).send({ error: 'bad_request', message });
     }
 
+    const { q, kind, year } = parsed.data;
     try {
-      const results = await tmdb.search(parsed.data.q);
+      const results = await tmdb.search(q, kind ? { kind, year } : undefined);
       // After the slice, so the lookup covers what is answered rather than the
       // whole page.
       return { results: await markStored(db, results.slice(0, parsed.data.limit)) };

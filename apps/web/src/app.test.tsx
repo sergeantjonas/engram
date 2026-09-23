@@ -2307,6 +2307,122 @@ describe('adding a title', () => {
     );
   });
 
+  it('narrows a search to a kind and a year, and says so when it finds nothing', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=dune&kind=movie&year=1984');
+
+    await screen.findByText('TMDB has nothing for “dune” among films released in 1984.');
+    expect(calls.find((call) => call.url.includes('/search'))?.url).toBe(
+      'http://localhost:2012/search?q=dune&kind=movie&year=1984',
+    );
+    expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Released' }).value).toBe('1984');
+  });
+
+  // The API refuses a year without a kind, and there is no field to have
+  // typed one into.
+  it('drops a year that arrives without a kind', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=dune&year=1984');
+
+    await screen.findByText('TMDB has nothing for “dune”.');
+    expect(calls.find((call) => call.url.includes('/search'))?.url).toBe(
+      'http://localhost:2012/search?q=dune',
+    );
+    expect(screen.queryByRole('textbox', { name: /Released|First aired/ })).toBeNull();
+  });
+
+  it('switches kind over the same query, and All lets the year go', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=dune&kind=show&year=1984');
+
+    await screen.findByText('TMDB has nothing for “dune” among series first aired in 1984.');
+    expect(screen.getByRole('link', { name: 'All' }).getAttribute('href')).toBe('/add?q=dune');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Movies' }));
+
+    await screen.findByText(/among films released in 1984/);
+    expect(calls.filter((call) => call.url.includes('/search')).map((call) => call.url)).toEqual([
+      'http://localhost:2012/search?q=dune&kind=show&year=1984',
+      'http://localhost:2012/search?q=dune&kind=movie&year=1984',
+    ]);
+  });
+
+  it('keeps an unsearched query across a kind, and lets the selection go', async () => {
+    stubApi((url) =>
+      url.includes('/search') ? json({ results: [candidate({})] }) : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    expect(screen.getByText('1 title selected')).toBeDefined();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search TMDB' }), {
+      target: { value: 'heat 1995' },
+    });
+
+    fireEvent.click(screen.getByRole('link', { name: 'Movies' }));
+
+    await screen.findByRole('textbox', { name: 'Released' });
+    expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Search TMDB' }).value).toBe(
+      'heat 1995',
+    );
+    expect(screen.queryByText('1 title selected')).toBeNull();
+  });
+
+  // Recorded in every cached search, not only the one it was added from:
+  // the same query under All holds the same candidate.
+  it('holds back a title added under one kind when the search goes back to All', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search')) return json({ results: [candidate({})] });
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json({ title: { id: 'title-949', name: 'Heat' }, seasons: [] }, 201);
+      }
+      return elsewhere(url, true, init);
+    });
+    const router = await renderAt('/add?q=heat');
+    await screen.findByRole('checkbox', { name: 'Select Heat' });
+
+    await router.navigate({ to: '/add', search: { q: 'heat', kind: 'movie' } });
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Heat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add 1' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Nothing yet — back to the search' }),
+    );
+    fireEvent.click(screen.getByRole('link', { name: 'All' }));
+
+    await screen.findByText(/1 result already on the record/);
+    expect(screen.queryByRole('checkbox', { name: 'Select Heat' })).toBeNull();
+    expect(calls.filter((call) => call.url.includes('/search'))).toHaveLength(2);
+  });
+
+  it('will not search on a year it cannot read', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),
+    );
+    const router = await renderAt('/add?kind=movie');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search TMDB' }), {
+      target: { value: 'dune' },
+    });
+    const year = screen.getByRole('textbox', { name: 'Released' });
+    fireEvent.change(year, { target: { value: '84' } });
+
+    const search = screen.getByRole<HTMLButtonElement>('button', { name: 'Search' });
+    expect(search.disabled).toBe(true);
+
+    fireEvent.change(year, { target: { value: '1984' } });
+    fireEvent.submit(search);
+
+    await screen.findByText(/among films released in 1984/);
+    expect(router.state.location.search).toEqual({ q: 'dune', kind: 'movie', year: 1984 });
+    expect(calls.filter((call) => call.url.includes('/search'))).toHaveLength(1);
+  });
+
   it('adds the chosen candidate and goes on to its title page', async () => {
     const id = '6d2a1f0e-1b2c-4d3e-8f90-1234567890ab';
     const calls = stubApi((url, init) => {

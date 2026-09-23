@@ -322,6 +322,16 @@ the viewer wants of a title. The SPA calls all four.
    interval, which is the whole cost of the feature — nothing else in the app
    asks a question on a timer. Surface, and the band it competes with, in
    [web-design.md](web-design.md) § Still open.
+8. **Add search** — scoped 2026-09-23 in [add-search.md](add-search.md).
+   `/add` searched by name only: one page of twenty mixed results from
+   `/search/multi`, no kind, no year, no second page. Seven chunks, in order —
+   kind and year (a kind switches TMDB endpoint rather than filtering a page),
+   more pages, the origin country and original name that tell a remake from
+   its original, *Want* straight from the results, a pasted IMDb or TMDB link
+   answering the one title it names, a collection added in one tick, and
+   search as the owner types, which is optional. No migrations. Chunk 1
+   landed 2026-09-23 — the wall's kind control and a year field on `/add`,
+   each kind asking TMDB's own search — not yet deployed.
 
 ## Blocked
 

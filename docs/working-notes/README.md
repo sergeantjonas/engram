@@ -42,4 +42,8 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
   and stills, show status, range marks, the YEAR screen and export, the
   progress bar. Read before scoping any `apps/web` work past the settled
   screens.
+- `add-search.md` — plan. What `/add`'s search cannot say — a kind, a year,
+  a second page, an id — and the seven chunks that let it, with what TMDB's
+  search endpoints take and its rate limit. Read before changing `/add` or
+  `GET /search`.
 - `integration-ideas.md` — idea pool. Nothing here is committed to.

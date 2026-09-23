@@ -369,10 +369,19 @@ export interface TmdbCandidate {
   storedTitleId: string | null;
 }
 
-export function searchQuery(q: string) {
+/** What `GET /search` is asked. The API refuses a year without a kind. */
+export interface SearchParams {
+  q: string;
+  kind?: 'show' | 'movie' | undefined;
+  year?: number | undefined;
+}
+
+export function searchQuery({ q, kind, year }: SearchParams) {
+  const narrowed = `${kind ? `&kind=${kind}` : ''}${year === undefined ? '' : `&year=${year}`}`;
   return queryOptions({
-    queryKey: ['search', q],
-    queryFn: () => apiFetch<{ results: TmdbCandidate[] }>(`/search?q=${encodeURIComponent(q)}`),
+    queryKey: ['search', q, kind ?? null, year ?? null],
+    queryFn: () =>
+      apiFetch<{ results: TmdbCandidate[] }>(`/search?q=${encodeURIComponent(q)}${narrowed}`),
     // A search for nothing is not a search. The route rejects an empty `q`
     // with a 400, and asking it to is a round trip to learn what is already
     // known here.

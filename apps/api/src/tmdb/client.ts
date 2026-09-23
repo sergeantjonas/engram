@@ -114,15 +114,27 @@ export interface TmdbCollection {
   parts: TmdbCollectionPart[];
 }
 
+/**
+ * What a search is narrowed to. A year only ever comes with a kind:
+ * `/search/multi` takes none, so a year on its own has nowhere to go.
+ */
+export interface TmdbSearchFilter {
+  kind: TitleKind;
+  year?: number | undefined;
+}
+
 export interface TmdbClient {
-  search(query: string): Promise<TmdbCandidate[]>;
+  search(query: string, filter?: TmdbSearchFilter): Promise<TmdbCandidate[]>;
   details(kind: TitleKind, tmdbId: string): Promise<TmdbTitleDetails>;
   seasonEpisodes(tmdbId: string, season: number): Promise<TmdbEpisode[]>;
   collection(id: number): Promise<TmdbCollection>;
 }
 
-/** A row of `/search/multi`, typed as loosely as the endpoint actually behaves. */
-interface MultiSearchRow {
+/**
+ * A row of any of the three searches, typed as loosely as they actually
+ * behave. Only `/search/multi` sends `media_type`.
+ */
+interface SearchRow {
   media_type?: string;
   id?: number;
   name?: string;
@@ -190,8 +202,18 @@ const yearOf = (date: string | undefined): number | null => {
   return Number.isNaN(year) ? null : year;
 };
 
-const candidateOf = (row: MultiSearchRow): TmdbCandidate | null => {
-  const kind = TITLE_KINDS[row.media_type ?? ''];
+/**
+ * Each kind's own search, and the year parameter that tells two titles of the
+ * same name apart. Plain `year` would not: on a film it matches any release,
+ * a re-release included, and on a series any episode's air date.
+ */
+const KIND_SEARCH: Record<TitleKind, { path: string; year: string }> = {
+  show: { path: '/search/tv', year: 'first_air_date_year' },
+  movie: { path: '/search/movie', year: 'primary_release_year' },
+};
+
+const candidateOf = (row: SearchRow, searched: TitleKind | undefined): TmdbCandidate | null => {
+  const kind = searched ?? TITLE_KINDS[row.media_type ?? ''];
   const name = row.name ?? row.title;
   // `/search/multi` also returns people, which have neither a kind we store nor
   // a title to store them under.
@@ -269,11 +291,20 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
   }
 
   return {
-    async search(query) {
-      const body = (await get('/search/multi', { query })) as { results?: MultiSearchRow[] } | null;
+    async search(query, filter) {
+      const narrowed = filter ? KIND_SEARCH[filter.kind] : null;
+      const params =
+        narrowed && filter?.year !== undefined
+          ? { query, [narrowed.year]: String(filter.year) }
+          : { query };
+      const body = (await get(narrowed?.path ?? '/search/multi', params)) as {
+        results?: SearchRow[];
+      } | null;
       const rows = body?.results ?? [];
       // Upstream order is popularity, which is the ranking the add screen wants.
-      return rows.map(candidateOf).filter((c): c is TmdbCandidate => c !== null);
+      return rows
+        .map((row) => candidateOf(row, filter?.kind))
+        .filter((c): c is TmdbCandidate => c !== null);
     },
 
     async details(kind, tmdbId) {

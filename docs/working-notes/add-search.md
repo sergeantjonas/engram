@@ -1,8 +1,8 @@
 # Add search
 
 **Status:** Done 2026-09-24 — built and deployed, no migration. Chunks 1 to
-6 landed 2026-09-23 and chunk 7 on 2026-09-24; three small follow-ups are
-listed at the end.
+6 landed 2026-09-23 and chunk 7 on 2026-09-24; two small follow-ups are
+listed at the end, both left as they are on purpose.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
 endpoints accept. Seven chunks, one commit each, in order. No chunk carries a
 migration.
@@ -262,15 +262,27 @@ What did stand in the way, and how each went:
 
 ## Follow-ups
 
-Left over from the arc, none of them blocking:
+Left over from the arc, and left as they are — settled with the owner
+2026-09-24:
 
-- **Focus after a single *Want*.** The row moves into the held-back group, so
-  the button that had focus unmounts and focus falls to the page. *Add* does
-  not have the problem because it opens the backfill.
 - **iOS zoom.** The query and year fields are 15px and 14px, and iOS Safari
   zooms the page on focusing an input under 16px. Unchecked on a device.
 - **Phone width.** The bar's wrap was checked at about 500px, the narrowest
   headless Chrome lays out; 390px is unchecked.
+
+Fixed after the arc closed, 2026-09-24: a single *Want* moved its row into
+the held-back group and took the focused button with it, dropping the
+keyboard to the page. It now lands on the row that took its place — the
+next, or the one before at the end — or on *Show them* when none is left;
+where the row stays, shown held-back results or an open collection, on its
+*On the record* link. A batch *Want* takes the sticky bar and its button with
+the selection, so it sends the keyboard to *Show them*, or where the titles
+stay listed — shown held-back results, a collection — to the first wanted. Each target holds the request until it can take it,
+since the list's patch and the end of the write can land in either order, and
+a new search or collection drops a request not yet taken. None of it moves
+the keyboard for an owner who has moved on while the want was landing — into
+the search box, say: it moves only while focus is still on the button pressed,
+or on the page it dropped to, under the search it was pressed in.
 
 ## Not planned
 

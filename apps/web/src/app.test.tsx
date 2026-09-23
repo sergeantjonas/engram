@@ -2379,6 +2379,10 @@ describe('adding a title', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Want 2' }));
 
     await screen.findByText('2 titles on the record as wanted.');
+    // The bar left with its button; the keyboard did not go with it.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show them' })),
+    );
     expect(calls.filter((call) => call.url.endsWith('/intent')).map((call) => call.url)).toEqual([
       'http://localhost:2012/titles/title-949/intent',
       'http://localhost:2012/titles/title-10138/intent',
@@ -2703,6 +2707,136 @@ describe('adding a title', () => {
 
     await screen.findByText('TMDB has nothing for “heat wave” among films.');
     expect(router.state.location.search).toEqual({ q: 'heat wave', kind: 'movie' });
+  });
+
+  // The row leaves the list with the button that had focus, and a keyboard
+  // left on the page has to walk back down from the top.
+  it('keeps the keyboard in the list as wanted rows leave it', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [candidate({}), candidate({ tmdbId: '10138', name: 'Iron Man 2' })],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { tmdbId: string };
+        return json({ title: { id: `title-${body.tmdbId}`, name: 'x' }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        return json({ intent: { want: true, dropped: false, excluded: false } });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Want Heat' }));
+
+    // To the row that took its place.
+    const next = screen.getByRole('button', { name: 'Want Iron Man 2' });
+    await waitFor(() => expect(document.activeElement).toBe(next));
+
+    fireEvent.click(next);
+
+    // None left to take it, so to the line that brings them back.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show them' })),
+    );
+  });
+
+  it('leaves the keyboard where the owner took it while a want was landing', async () => {
+    let land: (() => void) | undefined;
+    stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [candidate({}), candidate({ tmdbId: '10138', name: 'Iron Man 2' })],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json({ title: { id: 'title-949', name: 'Heat' }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        const body = { intent: { want: true, dropped: false, excluded: false } };
+        return new Promise<Response>((resolve) => {
+          land = () => resolve(json(body));
+        }) as unknown as Response;
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Want Heat' }));
+    await waitFor(() => expect(land).toBeDefined());
+    const box = screen.getByRole('textbox', { name: 'Search TMDB' });
+    box.focus();
+
+    await act(async () => land?.());
+
+    await screen.findByText('Heat is on the record as wanted.');
+    expect(document.activeElement).toBe(box);
+  });
+
+  it('keeps the keyboard on a wanted row that stays listed', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [
+            candidate({}),
+            candidate({ tmdbId: '10138', name: 'Iron Man 2', storedTitleId: 'title-10138' }),
+          ],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json({ title: { id: 'title-949', name: 'Heat' }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        return json({ intent: { want: true, dropped: false, excluded: false } });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Show them' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Want Heat' }));
+
+    const row = (await screen.findByRole('heading', { name: /^Heat/ })).closest('article');
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(row as HTMLElement).getByRole('link', { name: 'On the record →' }),
+      ),
+    );
+  });
+
+  it('sends the keyboard to the first of a batch that stays listed', async () => {
+    stubApi((url, init) => {
+      if (url.includes('/search')) {
+        return json({
+          results: [
+            candidate({}),
+            candidate({ tmdbId: '10138', name: 'Iron Man 2', storedTitleId: 'title-10138' }),
+          ],
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        return json({ title: { id: 'title-949', name: 'Heat' }, seasons: [] }, 201);
+      }
+      if (url.endsWith('/intent') && init?.method === 'PUT') {
+        return json({ intent: { want: true, dropped: false, excluded: false } });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Show them' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Heat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Want 1' }));
+
+    await screen.findByText('1 title on the record as wanted.');
+    const row = screen.getByRole('heading', { name: /^Heat/ }).closest('article');
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(row as HTMLElement).getByRole('link', { name: 'On the record →' }),
+      ),
+    );
   });
 
   it('asks nothing for a query it cannot read', async () => {

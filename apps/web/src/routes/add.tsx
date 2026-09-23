@@ -49,6 +49,12 @@ function unique(candidates: TmdbCandidate[]): TmdbCandidate[] {
   });
 }
 
+/**
+ * Where the keyboard goes once a *Want* has moved its row out from under it:
+ * a row's control, or the line that brings held-back results back.
+ */
+type Refocus = { key: string; control: 'want' | 'record' } | 'held-back' | null;
+
 /** What `/add` searches for: a kind of title, or a film series to open. */
 type AddKind = KindFilter | 'collection';
 
@@ -134,6 +140,28 @@ function Add() {
   const [showStored, setShowStored] = useState(false);
   const [batch, setBatch] = useState<BatchItem[] | null>(null);
   const [opened, setOpened] = useState<number | null>(null);
+  const [refocus, setRefocus] = useState<Refocus>(null);
+  // The search on screen now, for a want that lands after it has changed.
+  const searchNow = useRef('');
+  useEffect(() => {
+    searchNow.current = JSON.stringify([q, kind, year, opened]);
+  });
+
+  /**
+   * Moves the keyboard once a want lands — but only while it is still where
+   * the want left it, on the button pressed or dropped to the page with it,
+   * and the search is the one it was pressed in. An owner who has moved on,
+   * typing the next query or opening another collection, keeps their place.
+   */
+  const refocusAfter = (then: Refocus) => {
+    const from = document.activeElement;
+    const search = searchNow.current;
+    return () => {
+      const at = document.activeElement;
+      const stayed = at === from || at === null || at === document.body;
+      if (stayed && searchNow.current === search) setRefocus(then);
+    };
+  };
   // Which collection the latest open was for, so a slow answer for one that
   // has since been closed or passed over cannot tick its films.
   const opening = useRef<number | null>(null);
@@ -200,6 +228,9 @@ function Add() {
       setBurst(false);
     }
     setOpened(null);
+    // A focus asked for under the last search is not this one's to take: a
+    // row with the same key further on would grab it for no reason.
+    setRefocus(null);
   }
 
   /**
@@ -267,6 +298,7 @@ function Add() {
    */
   const openCollection = (id: number) => {
     setChosen(new Set());
+    setRefocus(null);
     if (opened === id) {
       setOpened(null);
       opening.current = null;
@@ -612,10 +644,18 @@ function Add() {
                 selected={chosen.has(key)}
                 onSelect={() => toggle(candidate)}
                 onAdd={() => add.mutate(candidate)}
-                onWant={() => want.mutate(candidate)}
+                // A collection lists its held films too, so the row stays
+                // where it was and the keyboard stays on it.
+                onWant={() =>
+                  want.mutate(candidate, {
+                    onSuccess: refocusAfter({ key, control: 'record' }),
+                  })
+                }
                 pending={pending?.key === key ? pending.verb : null}
                 disabled={busy}
                 error={failed?.key === key ? failed.message : null}
+                focus={typeof refocus === 'object' && refocus?.key === key ? refocus.control : null}
+                onFocused={() => setRefocus(null)}
               />
             );
           }}
@@ -632,7 +672,9 @@ function Add() {
           chosen={chosen}
           onSelect={toggle}
           onAdd={(candidate) => add.mutate(candidate)}
-          onWant={(candidate) => want.mutate(candidate)}
+          onWant={(candidate, then) => want.mutate(candidate, { onSuccess: refocusAfter(then) })}
+          refocus={refocus}
+          onRefocused={() => setRefocus(null)}
           pending={pending}
           busy={busy}
           failed={failed}
@@ -655,7 +697,20 @@ function Add() {
           <button
             type="button"
             disabled={busy}
-            onClick={() => wantSelected.mutate(picked)}
+            // The bar goes with the selection, and the button with it. The
+            // keyboard goes to the line that shows the titles again, or where
+            // they stay listed — shown held-back, or in a collection — to the
+            // first of them.
+            onClick={() => {
+              const [first] = picked;
+              wantSelected.mutate(picked, {
+                onSuccess: refocusAfter(
+                  (collectionMode || showStored) && first
+                    ? { key: candidateKey(first), control: 'record' }
+                    : 'held-back',
+                ),
+              });
+            }}
             className="rounded border border-line px-3 py-1 text-sm hover:border-dim disabled:opacity-50"
           >
             {wantSelected.isPending ? 'Saving…' : `Want ${picked.length}`}
@@ -670,6 +725,44 @@ function Add() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** The line that counts what the record already holds, and shows it again. */
+function HeldBack({
+  count: held,
+  shown,
+  onToggle,
+  focus,
+  onFocused,
+}: {
+  count: number;
+  shown: boolean;
+  onToggle: () => void;
+  focus: boolean;
+  onFocused: () => void;
+}) {
+  const toggle = useRef<HTMLButtonElement>(null);
+  // It can mount in the same render the focus is asked for, when the want
+  // just made the first held-back result.
+  useEffect(() => {
+    if (!focus || !toggle.current) return;
+    toggle.current.focus();
+    onFocused();
+  }, [focus, onFocused]);
+
+  return (
+    <p className="text-sm text-dim">
+      {count(held, 'result')} already on the record{shown ? '' : ' — hidden'}.{' '}
+      <button
+        ref={toggle}
+        type="button"
+        onClick={onToggle}
+        className="text-tx underline underline-offset-4"
+      >
+        {shown ? 'Hide them' : 'Show them'}
+      </button>
+    </p>
   );
 }
 
@@ -695,6 +788,8 @@ function Results({
   onSelect,
   onAdd,
   onWant,
+  refocus,
+  onRefocused,
   pending,
   busy,
   failed,
@@ -710,7 +805,10 @@ function Results({
   chosen: ReadonlySet<string>;
   onSelect: (candidate: TmdbCandidate) => void;
   onAdd: (candidate: TmdbCandidate) => void;
-  onWant: (candidate: TmdbCandidate) => void;
+  /** `then` is where the keyboard goes once the want has landed. */
+  onWant: (candidate: TmdbCandidate, then: Refocus) => void;
+  refocus: Refocus;
+  onRefocused: () => void;
   /** The row a single add or want is writing, and which of the two it is. */
   pending: { key: string; verb: 'add' | 'want' } | null;
   busy: boolean;
@@ -749,21 +847,32 @@ function Results({
   const listed = showStored ? found : found.filter((candidate) => candidate.storedTitleId === null);
   if (stale && listed.length === 0) return <p className="text-dim">Searching…</p>;
 
+  /**
+   * Where the keyboard goes when this row is wanted. Held-back results
+   * hidden, the row leaves the list, so it goes to the row taking its place —
+   * the next, or the one before at the end — and to the line that shows them
+   * again when there is none. Shown, the row stays, and the keyboard moves to
+   * its record link, the control that replaces the buttons.
+   */
+  const afterWant = (candidate: TmdbCandidate): Refocus => {
+    if (showStored) return { key: candidateKey(candidate), control: 'record' };
+    const at = listed.indexOf(candidate);
+    const neighbour = listed[at + 1] ?? listed[at - 1];
+    return neighbour ? { key: candidateKey(neighbour), control: 'want' } : 'held-back';
+  };
+
   return (
     <div aria-busy={stale} className={`space-y-5 transition-opacity ${stale ? 'opacity-60' : ''}`}>
       {/* Said rather than done quietly: a search that answers four of twenty
           hits and explains none of it looks broken rather than tidy. */}
       {stored.length > 0 ? (
-        <p className="text-sm text-dim">
-          {count(stored.length, 'result')} already on the record{showStored ? '' : ' — hidden'}.{' '}
-          <button
-            type="button"
-            onClick={onToggleStored}
-            className="text-tx underline underline-offset-4"
-          >
-            {showStored ? 'Hide them' : 'Show them'}
-          </button>
-        </p>
+        <HeldBack
+          count={stored.length}
+          shown={showStored}
+          onToggle={onToggleStored}
+          focus={refocus === 'held-back'}
+          onFocused={onRefocused}
+        />
       ) : null}
 
       {listed.length === 0 ? (
@@ -785,7 +894,11 @@ function Results({
                   selected={chosen.has(key)}
                   onSelect={() => onSelect(candidate)}
                   onAdd={() => onAdd(candidate)}
-                  onWant={() => onWant(candidate)}
+                  onWant={() => onWant(candidate, afterWant(candidate))}
+                  focus={
+                    typeof refocus === 'object' && refocus?.key === key ? refocus.control : null
+                  }
+                  onFocused={onRefocused}
                   pending={pending?.key === key ? pending.verb : null}
                   // Every row waits on whatever is in flight: two adds in
                   // parallel would race to navigate, and the loser's page is

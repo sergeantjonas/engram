@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { useEffect, useRef } from 'react';
 import { posterUrl, type TmdbCandidate } from '../api/titles.ts';
 
 export function CandidateRow({
@@ -11,6 +12,8 @@ export function CandidateRow({
   disabled,
   error,
   heading: Heading = 'h2',
+  focus = null,
+  onFocused,
 }: {
   candidate: TmdbCandidate;
   selected: boolean;
@@ -23,9 +26,29 @@ export function CandidateRow({
   error: string | null;
   /** One level below whatever it is listed under: a collection's films sit under its heading. */
   heading?: 'h2' | 'h3';
+  /** Which of this row's controls the keyboard is to land on, if any. */
+  focus?: 'want' | 'record' | null;
+  onFocused?: () => void;
 }) {
   const poster = posterUrl(candidate.posterPath);
   const stored = candidate.storedTitleId;
+  const wantRef = useRef<HTMLButtonElement>(null);
+  const recordRef = useRef<HTMLAnchorElement>(null);
+
+  // Held until the control can take it: the row may not have become stored
+  // yet, or its buttons may still be disabled by the write that sent focus
+  // here, and a focus that lands nowhere would drop to the page.
+  useEffect(() => {
+    const target =
+      focus === 'want' && stored === null && !disabled
+        ? wantRef.current
+        : focus === 'record' && stored !== null
+          ? recordRef.current
+          : null;
+    if (!target) return;
+    target.focus();
+    onFocused?.();
+  }, [focus, stored, disabled, onFocused]);
 
   return (
     <article className="flex items-start gap-3">
@@ -91,6 +114,7 @@ export function CandidateRow({
             {pending === 'add' ? 'Adding…' : 'Add'}
           </button>
           <button
+            ref={wantRef}
             type="button"
             onClick={onWant}
             disabled={disabled}
@@ -104,6 +128,7 @@ export function CandidateRow({
         // A title already held is one click from where the search was heading
         // anyway, so the row points at it rather than offering to add it twice.
         <Link
+          ref={recordRef}
           to="/titles/$id"
           params={{ id: stored }}
           className="h-fit shrink-0 text-sm text-dim underline-offset-4 hover:text-tx hover:underline"

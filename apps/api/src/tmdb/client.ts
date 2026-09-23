@@ -19,6 +19,13 @@ export interface TmdbCandidate {
    */
   posterPath: string | null;
   overview: string | null;
+  /** A series' first `origin_country`. Search rows give a film none. */
+  originCountry: string | null;
+  /**
+   * The title in its own language, when that is not what `name` already says —
+   * what tells a remake from its original. `language` is TMDB's ISO 639-1 code.
+   */
+  original: { name: string; language: string | null } | null;
 }
 
 /**
@@ -146,6 +153,10 @@ interface SearchRow {
   id?: number;
   name?: string;
   title?: string;
+  original_name?: string;
+  original_title?: string;
+  original_language?: string;
+  origin_country?: string[];
   first_air_date?: string;
   release_date?: string;
   poster_path?: string | null;
@@ -225,6 +236,7 @@ const candidateOf = (row: SearchRow, searched: TitleKind | undefined): TmdbCandi
   // `/search/multi` also returns people, which have neither a kind we store nor
   // a title to store them under.
   if (!kind || !name || typeof row.id !== 'number') return null;
+  const originalName = row.original_name ?? row.original_title;
 
   return {
     kind,
@@ -233,6 +245,11 @@ const candidateOf = (row: SearchRow, searched: TitleKind | undefined): TmdbCandi
     year: yearOf(kind === 'show' ? row.first_air_date : row.release_date),
     posterPath: row.poster_path ?? null,
     overview: row.overview || null,
+    originCountry: kind === 'show' ? row.origin_country?.[0] || null : null,
+    original:
+      originalName && originalName !== name
+        ? { name: originalName, language: row.original_language || null }
+        : null,
   };
 };
 

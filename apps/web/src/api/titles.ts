@@ -359,6 +359,10 @@ export interface TmdbCandidate {
   year: number | null;
   posterPath: string | null;
   overview: string | null;
+  /** A series' first country of origin, as an ISO 3166-1 code. TMDB gives a film none here. */
+  originCountry: string | null;
+  /** The title in its own language, only when that is not what `name` says. */
+  original: { name: string; language: string | null } | null;
   /**
    * The title already holding this candidate, when the record has one.
    *

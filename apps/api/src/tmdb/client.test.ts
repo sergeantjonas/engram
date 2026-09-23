@@ -72,6 +72,8 @@ describe('createTmdbClient', () => {
         year: 2019,
         posterPath: '/AoGsDM02UVt0npBA8OvpDcZbaMi.jpg',
         overview: 'Geralt of Rivia.',
+        originCountry: null,
+        original: null,
       },
       {
         kind: 'movie',
@@ -80,6 +82,8 @@ describe('createTmdbClient', () => {
         year: 1999,
         posterPath: '/p96dm7sCMn4VYAStA6siNz30G1r.jpg',
         overview: 'A computer hacker learns.',
+        originCountry: null,
+        original: null,
       },
     ]);
   });
@@ -93,13 +97,53 @@ describe('createTmdbClient', () => {
     expect(results.map((r) => r.tmdbId)).toEqual(['71912']);
   });
 
-  it('reports a missing date, poster or overview as null rather than guessing', async () => {
-    const bare = { media_type: 'tv', id: 1, name: 'Unaired', first_air_date: '', overview: '' };
+  it('reports a missing date, poster, overview or origin as null rather than guessing', async () => {
+    const bare = {
+      media_type: 'tv',
+      id: 1,
+      name: 'Unaired',
+      first_air_date: '',
+      overview: '',
+      origin_country: [''],
+      original_name: 'Unaired',
+      original_language: '',
+    };
     const { tmdb } = client({ results: [bare] });
 
     expect((await tmdb.search('unaired')).results).toEqual([
-      { kind: 'show', tmdbId: '1', name: 'Unaired', year: null, posterPath: null, overview: null },
+      {
+        kind: 'show',
+        tmdbId: '1',
+        name: 'Unaired',
+        year: null,
+        posterPath: null,
+        overview: null,
+        originCountry: null,
+        original: null,
+      },
     ]);
+  });
+
+  it('says where a series is from and what it is called there', async () => {
+    const titan = {
+      ...witcher,
+      id: 1429,
+      name: 'Attack on Titan',
+      original_name: '進撃の巨人',
+      original_language: 'ja',
+      origin_country: ['JP'],
+    };
+    const office = { ...witcher, id: 2996, name: 'The Office', original_name: 'The Office' };
+    const { tmdb } = client({ results: [titan, office] });
+
+    const { results } = await tmdb.search('titan');
+
+    expect(results[0]).toMatchObject({
+      originCountry: 'JP',
+      original: { name: '進撃の巨人', language: 'ja' },
+    });
+    // The same name twice says nothing the row does not already say.
+    expect(results[1]?.original).toBeNull();
   });
 
   it('authenticates by query parameter, which is what a v3 key accepts', async () => {

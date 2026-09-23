@@ -46,12 +46,23 @@ export function CandidateRow({
         )}
       </div>
       <div className="min-w-0 flex-1 space-y-1">
+        {/* Where a series is from and what it is called there are what tell
+            a remake from its original: two rows reading "The Office 2005 ·
+            series" and "2001 · series" leave the year to carry all of it. */}
         <h2 className="font-medium">
           {candidate.name}{' '}
           <span className="font-normal text-dim">
             {candidate.year ?? 'year unknown'} · {candidate.kind === 'show' ? 'series' : 'film'}
+            {candidate.originCountry ? ` · ${candidate.originCountry}` : ''}
           </span>
         </h2>
+        {candidate.original ? (
+          // Its own language, so a screen reader says it right and CJK text
+          // takes the glyphs of the language it is in.
+          <p lang={candidate.original.language ?? undefined} className="text-sm text-dim">
+            {candidate.original.name}
+          </p>
+        ) : null}
         {candidate.overview ? (
           <p className="line-clamp-2 text-sm text-dim">{candidate.overview}</p>
         ) : null}

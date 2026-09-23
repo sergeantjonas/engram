@@ -329,10 +329,10 @@ the viewer wants of a title. The SPA calls all four.
    more pages, the origin country and original name that tell a remake from
    its original, *Want* straight from the results, a pasted IMDb or TMDB link
    answering the one title it names, a collection added in one tick, and
-   search as the owner types, which is optional. No migrations. Chunks 1 and
-   2 landed 2026-09-23 — the wall's kind control and a year field in `/add`'s
-   search bar, each kind asking TMDB's own search, and TMDB's later pages on
-   request — not yet deployed.
+   search as the owner types, which is optional. No migrations. Chunks 1 to
+   3 landed 2026-09-23 — the wall's kind control and a year field in `/add`'s
+   search bar, each kind asking TMDB's own search, TMDB's later pages on
+   request, and each result's country and original name — not yet deployed.
 
 ## Blocked
 

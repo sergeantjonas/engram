@@ -17,6 +17,8 @@ const witcher: TmdbCandidate = {
   year: 2019,
   posterPath: '/AoGsDM02UVt0npBA8OvpDcZbaMi.jpg',
   overview: 'Geralt of Rivia.',
+  originCountry: 'PL',
+  original: null,
 };
 
 let app: FastifyInstance | undefined;

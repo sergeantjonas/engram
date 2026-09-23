@@ -2234,6 +2234,8 @@ const candidate = (overrides: Partial<TmdbCandidate>): TmdbCandidate => ({
   year: 1995,
   posterPath: null,
   overview: null,
+  originCountry: null,
+  original: null,
   storedTitleId: null,
   ...overrides,
 });
@@ -2272,6 +2274,30 @@ describe('adding a title', () => {
     );
     expect(screen.getByText('A crew of thieves.')).toBeDefined();
     expect(screen.getByRole('heading', { name: /Breaking Bad/ }).textContent).toContain('series');
+  });
+
+  it('tells a remake from its original by where it is from and what it is called there', async () => {
+    stubApi((url) =>
+      url.includes('/search')
+        ? json({
+            results: [
+              candidate({
+                kind: 'show',
+                tmdbId: '1429',
+                name: 'Attack on Titan',
+                year: 2013,
+                originCountry: 'JP',
+                original: { name: '進撃の巨人', language: 'ja' },
+              }),
+            ],
+          })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=titan');
+
+    const heading = await screen.findByRole('heading', { name: /^Attack on Titan/ });
+    expect(heading.textContent).toBe('Attack on Titan 2013 · series · JP');
+    expect(screen.getByText('進撃の巨人').getAttribute('lang')).toBe('ja');
   });
 
   it('asks nothing for a query it cannot read', async () => {

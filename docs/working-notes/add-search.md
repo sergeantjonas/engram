@@ -1,6 +1,6 @@
 # Add search
 
-**Status:** In progress — chunks 1 and 2 landed 2026-09-23, not yet deployed.
+**Status:** In progress — chunks 1 to 3 landed 2026-09-23, not yet deployed.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
 endpoints accept. Seven chunks, one commit each, in order; chunk 7 is
 optional. No chunk carries a migration.
@@ -130,11 +130,14 @@ current.
 
 ## Chunk 3 · Tell look-alikes apart
 
-The candidate carries `originCountry` (series only) and `originalName` when it
-differs from the display name, both from the row already fetched. The row's
-meta line draws `GB · 2001 · SERIES` and the original name under the title, so
-*The Office* from 2001 and from 2005 stop being two identical rows with
-different years. Null draws nothing.
+Landed 2026-09-23. The candidate carries `originCountry` — a series' first
+`origin_country`; a film's search row has none — and `original`, the title in
+its own language with TMDB's language code, only when it differs from the
+display name. Both come off the row already fetched, so no call is added. The
+row's heading reads `The Office 2001 · series · GB`, and the original name
+sits under it with `lang` set, so a screen reader pronounces it and CJK text
+takes its own language's glyphs. *The Office* from 2001 and from 2005 stop
+being two rows told apart by the year alone. Null draws nothing.
 
 ## Chunk 4 · Want from the results
 

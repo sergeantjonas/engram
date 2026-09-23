@@ -1,6 +1,8 @@
 # Add search
 
-**Status:** Built 2026-09-24 — chunks 1 to 6 landed 2026-09-23 and chunk 7 on 2026-09-24; none of it deployed yet.
+**Status:** Done 2026-09-24 — built and deployed, no migration. Chunks 1 to
+6 landed 2026-09-23 and chunk 7 on 2026-09-24; three small follow-ups are
+listed at the end.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
 endpoints accept. Seven chunks, one commit each, in order. No chunk carries a
 migration.
@@ -257,6 +259,18 @@ What did stand in the way, and how each went:
   moved past cost its TMDB call when the API made it; cancelling the browser's
   side saves nothing, and throws away an answer that, left to finish, is cached
   for when the query comes back.
+
+## Follow-ups
+
+Left over from the arc, none of them blocking:
+
+- **Focus after a single *Want*.** The row moves into the held-back group, so
+  the button that had focus unmounts and focus falls to the page. *Add* does
+  not have the problem because it opens the backfill.
+- **iOS zoom.** The query and year fields are 15px and 14px, and iOS Safari
+  zooms the page on focusing an input under 16px. Unchecked on a device.
+- **Phone width.** The bar's wrap was checked at about 500px, the narrowest
+  headless Chrome lays out; 390px is unchecked.
 
 ## Not planned
 

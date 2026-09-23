@@ -322,7 +322,7 @@ the viewer wants of a title. The SPA calls all four.
    interval, which is the whole cost of the feature — nothing else in the app
    asks a question on a timer. Surface, and the band it competes with, in
    [web-design.md](web-design.md) § Still open.
-8. ~~**Add search**~~ — built 2026-09-24, not yet deployed. Scoped
+8. ~~**Add search**~~ — done 2026-09-24, built and deployed. Scoped
    2026-09-23 in [add-search.md](add-search.md).
    `/add` searched by name only: one page of twenty mixed results from
    `/search/multi`, no kind, no year, no second page. Seven chunks, in order —

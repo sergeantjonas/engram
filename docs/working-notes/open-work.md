@@ -337,6 +337,20 @@ the viewer wants of a title. The SPA calls all four.
    a result or a selection, a pasted IMDb or TMDB link answered with the
    title it names, and a collection opened with its films ticked. Chunk 7,
    search as the owner types, landed 2026-09-24.
+9. **Visual finish** — scoped 2026-09-24 in [visual-finish.md](visual-finish.md),
+   nothing built. A review of the running app against
+   [web-design.md](web-design.md) and its mockup, at four widths and measured
+   rather than judged by eye: the palette, the wall, the grid and the tint
+   hold; what does not is the states the mockup never drew and the text set in
+   `--faint`, at 3.26:1 on the page. Settled with it: no state rests on hue
+   alone, measured under simulated colour-blind vision. Nine chunks, in order —
+   focus and ticked boxes in the palette's own terms, values moved off
+   `--faint`, colour that holds without hue (a filled missing cell, a lighter
+   `--line`, the list pane's bar following the wall's), Next up legible over
+   any still, the type rules as the note writes them, the owner's top bar back
+   on its 57px token, the year's pane beside its calendars, a cover for a
+   title with no poster, and the backfill step drawn as the mockup has it. No
+   migrations, no API.
 
 ## Blocked
 

@@ -46,4 +46,9 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
   a second page, an id — and the seven chunks that let it, with what TMDB's
   search endpoints take and its rate limit. Read before changing `/add` or
   `GET /search`.
+- `visual-finish.md` — plan. What a measured review of the running app found
+  against the design — focus, contrast, colour that must hold without hue,
+  type that drifted from the note, two layout offsets, and the cover and
+  backfill step the mockup drew — and the nine chunks that close it. Read
+  before changing how anything in `apps/web` looks.
 - `integration-ideas.md` — idea pool. Nothing here is committed to.

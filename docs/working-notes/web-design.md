@@ -246,9 +246,12 @@ up to four — each with its own "Not now", and one card left fills the
 row as the band did. `NEXT UP` sits once above the row. See
 [web-depth.md](web-depth.md) arc 4 chunk 1.
 
-Titles wrap to two lines under the tile and a subtitle past a colon is trimmed
-with the full name on hover. Truncation was accepted as a layout problem rather
-than a font one — it is not a reason to revisit the type.
+Titles wrap to two lines under the tile and are clamped there, with the full
+name on hover. Truncation was accepted as a layout problem rather than a font
+one — it is not a reason to revisit the type. The mockup also trimmed a
+subtitle past a colon; the build does not, since 2026-09-23, because in a
+franchise the subtitle is the part that tells two tiles apart — "Avengers" twice
+side by side names neither film.
 
 "Add watched" sits in the top chrome on every screen, because it is a primary
 verb in this app rather than something behind a settings page.

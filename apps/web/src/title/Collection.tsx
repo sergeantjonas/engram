@@ -99,8 +99,8 @@ function Part({
         </Link>
       )}
       <div className="mt-1.5 flex min-h-[30px] items-start justify-between gap-2">
-        {/* Whole, unlike the wall: inside a collection the part after the
-            colon is the only thing that tells the tiles apart. */}
+        {/* Whole: inside a collection the part after the colon is the only
+            thing that tells the tiles apart. */}
         <Tip label={part.name}>
           <h3 className="line-clamp-2 text-xs leading-tight font-medium">{part.name}</h3>
         </Tip>

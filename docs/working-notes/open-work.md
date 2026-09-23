@@ -291,9 +291,10 @@ the viewer wants of a title. The SPA calls all four.
    series' state bar is its progress, jade for the share seen — and chunk 2
    the same day, a wall tile growing into the title page's poster, and
    chunk 3, a title page tinted by its poster, and chunk 4, first-run
-   sentences on an empty wall and an empty title. Arc 5 is complete; it and
-   the export's UTC intent timestamps are not yet deployed, and with them on
-   the box, web depth is done.
+   sentences on an empty wall and an empty title. Arc 5 is complete; it, the
+   export's UTC intent timestamps and wall names no longer cut at a colon
+   ([web-design.md](web-design.md), amended 2026-09-23) are not yet deployed,
+   and with them on the box, web depth is done.
 7. **"Now watching"** — not started. The only part settled is which API
    answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
    server, which returns every current session with its user, player, platform

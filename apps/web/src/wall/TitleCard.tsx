@@ -56,13 +56,6 @@ const progressLabel = (title: TitleSummary) =>
     ? `, ${title.episodes.seen} of ${title.episodes.total} episodes`
     : '';
 
-/**
- * "Demon Slayer: Kimetsu no Yaiba Infinity Castle" under a 118px tile is a
- * wall of type. The part before the colon identifies it; the rest is on hover
- * and on the title page.
- */
-const shortTitle = (name: string) => name.split(':')[0]?.trim() ?? name;
-
 export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilter | undefined }) {
   const poster = posterUrl(title.posterPath);
   const since = formatSince(title.lastWatchedAt, title.lastWatchedPrecision);
@@ -126,11 +119,11 @@ export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilt
         {/* Mouse-only, and deliberately: the heading is not focusable and
             three hundred cards must not add three hundred tab stops. Anything
             reading the page rather than looking at it gets the whole name off
-            the link above, which carries it in full. */}
+            the link above. */}
         <Tip label={title.name}>
-          <h2 className="line-clamp-2 text-xs leading-tight font-medium">
-            {shortTitle(title.name)}
-          </h2>
+          {/* Clamped rather than cut at a colon: in a franchise the subtitle
+              is what tells "Avengers: Endgame" from "Avengers: Infinity War". */}
+          <h2 className="line-clamp-2 text-xs leading-tight font-medium">{title.name}</h2>
         </Tip>
         {since ? <span className="shrink-0 font-mono text-[10px] text-dim">{since}</span> : null}
       </div>

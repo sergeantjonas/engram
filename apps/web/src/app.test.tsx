@@ -460,6 +460,24 @@ describe('the wall', () => {
     ).toMatch(/^\/titles\/[0-9a-f-]{36}$/);
   });
 
+  it('names two films of one franchise apart', async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({
+            titles: [
+              title({ kind: 'movie', key: 'movie:tmdb:1', name: 'Avengers: Endgame' }),
+              title({ kind: 'movie', key: 'movie:tmdb:2', name: 'Avengers: Infinity War' }),
+            ],
+          })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/');
+
+    // The subtitle is the part that tells them apart, so it is not cut.
+    expect(await screen.findByRole('heading', { name: 'Avengers: Endgame' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Avengers: Infinity War' })).toBeDefined();
+  });
+
   it("draws a run's bar as the share of it seen, and a film's as one colour", async () => {
     stubApi((url) =>
       url.includes('/titles')

@@ -10,7 +10,8 @@ day with no migration, and `GET /history` answered on the box as the
 rehearsal had — 461 plays over 24 titles, all exact, 116 KB. Chunks 4 and
 5 deployed 2026-09-23, no migration, and the export downloaded from the box
 matched the local rehearsal's shape; its intent timestamps are written in
-UTC since, not yet deployed. Arc 5 is next.
+UTC since, not yet deployed. Arc 5 chunk 1, the progress bar, landed
+2026-09-23 and is not yet deployed; chunk 2 is next.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -615,12 +616,17 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
 
 ## Arc 5 · Visual
 
-1. **The state bar becomes a progress bar.** The card holds
-   `episodes.seen / total` and draws a binary 3px colour. Jade for the seen
-   fraction over `--line` for the rest, full jade when finished, gold kept for
-   in-progress as the bar's *colour* only if it still reads at 118px; try
-   jade-fraction alone first. 8 of 424 and 400 of 424 stop looking identical.
-   Highest value per line in this note. Films keep the binary bar.
+1. ~~**The state bar becomes a progress bar.**~~ Landed 2026-09-23. A
+   series' 3px bar is `episodes.seen / total` in jade over `--line`, full
+   when finished, so 8 of 424 and 400 of 424 no longer look identical. Films
+   keep the binary bar. Gold was held in reserve for in-progress in case the
+   jade fraction alone did not read at 118px; it did — 4 of 24, 8 of 24, 16
+   of 24 and 26 of 32 are told apart at a glance on the local wall — so the
+   bar draws no gold at all, a film being only unwatched or seen. The
+   screenshot showed the other end instead: 422 of 424 and 32 of 33 drew as
+   full as finished, so the fill stops 3px short until the run is done, as
+   it starts no narrower than 2px once begun. The link's name carries the
+   count for an unfinished run, since the bar is only drawn.
 2. **View transitions.** TanStack Router's `viewTransition` on the card link
    and a shared `view-transition-name` per title on the wall poster and the
    header poster, so the tile morphs into the header. Progressive: browsers

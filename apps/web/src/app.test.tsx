@@ -376,9 +376,47 @@ describe('the wall', () => {
     expect(screen.getByRole('link', { name: 'Show excluded' }).getAttribute('href')).toBe(
       '/?facet=going&excluded=true',
     );
-    expect(screen.getByRole('link', { name: 'Bleach, In progress' }).getAttribute('href')).toMatch(
-      /^\/titles\/[0-9a-f-]{36}$/,
+    expect(
+      screen
+        .getByRole('link', { name: 'Bleach, In progress, 8 of 424 episodes' })
+        .getAttribute('href'),
+    ).toMatch(/^\/titles\/[0-9a-f-]{36}$/);
+  });
+
+  it("draws a run's bar as the share of it seen, and a film's as one colour", async () => {
+    stubApi((url) =>
+      url.includes('/titles')
+        ? json({
+            titles: [
+              title({ name: 'Bleach', state: 'in_progress', episodes: { total: 424, seen: 8 } }),
+              title({
+                key: 'show:tvdb:2',
+                name: 'Lost',
+                state: 'seen',
+                episodes: { total: 121, seen: 121 },
+              }),
+              title({ key: 'show:tvdb:3', name: 'Dark', episodes: { total: 26, seen: 0 } }),
+              title({ kind: 'movie', key: 'movie:tmdb:2', name: 'Heat', state: 'seen' }),
+            ],
+          })
+        : json({ isOwner: true }),
     );
+    await renderAt('/');
+
+    const fillOf = (name: string) =>
+      screen.getByRole('link', { name }).querySelector<HTMLElement>('[style]');
+    // The count is in the name as well as the bar, since the bar is only drawn.
+    const begun = fillOf('Bleach, In progress, 8 of 424 episodes');
+    expect(begun?.style.width).toBe(`${(8 / 424) * 100}%`);
+    // Held short of the end, so an unfinished run never draws as finished.
+    expect(begun?.classList.contains('max-w-[calc(100%-3px)]')).toBe(true);
+    const done = fillOf('Lost, Seen');
+    expect(done?.style.width).toBe('100%');
+    expect(done?.classList.contains('max-w-[calc(100%-3px)]')).toBe(false);
+    expect(fillOf('Dark, Unwatched')).toBeNull();
+    const film = screen.getByRole('link', { name: 'Heat, Seen' });
+    expect(film.querySelector('[style]')).toBeNull();
+    expect(film.querySelector('.bg-jade')).not.toBeNull();
   });
 
   it('narrows to movies and stops offering chips a movie cannot match', async () => {

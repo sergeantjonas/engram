@@ -22,6 +22,39 @@ export const STATE_BAR: Record<TitleState, string> = {
 };
 
 /**
+ * A run's bar is how far through it the viewer is: jade for the share seen
+ * over the empty bar's line, so 8 of 424 and 400 of 424 do not read alike.
+ * Finished is full whatever the count says, and the ends are held for the
+ * rest: a run begun is never narrower than a sliver and one not finished never
+ * quite full, or one episode in would pass for none and one short for done. A
+ * film has no share to draw and keeps the one colour, and so does a run with
+ * no episodes stored.
+ */
+function StateBar({ title }: { title: TitleSummary }) {
+  const { seen, total } = title.episodes;
+  if (title.kind === 'movie' || total === 0) {
+    return <span className={`block h-[3px] ${STATE_BAR[title.state]}`} />;
+  }
+  const share = title.state === 'seen' ? 100 : (seen / total) * 100;
+  return (
+    <span className="block h-[3px] bg-line">
+      {title.state === 'unwatched' ? null : (
+        <span
+          className={`block h-full bg-jade ${title.state === 'seen' ? '' : 'min-w-0.5 max-w-[calc(100%-3px)]'}`}
+          style={{ width: `${share}%` }}
+        />
+      )}
+    </span>
+  );
+}
+
+/** What the bar draws, for anything reading the link rather than looking at it. */
+const progressLabel = (title: TitleSummary) =>
+  title.kind === 'show' && title.state === 'in_progress' && title.episodes.total > 0
+    ? `, ${title.episodes.seen} of ${title.episodes.total} episodes`
+    : '';
+
+/**
  * "Demon Slayer: Kimetsu no Yaiba Infinity Castle" under a 118px tile is a
  * wall of type. The part before the colon identifies it; the rest is on hover
  * and on the title page.
@@ -45,7 +78,7 @@ export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilt
         // The pane on the other side opens on what the wall was showing,
         // rather than widening back out the moment a title is opened.
         search={kind ? { kind } : {}}
-        aria-label={`${title.name}, ${STATE_LABEL[title.state]}`}
+        aria-label={`${title.name}, ${STATE_LABEL[title.state]}${progressLabel(title)}`}
         className="block rounded-t hover:ring-2 hover:ring-dim"
       >
         <div
@@ -65,7 +98,7 @@ export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilt
             </span>
           )}
         </div>
-        <span className={`block h-[3px] ${STATE_BAR[title.state]}`} />
+        <StateBar title={title} />
       </Link>
       {/* Two lines' worth of height whether the name needs it or not, so a row
           of one-line names does not sit ragged against its two-line neighbour. */}

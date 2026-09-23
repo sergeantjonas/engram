@@ -1,6 +1,6 @@
 # Web design
 
-**Status:** Settled 2026-09-16; amended 2026-09-21 and 2026-09-22 where the build departs from
+**Status:** Settled 2026-09-16; amended 2026-09-21, 2026-09-22 and 2026-09-23 where the build departs from
 the mockup, each departure marked as such in place. The mockup is the reference,
 not this note: [../design/engram-app.html](../design/engram-app.html), or
 <https://claude.ai/artifact/8Tu2NYg7EXNS8kDw3LanJ5> for the hosted copy. Read
@@ -103,7 +103,12 @@ is widened rather than the text shrunk, as the feed's time gutter was. See
 **State vocabulary.** Six states, and the wall filters on them: still going,
 drifting, gaps, finished, not on disk, added by hand. A tile carries its state
 as a 3px bar under the poster, and a title no longer on disk is greyscaled to
-45% brightness rather than badged.
+45% brightness rather than badged. A film's bar is one colour; a series' is
+its progress, jade for the share seen over `--line`, never empty once begun
+and held 3px short of full until the run is finished — so jade meeting the
+bar's end still means finished and nothing else. The bar draws no gold: a
+film is only ever unwatched or seen. Since 2026-09-23; see
+[web-depth.md](web-depth.md) arc 5 chunk 1.
 
 They are facets, not a partition — a show can be still going, drifting and full
 of holes at once, and each chip counts everything the chrome's search box has
@@ -464,8 +469,8 @@ the record and has to outlive a navigation.
 
 ## Still open
 
-What the built screens still owe past the mockup — a progress bar in place
-of the state bar among them — is scoped in [web-depth.md](web-depth.md),
+What the built screens still owe past the mockup is scoped in
+[web-depth.md](web-depth.md),
 which is also where the fourth rail item below got its answer.
 
 - **Light mode.** The mockup is dark only. No decision was made about whether a

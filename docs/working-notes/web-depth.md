@@ -1,7 +1,7 @@
 # Web depth
 
-**Status:** Built 2026-09-23; arc 5 and the export's UTC intent timestamps
-are not yet deployed — scoped 2026-09-21 from a review of the three built
+**Status:** Done 2026-09-23 — every arc built and deployed. Scoped
+2026-09-21 from a review of the three built
 screens against [web-design.md](web-design.md). Arcs 1 and 2 are complete
 and deployed: arc 1 landed 2026-09-21 and 2026-09-22, arc 2 on 2026-09-22
 with migrations 0012 to 0014, each refreshed on the box the day it shipped.
@@ -11,10 +11,9 @@ day with no migration, and `GET /history` answered on the box as the
 rehearsal had — 461 plays over 24 titles, all exact, 116 KB. Chunks 4 and
 5 deployed 2026-09-23, no migration, and the export downloaded from the box
 matched the local rehearsal's shape; its intent timestamps are written in
-UTC since, not yet deployed. Arc 5 is complete, all four chunks landed
+UTC since, deployed 2026-09-23. Arc 5 is complete, all four chunks landed
 2026-09-23 — the progress bar, the view transition, the ambient tint and
-the first-run states — none of it deployed yet and none of it carrying a
-migration. Once they are on the box, every arc here is done.
+the first-run states — and deployed the same day, no migration.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 

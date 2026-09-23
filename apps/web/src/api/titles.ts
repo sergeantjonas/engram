@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query';
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { apiFetch, postJson } from './client.ts';
 
 export type WatchPrecision = 'exact' | 'day' | 'month' | 'year' | 'unknown';
@@ -376,12 +376,26 @@ export interface SearchParams {
   year?: number | undefined;
 }
 
+/** One TMDB page of `GET /search`. */
+export interface SearchPage {
+  results: TmdbCandidate[];
+  page: number;
+  /** Whether TMDB has a page after this one, as far as the API will ask. */
+  hasMore: boolean;
+}
+
 export function searchQuery({ q, kind, year }: SearchParams) {
   const narrowed = `${kind ? `&kind=${kind}` : ''}${year === undefined ? '' : `&year=${year}`}`;
-  return queryOptions({
+  return infiniteQueryOptions({
     queryKey: ['search', q, kind ?? null, year ?? null],
-    queryFn: () =>
-      apiFetch<{ results: TmdbCandidate[] }>(`/search?q=${encodeURIComponent(q)}${narrowed}`),
+    queryFn: ({ pageParam }) =>
+      apiFetch<SearchPage>(
+        `/search?q=${encodeURIComponent(q)}${narrowed}${pageParam > 1 ? `&page=${pageParam}` : ''}`,
+      ),
+    initialPageParam: 1,
+    // Taken from the page rather than counted here: only the API saw TMDB's
+    // `total_pages`, and only it knows where TMDB stops answering.
+    getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
     // A search for nothing is not a search. The route rejects an empty `q`
     // with a 400, and asking it to is a round trip to learn what is already
     // known here.
@@ -389,6 +403,9 @@ export function searchQuery({ q, kind, year }: SearchParams) {
     // The same query typed twice in a minute is the same twenty films, and
     // every miss is a TMDB call against the owner's key.
     staleTime: 5 * 60 * 1000,
+    // A stale infinite query refetches every page it holds, one call each, and
+    // a tab coming back into focus is no reason to spend four of them.
+    refetchOnWindowFocus: false,
   });
 }
 

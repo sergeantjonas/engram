@@ -123,8 +123,15 @@ export interface TmdbSearchFilter {
   year?: number | undefined;
 }
 
+/** One page of a search, and how many TMDB says there are. */
+export interface TmdbSearchPage {
+  results: TmdbCandidate[];
+  page: number;
+  totalPages: number;
+}
+
 export interface TmdbClient {
-  search(query: string, filter?: TmdbSearchFilter): Promise<TmdbCandidate[]>;
+  search(query: string, filter?: TmdbSearchFilter, page?: number): Promise<TmdbSearchPage>;
   details(kind: TitleKind, tmdbId: string): Promise<TmdbTitleDetails>;
   seasonEpisodes(tmdbId: string, season: number): Promise<TmdbEpisode[]>;
   collection(id: number): Promise<TmdbCollection>;
@@ -291,20 +298,26 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
   }
 
   return {
-    async search(query, filter) {
+    async search(query, filter, page = 1) {
       const narrowed = filter ? KIND_SEARCH[filter.kind] : null;
       const params =
         narrowed && filter?.year !== undefined
-          ? { query, [narrowed.year]: String(filter.year) }
-          : { query };
+          ? { query, page: String(page), [narrowed.year]: String(filter.year) }
+          : { query, page: String(page) };
       const body = (await get(narrowed?.path ?? '/search/multi', params)) as {
         results?: SearchRow[];
+        total_pages?: number;
       } | null;
       const rows = body?.results ?? [];
-      // Upstream order is popularity, which is the ranking the add screen wants.
-      return rows
-        .map((row) => candidateOf(row, filter?.kind))
-        .filter((c): c is TmdbCandidate => c !== null);
+      return {
+        // Upstream order is popularity, which is the ranking the add screen wants.
+        results: rows
+          .map((row) => candidateOf(row, filter?.kind))
+          .filter((c): c is TmdbCandidate => c !== null),
+        page,
+        // A body that does not say is the last page, not the first of many.
+        totalPages: typeof body?.total_pages === 'number' ? body.total_pages : page,
+      };
     },
 
     async details(kind, tmdbId) {

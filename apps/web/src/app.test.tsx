@@ -2400,6 +2400,61 @@ describe('adding a title', () => {
     expect(calls.filter((call) => call.url.includes('/search'))).toHaveLength(2);
   });
 
+  it('asks TMDB for its next page only when told to, and lists each title once', async () => {
+    const calls = stubApi((url) => {
+      if (!url.includes('/search')) return json({ isOwner: true });
+      // Heat again on the second page: popularity moved it between the calls.
+      return url.includes('page=2')
+        ? json({
+            results: [candidate({ tmdbId: '2', name: 'Heat Wave' }), candidate({})],
+            page: 2,
+            hasMore: false,
+          })
+        : json({ results: [candidate({})], page: 1, hasMore: true });
+    });
+    await renderAt('/add?q=heat');
+
+    await screen.findByRole('heading', { name: /^Heat/ });
+    expect(calls.filter((call) => call.url.includes('/search'))).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'more from TMDB' }));
+
+    await screen.findByRole('heading', { name: /^Heat Wave/ });
+    expect(screen.getAllByRole('heading', { name: /^Heat \d/ })).toHaveLength(1);
+    expect(calls.map((call) => call.url)).toContain('http://localhost:2012/search?q=heat&page=2');
+    // TMDB said there was nothing after the second page.
+    expect(screen.queryByRole('button', { name: 'more from TMDB' })).toBeNull();
+  });
+
+  it('keeps what it has when a later page fails, and says so', async () => {
+    stubApi((url) => {
+      if (!url.includes('/search')) return json({ isOwner: true });
+      return url.includes('page=2')
+        ? json({ error: 'upstream_failed', message: 'TMDB did not answer' }, 502)
+        : json({ results: [candidate({})], page: 1, hasMore: true });
+    });
+    await renderAt('/add?q=heat');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'more from TMDB' }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe('TMDB did not answer. Try again.');
+    expect(screen.getByRole('heading', { name: /^Heat/ })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'more from TMDB' })).toBeDefined();
+  });
+
+  // Not "TMDB has nothing": there is a next page, and titles may be on it.
+  it('offers the next page when the first held no title', async () => {
+    stubApi((url) =>
+      url.includes('/search')
+        ? json({ results: [], page: 1, hasMore: true })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=nolan');
+
+    await screen.findByText('No titles in what TMDB has sent for “nolan” so far.');
+    expect(screen.getByRole('button', { name: 'more from TMDB' })).toBeDefined();
+  });
+
   it('will not search on a year it cannot read', async () => {
     const calls = stubApi((url) =>
       url.includes('/search') ? json({ results: [] }) : json({ isOwner: true }),

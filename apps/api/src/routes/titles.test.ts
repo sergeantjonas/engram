@@ -24,7 +24,7 @@ const witcher: TmdbTitleDetails = {
 };
 
 const stub = (over: Partial<TmdbClient> = {}): TmdbClient => ({
-  search: async () => [],
+  search: async () => ({ results: [], page: 1, totalPages: 0 }),
   details: async () => witcher,
   seasonEpisodes: async () => [],
   collection: async () => ({ id: 0, name: '', parts: [] }),

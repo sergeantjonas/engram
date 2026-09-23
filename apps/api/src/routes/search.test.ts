@@ -28,6 +28,11 @@ const live = () => {
   return { githubUserId: OWNER_GITHUB_USER_ID, expiresAt: at, absoluteExpiresAt: at };
 };
 
+/** A search that finds these, on a page of its own with none after it. */
+const finding =
+  (...results: TmdbCandidate[]): TmdbClient['search'] =>
+  async (_query, _filter, page = 1) => ({ results, page, totalPages: page });
+
 /** Only `search` is ever exercised here; the rest satisfy the interface. */
 const searching = (search: TmdbClient['search']): TmdbClient => ({
   search,
@@ -61,7 +66,7 @@ afterEach(async () => {
 
 describe('GET /search', () => {
   it('returns the candidates TMDB found', async () => {
-    const server = start(searching(async () => [witcher]));
+    const server = start(searching(finding(witcher)));
     storing([]);
 
     const response = await server.inject({
@@ -71,11 +76,15 @@ describe('GET /search', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ results: [{ ...witcher, storedTitleId: null }] });
+    expect(response.json()).toEqual({
+      results: [{ ...witcher, storedTitleId: null }],
+      page: 1,
+      hasMore: false,
+    });
   });
 
   it('names the title already holding a candidate', async () => {
-    const server = start(searching(async () => [witcher]));
+    const server = start(searching(finding(witcher)));
     storing([{ id: 'title-1', kind: 'show', tmdbId: witcher.tmdbId }]);
 
     const response = await server.inject({
@@ -91,7 +100,7 @@ describe('GET /search', () => {
   // different things and matching on it alone would hide an unstored film
   // behind a stored series.
   it('does not match a series against a film of the same id', async () => {
-    const server = start(searching(async () => [witcher]));
+    const server = start(searching(finding(witcher)));
     storing([{ id: 'title-1', kind: 'movie', tmdbId: witcher.tmdbId }]);
 
     const response = await server.inject({
@@ -108,7 +117,7 @@ describe('GET /search', () => {
     const server = start(
       searching(async (...args) => {
         asked.push(args);
-        return [];
+        return { results: [], page: 1, totalPages: 1 };
       }),
     );
 
@@ -120,14 +129,56 @@ describe('GET /search', () => {
     });
 
     expect(asked).toEqual([
-      ['dune', undefined],
-      ['dune', { kind: 'movie', year: 1984 }],
+      ['dune', undefined, 1],
+      ['dune', { kind: 'movie', year: 1984 }, 1],
     ]);
+  });
+
+  it('asks for the page named, and says whether TMDB has another', async () => {
+    const server = start(
+      searching(async (_query, _filter, page = 1) => ({ results: [], page, totalPages: 3 })),
+    );
+
+    const second = await server.inject({
+      method: 'GET',
+      url: '/search?q=dune&page=2',
+      headers: signedIn,
+    });
+    const third = await server.inject({
+      method: 'GET',
+      url: '/search?q=dune&page=3',
+      headers: signedIn,
+    });
+
+    expect(second.json()).toEqual({ results: [], page: 2, hasMore: true });
+    expect(third.json()).toMatchObject({ page: 3, hasMore: false });
+  });
+
+  // `total_pages` can run past 500 on a common word, and TMDB answers any page
+  // beyond that with an error rather than results.
+  it('stops at the last page TMDB will answer', async () => {
+    const server = start(
+      searching(async (_query, _filter, page = 1) => ({ results: [], page, totalPages: 900 })),
+    );
+
+    const last = await server.inject({
+      method: 'GET',
+      url: '/search?q=a&page=500',
+      headers: signedIn,
+    });
+    const past = await server.inject({
+      method: 'GET',
+      url: '/search?q=a&page=501',
+      headers: signedIn,
+    });
+
+    expect(last.json().hasMore).toBe(false);
+    expect(past.statusCode).toBe(400);
   });
 
   // `/search/multi` takes no year, so there is no search a year alone could ask.
   it('refuses a year without a kind', async () => {
-    const server = start(searching(async () => [witcher]));
+    const server = start(searching(finding(witcher)));
 
     const response = await server.inject({
       method: 'GET',
@@ -140,7 +191,7 @@ describe('GET /search', () => {
   });
 
   it('refuses a year TMDB would not search on', async () => {
-    const server = start(searching(async () => [witcher]));
+    const server = start(searching(finding(witcher)));
 
     const response = await server.inject({
       method: 'GET',
@@ -151,33 +202,8 @@ describe('GET /search', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it('caps the results at the requested limit', async () => {
-    const many = Array.from({ length: 20 }, (_, i) => ({ ...witcher, tmdbId: String(i) }));
-    const server = start(searching(async () => many));
-
-    const response = await server.inject({
-      method: 'GET',
-      url: '/search?q=a&limit=3',
-      headers: signedIn,
-    });
-
-    expect(response.json().results).toHaveLength(3);
-  });
-
-  it('refuses a limit larger than the one page it fetches', async () => {
-    const server = start(searching(async () => [witcher]));
-
-    const response = await server.inject({
-      method: 'GET',
-      url: '/search?q=a&limit=50',
-      headers: signedIn,
-    });
-
-    expect(response.statusCode).toBe(400);
-  });
-
   it('rejects a query that asks for nothing', async () => {
-    const server = start(searching(async () => [witcher]));
+    const server = start(searching(finding(witcher)));
 
     const response = await server.inject({
       method: 'GET',

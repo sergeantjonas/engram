@@ -64,7 +64,7 @@ describe('createTmdbClient', () => {
   it('maps tv to show and movie to movie, taking each kind its own date field', async () => {
     const { tmdb } = client({ results: [witcher, matrix] });
 
-    expect(await tmdb.search('the witcher')).toEqual([
+    expect((await tmdb.search('the witcher')).results).toEqual([
       {
         kind: 'show',
         tmdbId: '71912',
@@ -88,7 +88,7 @@ describe('createTmdbClient', () => {
     const person = { media_type: 'person', id: 525, name: 'Christopher Nolan' };
     const { tmdb } = client({ results: [person, witcher] });
 
-    const results = await tmdb.search('nolan');
+    const { results } = await tmdb.search('nolan');
 
     expect(results.map((r) => r.tmdbId)).toEqual(['71912']);
   });
@@ -97,7 +97,7 @@ describe('createTmdbClient', () => {
     const bare = { media_type: 'tv', id: 1, name: 'Unaired', first_air_date: '', overview: '' };
     const { tmdb } = client({ results: [bare] });
 
-    expect(await tmdb.search('unaired')).toEqual([
+    expect((await tmdb.search('unaired')).results).toEqual([
       { kind: 'show', tmdbId: '1', name: 'Unaired', year: null, posterPath: null, overview: null },
     ]);
   });
@@ -136,9 +136,18 @@ describe('createTmdbClient', () => {
     const { media_type: _, ...row } = matrix;
     const { tmdb } = client({ results: [row] });
 
-    const [result] = await tmdb.search('matrix', { kind: 'movie' });
+    const [result] = (await tmdb.search('matrix', { kind: 'movie' })).results;
 
     expect(result).toMatchObject({ kind: 'movie', tmdbId: '603', year: 1999 });
+  });
+
+  it('asks for the page named and reads how many TMDB has', async () => {
+    const { tmdb, calls } = client({ results: [], page: 2, total_pages: 7 });
+
+    const found = await tmdb.search('dune', undefined, 2);
+
+    expect(firstCall(calls).searchParams.get('page')).toBe('2');
+    expect(found).toEqual({ results: [], page: 2, totalPages: 7 });
   });
 
   it('raises a TmdbError carrying the upstream status', async () => {
@@ -368,7 +377,7 @@ describe('createTmdbClient', () => {
   it('treats a body with no results as no results', async () => {
     const { tmdb } = client(null);
 
-    expect(await tmdb.search('dune')).toEqual([]);
+    expect(await tmdb.search('dune')).toEqual({ results: [], page: 1, totalPages: 1 });
   });
 
   it('raises a TmdbError with no status when the request never lands', async () => {

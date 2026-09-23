@@ -5,19 +5,21 @@ import type { Database } from '../db/client.js';
 import { titles as titleTable } from '../db/schema.js';
 import { type TmdbCandidate, type TmdbClient, TmdbError } from '../tmdb/client.js';
 
+/** TMDB refuses a page past 500, whatever its `total_pages` says there are. */
+const LAST_PAGE = 500;
+
 /**
- * One request is one TMDB page, and a page is 20 results, so a larger limit
- * would promise more than it can return. Fewer than `limit` can still come
- * back: a search across both kinds has its people filtered out of the page
+ * One request is one TMDB page of up to 20. Fewer can come back than TMDB
+ * sent: a search across both kinds has its people filtered out of the page
  * after it arrives.
  */
 const querySchema = z
   .object({
     q: z.string().trim().min(1, 'q is required'),
-    limit: z.coerce.number().int().min(1).max(20).default(20),
     kind: z.enum(['show', 'movie']).optional(),
     // The range TMDB accepts, which is wider than anything it holds a title for.
     year: z.coerce.number().int().min(1000).max(9999).optional(),
+    page: z.coerce.number().int().min(1).max(LAST_PAGE).default(1),
   })
   .refine((query) => query.year === undefined || query.kind !== undefined, 'year needs a kind');
 
@@ -76,12 +78,14 @@ export function registerSearchRoutes(
       return reply.code(400).send({ error: 'bad_request', message });
     }
 
-    const { q, kind, year } = parsed.data;
+    const { q, kind, year, page } = parsed.data;
     try {
-      const results = await tmdb.search(q, kind ? { kind, year } : undefined);
-      // After the slice, so the lookup covers what is answered rather than the
-      // whole page.
-      return { results: await markStored(db, results.slice(0, parsed.data.limit)) };
+      const found = await tmdb.search(q, kind ? { kind, year } : undefined, page);
+      return {
+        results: await markStored(db, found.results),
+        page: found.page,
+        hasMore: found.page < Math.min(found.totalPages, LAST_PAGE),
+      };
     } catch (error) {
       if (!(error instanceof TmdbError)) throw error;
       // Only the status, never the error itself: its message or cause can carry

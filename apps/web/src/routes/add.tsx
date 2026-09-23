@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type InfiniteData,
+  type UseInfiniteQueryResult,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
 import { Backfill } from '../add/Backfill.tsx';
@@ -10,6 +16,7 @@ import {
   type AddedTitle,
   addTitle,
   candidateKey,
+  type SearchPage,
   searchQuery,
   type TmdbCandidate,
 } from '../api/titles.ts';
@@ -19,6 +26,20 @@ import { ACTIVE_SEG, CHIP, SEG } from '../wall/chips.ts';
 import { isKind, KIND_LABEL, KINDS, type KindFilter } from '../wall/facets.ts';
 
 const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
+
+/**
+ * Each candidate once. Popularity can move a title across a page boundary
+ * between one call and the next, so the same one can arrive on both pages.
+ */
+function unique(candidates: TmdbCandidate[]): TmdbCandidate[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = candidateKey(candidate);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 interface AddSearch {
   q?: string | undefined;
@@ -106,7 +127,8 @@ function Add() {
   }
 
   const asked = { q: q ?? '', kind, year };
-  const results = useQuery(searchQuery(asked));
+  const results = useInfiniteQuery(searchQuery(asked));
+  const found = unique(results.data?.pages.flatMap((page) => page.results) ?? []);
   // Refused rather than dropped from the search: a search the owner narrowed
   // and TMDB did not would read as TMDB not having the title.
   const yearUnreadable = kind !== undefined && yearDraft.trim() !== '' && !readYear(yearDraft);
@@ -121,14 +143,16 @@ function Add() {
    */
   const recordStored = (items: BatchItem[]) => {
     const byKey = new Map(items.map((item) => [candidateKey(item.candidate), item.added.title.id]));
-    queryClient.setQueriesData<{ results: TmdbCandidate[] }>({ queryKey: ['search'] }, (old) =>
+    const mark = (candidate: TmdbCandidate) => {
+      const id = byKey.get(candidateKey(candidate));
+      return id === undefined ? candidate : { ...candidate, storedTitleId: id };
+    };
+    queryClient.setQueriesData<InfiniteData<SearchPage>>({ queryKey: ['search'] }, (old) =>
       old === undefined
         ? old
         : {
-            results: old.results.map((candidate) => {
-              const id = byKey.get(candidateKey(candidate));
-              return id === undefined ? candidate : { ...candidate, storedTitleId: id };
-            }),
+            ...old,
+            pages: old.pages.map((page) => ({ ...page, results: page.results.map(mark) })),
           },
     );
   };
@@ -217,7 +241,7 @@ function Add() {
   // What the bar counts and what it sends, worked out once: a chosen key whose
   // candidate is no longer selectable must not be counted into a number the
   // button will not act on.
-  const picked = (results.data?.results ?? []).filter(
+  const picked = found.filter(
     (candidate) => candidate.storedTitleId === null && chosen.has(candidateKey(candidate)),
   );
   const busy = add.isPending || addSelected.isPending;
@@ -325,6 +349,7 @@ function Add() {
         kind={kind}
         year={year}
         results={results}
+        found={found}
         showStored={showStored}
         onToggleStored={() => setShowStored(!showStored)}
         chosen={chosen}
@@ -382,6 +407,7 @@ function Results({
   kind,
   year,
   results,
+  found,
   showStored,
   onToggleStored,
   chosen,
@@ -394,7 +420,9 @@ function Results({
   q: string | undefined;
   kind: KindFilter | undefined;
   year: number | undefined;
-  results: ReturnType<typeof useQuery<{ results: TmdbCandidate[] }>>;
+  results: UseInfiniteQueryResult<InfiniteData<SearchPage>>;
+  /** Every page loaded so far, flattened and each candidate once. */
+  found: TmdbCandidate[];
   showStored: boolean;
   onToggleStored: () => void;
   chosen: ReadonlySet<string>;
@@ -408,14 +436,16 @@ function Results({
     return <p className="text-dim">Search TMDB for something to put on the record.</p>;
   }
   if (results.isPending) return <p className="text-dim">Searching…</p>;
-  if (results.isError) {
+  // Only while nothing has arrived: a later page that fails leaves the ones
+  // already listed standing, and says so beside the way to ask again.
+  if (results.data === undefined) {
     return (
       <p role="alert" className="text-gap-tx">
         {describe(results.error)}
       </p>
     );
   }
-  if (results.data.results.length === 0) {
+  if (found.length === 0 && !results.hasNextPage) {
     return (
       <p className="text-dim">
         TMDB has nothing for “{q}”{among(kind, year)}.
@@ -423,10 +453,8 @@ function Results({
     );
   }
 
-  const stored = results.data.results.filter((candidate) => candidate.storedTitleId !== null);
-  const listed = showStored
-    ? results.data.results
-    : results.data.results.filter((candidate) => candidate.storedTitleId === null);
+  const stored = found.filter((candidate) => candidate.storedTitleId !== null);
+  const listed = showStored ? found : found.filter((candidate) => candidate.storedTitleId === null);
 
   return (
     <div className="space-y-5">
@@ -446,7 +474,13 @@ function Results({
       ) : null}
 
       {listed.length === 0 ? (
-        <p className="text-dim">Everything TMDB found for “{q}” is already on the record.</p>
+        <p className="text-dim">
+          {/* Usually a page of nothing but people, which only a search
+              across both kinds can send. */}
+          {found.length === 0
+            ? `No titles in what TMDB has sent for “${q}” so far.`
+            : `Everything TMDB found for “${q}”${results.hasNextPage ? ' so far' : ''} is already on the record.`}
+        </p>
       ) : (
         <ul className="space-y-5">
           {listed.map((candidate) => {
@@ -470,6 +504,25 @@ function Results({
           })}
         </ul>
       )}
+
+      {/* A button rather than loading on scroll: every page is a call against
+          the owner's key, and the sticky selection bar sits where a scroll
+          trigger would have to be. */}
+      {results.hasNextPage ? (
+        <button
+          type="button"
+          disabled={results.isFetchingNextPage}
+          onClick={() => void results.fetchNextPage()}
+          className="font-mono text-[10px] tracking-[.08em] text-faint underline-offset-4 hover:text-tx hover:underline disabled:opacity-50"
+        >
+          {results.isFetchingNextPage ? 'asking TMDB…' : 'more from TMDB'}
+        </button>
+      ) : null}
+      {results.isFetchNextPageError ? (
+        <p role="alert" className="text-sm text-gap-tx">
+          {describe(results.error)}
+        </p>
+      ) : null}
     </div>
   );
 }

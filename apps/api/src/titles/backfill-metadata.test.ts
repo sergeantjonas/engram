@@ -89,7 +89,7 @@ const details = (
 });
 
 const stubTmdb = (over: Partial<TmdbClient> = {}): TmdbClient => ({
-  search: async () => [],
+  search: async () => ({ results: [], page: 1, totalPages: 0 }),
   details: async () => details(),
   seasonEpisodes: async () => [],
   collection: async () => ({ id: 0, name: '', parts: [] }),

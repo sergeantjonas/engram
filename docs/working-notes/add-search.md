@@ -1,6 +1,6 @@
 # Add search
 
-**Status:** In progress — chunk 1 landed 2026-09-23, not yet deployed.
+**Status:** In progress — chunks 1 and 2 landed 2026-09-23, not yet deployed.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
 endpoints accept. Seven chunks, one commit each, in order; chunk 7 is
 optional. No chunk carries a migration.
@@ -9,10 +9,10 @@ optional. No chunk carries a migration.
 `/search/multi` a `query` and no other parameter, so every search was one page
 of twenty mixed rows, people included until they were dropped after the page
 arrived. There was no way to say *the film*, no way to say *the 1984 one*, and
-there is still no way to see a twenty-first result. A remake, a franchise or a
-common word buries the title being looked for, and the only way out is
-guessing a better query. The search itself is `TmdbClient.search`
-([client.ts:294](../../apps/api/src/tmdb/client.ts#L294)).
+no way to see a twenty-first result. A remake, a franchise or a common word
+buried the title being looked for, and the only way out was guessing a better
+query. The search itself is `TmdbClient.search`
+([client.ts:301](../../apps/api/src/tmdb/client.ts#L301)).
 
 ## Constraints that carry over
 
@@ -50,7 +50,7 @@ one that tells two shows of the same name apart.
 
 Per-kind rows carry no `media_type`, the field a `/search/multi` row's kind is
 read from, so `candidateOf`
-([client.ts:215](../../apps/api/src/tmdb/client.ts#L215)) takes a narrowed
+([client.ts:222](../../apps/api/src/tmdb/client.ts#L222)) takes a narrowed
 row's kind from the search it came back from. A series
 row carries `origin_country` and `original_name`; a film row carries
 `original_title` and `original_language` and no country.
@@ -98,24 +98,35 @@ rather than sending it to be refused. The year field is labelled *First
 aired* or *Released* by kind, and anything in it but a four-digit year
 disables Search rather than being quietly left out. Switching kind keeps a
 query typed and not yet searched for; a new query, kind or year clears the
-selection, which belongs to the results it was made over. A title added is patched into every cached
-search rather than only the one it was added from, since the same query under
-All or the other kind holds the same candidate for five minutes and would
-offer it again. The empty answer names what narrowed it — "TMDB has nothing
+selection, which belongs to the results it was made over. A title added is
+patched into every cached search rather than only the one it was added from,
+since the same query under All or the other kind holds the same candidate for
+five minutes and would offer it again. The empty answer names what narrowed it — "TMDB has nothing
 for “dune” among series first aired in 1984."
 
 ## Chunk 2 · More from TMDB
 
-`GET /search` takes `page` and answers `{ results, page, hasMore }`, `hasMore`
-from TMDB's `total_pages`. `limit` goes: slicing inside a page would skip the
-rows between it and the next one, and nothing in `apps/web` passes it.
+Landed 2026-09-23. `GET /search` takes `page` (1–500: TMDB refuses anything
+past 500 whatever its `total_pages` says) and answers
+`{ results, page, hasMore }`, `hasMore` from `total_pages` capped at that 500.
+`TmdbClient.search` returns the page with TMDB's count, and a body that gives
+none reads as the last page. `limit` went: slicing inside a page would skip
+the rows between it and the next one, and nothing in `apps/web` passed it.
 
-On the web, `useInfiniteQuery` and a *More from TMDB* button under the list —
-a button rather than scroll-loading, because every page is a call and the
-sticky commit bar sits at the bottom where a scroll trigger would be.
-Flattening dedupes on `candidateKey`, since popularity can move a title from
-one page to the next between calls. The held-back count covers every loaded
-page, and a selection lives across the pages of one search.
+On the web, `searchQuery` is an infinite query under the same key, so
+chunk 1's patch after an add covers every loaded page, and a *more from TMDB*
+button sits under the list — a button rather than scroll-loading, because
+every page is a call and the sticky selection bar sits at the bottom where a
+scroll trigger would be. Flattening dedupes on `candidateKey`, since
+popularity can move a title from one page to the next between calls. The
+held-back count covers every loaded page, and a selection lives across the
+pages of one search. A later page that fails leaves the list standing and
+says so under it. A page with no title on it — usually a `/search/multi` page
+of nothing but people — says there are none so far rather than that TMDB has
+nothing. A stale search refetches every page it holds, one call each, so it
+does not refetch on window focus; a return to `/add` past the five minutes
+still does, sequentially, which is the price of held-back counts that are
+current.
 
 ## Chunk 3 · Tell look-alikes apart
 
@@ -165,7 +176,7 @@ over, and with a 300ms debounce, a three-character floor and the five-minute
 cache, typing "breaking bad" costs a handful of calls. What does:
 
 - **The selection is cleared whenever `q`, `kind` or `year` changes**
-  ([add.tsx:93](../../apps/web/src/routes/add.tsx#L93)). Fixing a typo after
+  ([add.tsx:114](../../apps/web/src/routes/add.tsx#L114)). Fixing a typo after
   ticking two titles would drop both. The selection has to outlive a query
   change, which `picked` already makes safe — it only adds ticks the current
   results show.

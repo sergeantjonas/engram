@@ -57,6 +57,12 @@ that much or it slides under the bar; the bar is held to it as a floor, so the
 offset can only ever be right or generous. Measured at 57px, which is what the
 token says.
 
+**One thing moves.** Opening a title from the wall grows its tile into the
+title page's poster through a view transition while the rest of the page
+crossfades. No other navigation transitions, and reduced motion cuts it to a
+frame. Added 2026-09-23, since the mockup is still; see
+[web-depth.md](web-depth.md) arc 5 chunk 2.
+
 **Palette.** Espresso, not slate, so artwork is the only saturated thing on
 screen.
 

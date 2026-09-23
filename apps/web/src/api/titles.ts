@@ -192,14 +192,13 @@ export function titlesQuery(filter: TitleListFilter = {}) {
 }
 
 /**
- * TMDB's image CDN needs no key. The size is chosen here rather than stored
- * with the path, because the same path serves a card and, later, a title page.
+ * TMDB's image CDN needs no key. One size everywhere, a card's: nothing draws
+ * a poster wider than a tile, and one URL per title means a poster seen once
+ * is already loaded wherever it turns up next — the title page's header among
+ * them, which the tile grows into.
  */
-export function posterUrl(
-  posterPath: string | null,
-  size: 'w342' | 'w500' = 'w342',
-): string | null {
-  return posterPath === null ? null : `https://image.tmdb.org/t/p/${size}${posterPath}`;
+export function posterUrl(posterPath: string | null): string | null {
+  return posterPath === null ? null : `https://image.tmdb.org/t/p/w342${posterPath}`;
 }
 
 /** A backdrop is wide and sits behind text, so it is fetched at its own sizes. */

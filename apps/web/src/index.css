@@ -52,3 +52,17 @@
     cursor: pointer;
   }
 }
+
+/* The wall's tile and the title page's poster, drawn as one element across
+   the navigation between them. See shell/morph.ts. */
+[data-morph] {
+  view-transition-name: poster;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}

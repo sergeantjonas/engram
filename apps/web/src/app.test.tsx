@@ -165,6 +165,31 @@ const title = (overrides: Partial<TitleSummary>): TitleSummary => ({
   ...overrides,
 });
 
+/** A title page's answer with nothing on record, for tests that only need it to draw. */
+const detail = (summary: TitleSummary | undefined) => ({
+  title: { ...summary, onDisk: null },
+  ids: {},
+  backdropPath: null,
+  runtimeMin: null,
+  director: null,
+  cast: [],
+  collection: null,
+  airing: { lastAirDate: null, next: null, fetchedAt: null },
+  figures: {
+    plays: 0,
+    rewatched: 0,
+    manualPlays: 0,
+    watchedMin: 0,
+    untimed: 0,
+    firstWatchedAt: null,
+    firstWatchedPrecision: null,
+    lastWatchedAt: null,
+    lastWatchedPrecision: null,
+  },
+  recentActivity: [],
+  seasons: [],
+});
+
 describe('remembering the kind', () => {
   const library = [
     title({ id: 'show-1', name: 'Bleach' }),
@@ -238,29 +263,6 @@ describe('the title pane', () => {
     title({ id: 'show-1', name: 'Bleach', state: 'in_progress' }),
     title({ id: 'film-1', kind: 'movie', key: 'movie:tmdb:2', name: 'Heat', state: 'seen' }),
   ];
-  const detail = (summary: TitleSummary | undefined) => ({
-    title: { ...summary, onDisk: null },
-    ids: {},
-    backdropPath: null,
-    runtimeMin: null,
-    director: null,
-    cast: [],
-    collection: null,
-    airing: { lastAirDate: null, next: null, fetchedAt: null },
-    figures: {
-      plays: 0,
-      rewatched: 0,
-      manualPlays: 0,
-      watchedMin: 0,
-      untimed: 0,
-      firstWatchedAt: null,
-      firstWatchedPrecision: null,
-      lastWatchedAt: null,
-      lastWatchedPrecision: null,
-    },
-    recentActivity: [],
-    seasons: [],
-  });
 
   it('narrows the pane to one kind without leaving the title', async () => {
     stubApi((url) =>
@@ -417,6 +419,60 @@ describe('the wall', () => {
     const film = screen.getByRole('link', { name: 'Heat, Seen' });
     expect(film.querySelector('[style]')).toBeNull();
     expect(film.querySelector('.bg-jade')).not.toBeNull();
+  });
+
+  it('opens a title through a view transition, with only that tile marked to move', async () => {
+    const library = [
+      title({ id: 'show-1', name: 'Bleach' }),
+      title({ id: 'show-2', key: 'show:tvdb:2', name: 'Lost' }),
+    ];
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({ titles: library })
+        : url.includes('/titles/show-2')
+          ? json(detail(library[1]))
+          : json({ isOwner: true }),
+    );
+    const marked = () =>
+      [...document.querySelectorAll('[data-morph]')].map((element) =>
+        element.closest('header')
+          ? 'header'
+          : element.closest('article')?.querySelector('h2')?.textContent,
+      );
+    // happy-dom has no view transitions. This stands in for the browser's and
+    // reads the page when it would take its picture of the old one.
+    const pictured: unknown[] = [];
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true,
+      value: (update: () => Promise<void>) => {
+        pictured.push(marked());
+        const done = Promise.resolve().then(update);
+        return { updateCallbackDone: done, ready: done, finished: done, skipTransition() {} };
+      },
+    });
+    try {
+      await renderAt('/');
+      fireEvent.click(await screen.findByRole('link', { name: 'Lost, Unwatched' }));
+
+      await screen.findByRole('heading', { level: 1, name: 'Lost' });
+      expect(pictured).toEqual([['Lost']]);
+      expect(marked()).toEqual(['header']);
+    } finally {
+      Reflect.deleteProperty(document, 'startViewTransition');
+    }
+  });
+
+  it('leaves a tile unmarked when the click is the browser’s to handle', async () => {
+    stubApi((url) =>
+      url.endsWith('/titles')
+        ? json({ titles: [title({ name: 'Lost' })] })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/');
+    const link = await screen.findByRole('link', { name: 'Lost, Unwatched' });
+    fireEvent.click(link, { metaKey: true });
+
+    expect(document.querySelector('[data-morph]')).toBeNull();
   });
 
   it('narrows to movies and stops offering chips a movie cannot match', async () => {

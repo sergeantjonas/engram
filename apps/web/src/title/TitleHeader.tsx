@@ -180,7 +180,7 @@ export function TitleHeader({
   /** Today as `YYYY-MM-DD`, the page's one clock. */
   today: string;
 }) {
-  const poster = posterUrl(title.posterPath, 'w500');
+  const poster = posterUrl(title.posterPath);
   const backdrop = backdropUrl(backdropPath);
   const isShow = title.kind === 'show';
   const run = airingLine(title, airing, today);
@@ -244,7 +244,10 @@ export function TitleHeader({
           the name would climb to wherever the figures happened to reach — over
           the part of the image the gradient has not finished covering. */}
       <div className="relative flex items-end gap-4">
-        <div className="w-23 shrink-0 overflow-hidden bg-surf shadow-[0_8px_24px_rgba(0,0,0,.6)]">
+        <div
+          data-morph=""
+          className="w-23 shrink-0 overflow-hidden bg-surf shadow-[0_8px_24px_rgba(0,0,0,.6)]"
+        >
           {poster ? (
             <img src={poster} alt="" className="aspect-2/3 size-full object-cover" />
           ) : (

@@ -10,8 +10,9 @@ day with no migration, and `GET /history` answered on the box as the
 rehearsal had — 461 plays over 24 titles, all exact, 116 KB. Chunks 4 and
 5 deployed 2026-09-23, no migration, and the export downloaded from the box
 matched the local rehearsal's shape; its intent timestamps are written in
-UTC since, not yet deployed. Arc 5 chunk 1, the progress bar, landed
-2026-09-23 and is not yet deployed; chunk 2 is next.
+UTC since, not yet deployed. Arc 5 chunks 1 and 2, the progress bar and
+the view transition, landed 2026-09-23 and are not yet deployed; chunk 3
+is next.
 Arcs are ordered; chunks inside an arc are one commit each, and each one
 deploys to a live record — see Shipping against production.
 
@@ -627,11 +628,24 @@ The pain point, in cost order. Chunks 1 to 3 spend no TMDB calls.
    full as finished, so the fill stops 3px short until the run is done, as
    it starts no narrower than 2px once begun. The link's name carries the
    count for an unfinished run, since the bar is only drawn.
-2. **View transitions.** TanStack Router's `viewTransition` on the card link
-   and a shared `view-transition-name` per title on the wall poster and the
-   header poster, so the tile morphs into the header. Progressive: browsers
-   without the API navigate as today. Check `scrollRestoration` still
-   restores; the note in web-design.md explains why the window owns scroll.
+2. ~~**View transitions.**~~ Landed 2026-09-23. TanStack Router's
+   `viewTransition` on the card link, so the tile grows into the title
+   page's poster; browsers without the API navigate as they did. Not one
+   name per title: only the tile being opened is marked, at the click, and
+   the mark is moved rather than added (`shell/morph.ts`). Three hundred
+   named cards would be three hundred captures for one morph, and two
+   holding the name at once — a second click before the first title has
+   loaded — abort the transition outright. The header's poster came down
+   from w500 to the wall's w342, one poster URL everywhere: the image is
+   already loaded when the new page is pictured, and a 92px box had no use
+   for more. Forward only, and nothing else transitions. A router-wide
+   default would crossfade every chip and every arrow step on YEAR, and
+   the back button carries no options. Measured in headless Chrome over
+   CDP at a tenth of the speed: one element marked on each side, the
+   transition ready rather than aborted, the window at 0 before the new
+   page is pictured, and back to the wall restored to where it was
+   scrolled. With reduced motion emulated the same transition is over in
+   79ms, against 2.5s for the slowed one.
 3. **Ambient tint.** A dominant colour per title, extracted client-side from
    the poster with a canvas once it loads and cached in memory, mixed into
    the title page's `--surf` and `--raise` with `color-mix()` at four to six

@@ -1,5 +1,7 @@
 import { Link } from '@tanstack/react-router';
+import { type MouseEvent, useRef } from 'react';
 import { posterUrl, type TitleState, type TitleSummary } from '../api/titles.ts';
+import { markMorph } from '../shell/morph.ts';
 import { Tip } from '../shell/Tooltip.tsx';
 import { formatSince } from '../title/format.ts';
 import type { KindFilter } from './facets.ts';
@@ -69,6 +71,21 @@ export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilt
     title.dropped ? 'dropped' : null,
     title.excluded ? 'excluded' : null,
   ].filter((flag) => flag !== null);
+  const art = useRef<HTMLDivElement>(null);
+
+  // The router leaves a click with a modifier to the browser, a new tab or
+  // window; marking on one would leave a stale mark on the wall.
+  const open = (event: MouseEvent) => {
+    if (
+      event.button === 0 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey
+    ) {
+      markMorph(art.current);
+    }
+  };
 
   return (
     <article>
@@ -79,9 +96,12 @@ export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilt
         // rather than widening back out the moment a title is opened.
         search={kind ? { kind } : {}}
         aria-label={`${title.name}, ${STATE_LABEL[title.state]}${progressLabel(title)}`}
+        onClick={open}
+        viewTransition
         className="block rounded-t hover:ring-2 hover:ring-dim"
       >
         <div
+          ref={art}
           // Greyscaled rather than badged: a title whose files are gone should
           // read as faded from the shelf at a glance across the whole wall.
           className={`aspect-2/3 overflow-hidden rounded-t bg-surf ${

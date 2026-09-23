@@ -248,6 +248,52 @@ describe('createTmdbClient', () => {
     expect(await unknown.tmdb.find({ source: 'imdb', id: 'tt9999999999' })).toEqual([]);
   });
 
+  it('finds collections by name, and reads how many pages TMDB has', async () => {
+    const { tmdb, calls } = client({
+      results: [
+        { id: 726871, name: 'Dune Collection', poster_path: '/l.jpg', overview: 'Arrakis.' },
+        { name: 'No id' },
+      ],
+      total_pages: 1,
+    });
+
+    const found = await tmdb.searchCollections('dune');
+
+    const url = firstCall(calls);
+    expect(url.pathname).toBe('/3/search/collection');
+    expect(url.searchParams.get('query')).toBe('dune');
+    expect(url.searchParams.get('page')).toBe('1');
+    expect(found).toEqual({
+      results: [
+        { id: 726871, name: 'Dune Collection', posterPath: '/l.jpg', overview: 'Arrakis.' },
+      ],
+      page: 1,
+      totalPages: 1,
+    });
+  });
+
+  it("reads a collection's films as candidates in release order, the unannounced last", async () => {
+    const { tmdb } = client({
+      id: 726871,
+      name: 'Dune Collection',
+      parts: [
+        { id: 3, title: 'Dune: Messiah', release_date: '' },
+        { id: 2, title: 'Dune: Part Two', release_date: '2024-02-27' },
+        { id: 1, title: 'Dune', release_date: '2021-09-15', overview: 'Paul Atreides.' },
+      ],
+    });
+
+    const found = await tmdb.collectionTitles(726871);
+
+    expect(found.name).toBe('Dune Collection');
+    expect(found.results.map((c) => [c.kind, c.tmdbId, c.year])).toEqual([
+      ['movie', '1', 2021],
+      ['movie', '2', 2024],
+      ['movie', '3', null],
+    ]);
+    expect(found.results[0]?.overview).toBe('Paul Atreides.');
+  });
+
   it('raises a TmdbError carrying the upstream status', async () => {
     const { tmdb } = client({ status_message: 'Invalid API key' }, 401);
 

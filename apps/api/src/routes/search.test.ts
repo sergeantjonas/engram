@@ -35,15 +35,17 @@ const finding =
   (...results: TmdbCandidate[]): TmdbClient['search'] =>
   async (_query, _filter, page = 1) => ({ results, page, totalPages: page });
 
-/** Only `search` and `find` are ever exercised here; the rest satisfy the interface. */
-const searching = (
-  search: TmdbClient['search'],
-  find: TmdbClient['find'] = async () => {
-    throw new Error('not reached');
-  },
-): TmdbClient => ({
+/** Only the searches are ever exercised here; the rest satisfy the interface. */
+const notReached = async (): Promise<never> => {
+  throw new Error('not reached');
+};
+
+const searching = (search: TmdbClient['search'], more: Partial<TmdbClient> = {}): TmdbClient => ({
   search,
-  find,
+  find: notReached,
+  searchCollections: notReached,
+  collectionTitles: notReached,
+  ...more,
   details: async () => {
     throw new Error('not reached');
   },
@@ -187,9 +189,11 @@ describe('GET /search', () => {
   it('answers a pasted id with the title it names, whatever kind is chosen', async () => {
     const asked: Parameters<TmdbClient['find']>[] = [];
     const server = start(
-      searching(finding(), async (...args) => {
-        asked.push(args);
-        return [witcher];
+      searching(finding(), {
+        find: async (...args) => {
+          asked.push(args);
+          return [witcher];
+        },
       }),
     );
     storing([{ id: 'title-1', kind: 'show', tmdbId: witcher.tmdbId }]);
@@ -275,5 +279,64 @@ describe('GET /search', () => {
 
     expect(response.statusCode).toBe(502);
     expect(response.json()).toEqual({ error: 'upstream_failed', message: 'TMDB did not answer' });
+  });
+});
+
+describe('GET /search/collections', () => {
+  it('finds collections by name, one page at a time', async () => {
+    const dune = { id: 726871, name: 'Dune Collection', posterPath: null, overview: null };
+    const server = start(
+      searching(finding(), {
+        searchCollections: async (_query, page = 1) => ({ results: [dune], page, totalPages: 2 }),
+      }),
+    );
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search/collections?q=dune',
+      headers: signedIn,
+    });
+
+    expect(response.json()).toEqual({ results: [dune], page: 1, hasMore: true });
+  });
+
+  it("lists a collection's films as candidates, naming the ones already held", async () => {
+    const film = { ...witcher, kind: 'movie' as const, tmdbId: '438631', name: 'Dune' };
+    const server = start(
+      searching(finding(), {
+        collectionTitles: async () => ({ name: 'Dune Collection', results: [film] }),
+      }),
+    );
+    storing([{ id: 'title-9', kind: 'movie', tmdbId: '438631' }]);
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search/collections/726871',
+      headers: signedIn,
+    });
+
+    expect(response.json()).toEqual({
+      name: 'Dune Collection',
+      results: [{ ...film, storedTitleId: 'title-9' }],
+    });
+  });
+
+  it('says TMDB has no such collection rather than that it failed', async () => {
+    const server = start(
+      searching(finding(), {
+        collectionTitles: async () => {
+          throw new TmdbError('TMDB has no such collection', 404);
+        },
+      }),
+    );
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/search/collections/1',
+      headers: signedIn,
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error).toBe('not_found');
   });
 });

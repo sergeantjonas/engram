@@ -1,6 +1,6 @@
 # Add search
 
-**Status:** In progress — chunks 1 to 5 landed 2026-09-23, not yet deployed.
+**Status:** In progress — chunks 1 to 6 landed 2026-09-23, not yet deployed; chunk 7, the optional one, is not started.
 Scoped 2026-09-23 from a review of `/add` against what TMDB's search
 endpoints accept. Seven chunks, one commit each, in order; chunk 7 is
 optional. No chunk carries a migration.
@@ -39,7 +39,7 @@ are verified against a live key by the chunk that first calls them.
 | `/search/movie` | `query`, `page`, `year`, `primary_release_year`, `region` | chunks 1–2 |
 | `/search/tv` | `query`, `page`, `year`, `first_air_date_year` | chunks 1–2 |
 | `/find/{id}` | `external_source=imdb_id` — measured, see chunk 5 | chunk 5 |
-| `/search/collection` | `query`, `page` (reference only) | chunk 6 |
+| `/search/collection` | `query`, `page` — measured, see chunk 6 | chunk 6 |
 
 Two year parameters each, and the difference matters. A film's `year` matches
 any release — a re-release, another country's date — where
@@ -185,12 +185,35 @@ title under it rather than naming a kind and year that were not applied.
 
 ## Chunk 6 · A collection in one tick
 
-A *Collections* chip searches `/search/collection`; picking one asks
-`/collection/{id}` — the call `backfill:metadata` already makes — and lists
-its parts as film candidates, all ticked, straight into the bulk add. A chip
-rather than collections mixed into every film search, so an ordinary search
-stays one call. A collection is not a `TitleKind`, so `kind` either widens or
-a separate parameter carries it; decided in the chunk.
+Landed 2026-09-23. *Collections* is a fourth position on `/add`'s kind
+control, `?kind=collection`, and searches `/search/collection` through
+`GET /search/collections`; a position of its own rather than collections
+mixed into every film search, so an ordinary search stays one call. A
+collection is not a `TitleKind`, so it widens the screen's kind, not the
+record's: the API keeps `kind` to `show | movie` on `/search`, the year
+field is not drawn for it, and a pasted link under it still goes to the
+title search, since a link names a title.
+
+Opening one asks `GET /search/collections/:id`, which reads
+`/collection/{id}` — the call `backfill:metadata` makes for a film's
+series — through a client method of its own, `collectionTitles`, so the
+backfill's `collection()` and the rows it stores are untouched. A part is a
+search row in all but name and maps to a candidate the same way, overview
+and original title included, in release order with the unannounced last. The
+route marks the held ones like a search does. Every film the record does not
+hold starts ticked, straight into the bulk add or want; the held ones are
+listed too, pointing at where they are held, since which of a series is
+already on the record is half of what opening it is for. One collection is
+open at a time, a second press closes it, and an answer for one since closed
+or passed over ticks nothing. An add patches the open collection's films as
+it patches every cached search; collection pages are keyed apart from
+`['search']` so that patch never reaches them.
+
+Measured against the live API 2026-09-23: `/search/collection` rows carry
+`id`, `name`, `poster_path` and `overview`, and matches loosely — "dune"
+also finds *Legally Blonde* and *The Princess Diaries*. A part carries
+`media_type: 'movie'` and the fields of a film search row, and a collection
+can hold a film not yet released: *Dune: Part Three*, dated 2026-12-15.
 
 ## Chunk 7 · Search as the owner types (optional)
 

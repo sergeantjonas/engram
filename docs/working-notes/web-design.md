@@ -406,7 +406,9 @@ both ids for the same title.
 The search is the mockup's one bar: squared on `--surf`, the mono `TMDB`
 label, then the wall's own kind control, All / Series / Movies, in the slot
 beside it — the kind picks which search TMDB runs, so it is part of the
-question, not a filter under the answer. A year field joins the bar once a
+question, not a filter under the answer. A fourth position, *Collections*,
+searches film series instead; opening one lists its films under it with
+every one the record does not hold ticked. A year field joins the bar once a
 kind is chosen and is not there under All, because TMDB's mixed search takes
 no year. Search is a quiet chip, not jade: on this screen jade is for its
 main write, saying what was watched. *Want* sits quiet under each result's

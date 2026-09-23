@@ -65,6 +65,8 @@ const stubDb = (storedBySlot: Record<string, { season: number; number: number }[
 const stubTmdb = (over: Partial<TmdbClient> = {}): TmdbClient => ({
   search: async () => ({ results: [], page: 1, totalPages: 0 }),
   find: async () => [],
+  searchCollections: async () => ({ results: [], page: 1, totalPages: 0 }),
+  collectionTitles: async () => ({ name: '', results: [] }),
   details: async () => ({
     kind: 'show',
     ids: { tmdb: '1', tvdb: '2' },

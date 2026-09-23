@@ -10,6 +10,7 @@ export function CandidateRow({
   pending,
   disabled,
   error,
+  heading: Heading = 'h2',
 }: {
   candidate: TmdbCandidate;
   selected: boolean;
@@ -20,6 +21,8 @@ export function CandidateRow({
   pending: 'add' | 'want' | null;
   disabled: boolean;
   error: string | null;
+  /** One level below whatever it is listed under: a collection's films sit under its heading. */
+  heading?: 'h2' | 'h3';
 }) {
   const poster = posterUrl(candidate.posterPath);
   const stored = candidate.storedTitleId;
@@ -51,13 +54,13 @@ export function CandidateRow({
         {/* Where a series is from and what it is called there are what tell
             a remake from its original: two rows reading "The Office 2005 ·
             series" and "2001 · series" leave the year to carry all of it. */}
-        <h2 className="font-medium">
+        <Heading className="font-medium">
           {candidate.name}{' '}
           <span className="font-normal text-dim">
             {candidate.year ?? 'year unknown'} · {candidate.kind === 'show' ? 'series' : 'film'}
             {candidate.originCountry ? ` · ${candidate.originCountry}` : ''}
           </span>
-        </h2>
+        </Heading>
         {candidate.original ? (
           // Its own language, so a screen reader says it right and CJK text
           // takes the glyphs of the language it is in.

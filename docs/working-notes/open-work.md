@@ -330,11 +330,12 @@ the viewer wants of a title. The SPA calls all four.
    its original, *Want* straight from the results, a pasted IMDb or TMDB link
    answering the one title it names, a collection added in one tick, and
    search as the owner types, which is optional. No migrations. Chunks 1 to
-   5 landed 2026-09-23 — the wall's kind control and a year field in `/add`'s
+   6 landed 2026-09-23 — the wall's kind control and a year field in `/add`'s
    search bar, each kind asking TMDB's own search, TMDB's later pages on
    request, each result's country and original name, *Want* beside *Add* on
-   a result or a selection, and a pasted IMDb or TMDB link answered with the
-   title it names — not yet deployed.
+   a result or a selection, a pasted IMDb or TMDB link answered with the
+   title it names, and a collection opened with its films ticked — not yet
+   deployed. Chunk 7 waits on the owner.
 
 ## Blocked
 

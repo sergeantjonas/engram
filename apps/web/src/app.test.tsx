@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EpisodeCell, TitleDetail, TitleSummary, TmdbCandidate } from './api/titles.ts';
 import { createAppRouter } from './router.tsx';
@@ -2433,6 +2433,121 @@ describe('adding a title', () => {
     expect(calls.find((call) => call.url.includes('/search'))?.url).toBe(
       'http://localhost:2012/search?q=tt9999999999&kind=movie',
     );
+  });
+
+  it('opens a collection with its unheld films ticked, and adds them in one pass', async () => {
+    const calls = stubApi((url, init) => {
+      if (url.includes('/search/collections/726871')) {
+        return json({
+          name: 'Dune Collection',
+          results: [
+            candidate({ tmdbId: '438631', name: 'Dune', year: 2021 }),
+            candidate({
+              tmdbId: '693134',
+              name: 'Dune: Part Two',
+              year: 2024,
+              storedTitleId: 'title-2',
+            }),
+            candidate({ tmdbId: '1170608', name: 'Dune: Part Three', year: 2026 }),
+          ],
+        });
+      }
+      if (url.includes('/search/collections')) {
+        return json({
+          results: [{ id: 726871, name: 'Dune Collection', posterPath: null, overview: null }],
+          page: 1,
+          hasMore: false,
+        });
+      }
+      if (url.endsWith('/titles') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { tmdbId: string };
+        return json({ title: { id: `title-${body.tmdbId}`, name: 'Dune' }, seasons: [] }, 201);
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=dune&kind=collection');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Films in Dune Collection' }));
+
+    const first = await screen.findByRole<HTMLInputElement>('checkbox', { name: 'Select Dune' });
+    await waitFor(() => expect(first.checked).toBe(true));
+    expect(
+      screen.getByRole<HTMLInputElement>('checkbox', { name: 'Select Dune: Part Three' }).checked,
+    ).toBe(true);
+    // Held already, so there is nothing to tick; it points at where it is held.
+    expect(screen.queryByRole('checkbox', { name: 'Select Dune: Part Two' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'On the record →' })).toBeDefined();
+    expect(screen.getByText('2 titles selected')).toBeDefined();
+    expect(calls.some((call) => call.url.includes('/search?'))).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add 2' }));
+
+    await screen.findByRole('heading', { name: '2 titles on the record. Seen any of them?' });
+  });
+
+  // An answer for a collection the owner has moved on from must not tick
+  // films under the one they are looking at now.
+  it('ticks nothing for a collection opened and passed over before it answered', async () => {
+    let answerFirst: (() => void) | undefined;
+    stubApi((url, init) => {
+      if (url.includes('/search/collections/1')) {
+        const body = { name: 'First', results: [candidate({ tmdbId: '11', name: 'First film' })] };
+        return new Promise<Response>((resolve) => {
+          answerFirst = () => resolve(json(body));
+        }) as unknown as Response;
+      }
+      if (url.includes('/search/collections/2')) {
+        return json({
+          name: 'Second',
+          results: [candidate({ tmdbId: '22', name: 'Second film' })],
+        });
+      }
+      if (url.includes('/search/collections')) {
+        return json({
+          results: [
+            { id: 1, name: 'First', posterPath: null, overview: null },
+            { id: 2, name: 'Second', posterPath: null, overview: null },
+          ],
+          page: 1,
+          hasMore: false,
+        });
+      }
+      return elsewhere(url, true, init);
+    });
+    await renderAt('/add?q=film&kind=collection');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Films in First' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Films in Second' }));
+    const second = await screen.findByRole<HTMLInputElement>('checkbox', {
+      name: 'Select Second film',
+    });
+    await waitFor(() => expect(second.checked).toBe(true));
+
+    await act(async () => answerFirst?.());
+    expect(second.checked).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Films in First' }));
+
+    const first = await screen.findByRole<HTMLInputElement>('checkbox', {
+      name: 'Select First film',
+    });
+    // Opened again, so ticked again — by this open, not the one passed over.
+    await waitFor(() => expect(first.checked).toBe(true));
+    expect(screen.getByText('1 title selected')).toBeDefined();
+  });
+
+  it('looks a pasted link up as a title even under Collections', async () => {
+    const calls = stubApi((url) =>
+      url.includes('/search')
+        ? json({ results: [candidate({})], page: 1, hasMore: false })
+        : json({ isOwner: true }),
+    );
+    await renderAt('/add?q=tt0113277&kind=collection');
+
+    await screen.findByRole('heading', { name: /^Heat/ });
+    expect(calls.filter((call) => call.url.includes('/search')).map((call) => call.url)).toEqual([
+      'http://localhost:2012/search?q=tt0113277',
+    ]);
   });
 
   it('asks nothing for a query it cannot read', async () => {

@@ -413,6 +413,54 @@ export function searchQuery({ q, kind, year }: SearchParams) {
   });
 }
 
+/** A film series as `GET /search/collections` finds it, before it is opened. */
+export interface CollectionHit {
+  id: number;
+  name: string;
+  posterPath: string | null;
+  overview: string | null;
+}
+
+export interface CollectionSearchPage {
+  results: CollectionHit[];
+  page: number;
+  hasMore: boolean;
+}
+
+/** A collection's films, each a candidate like a search hit. */
+export interface CollectionTitles {
+  name: string;
+  results: TmdbCandidate[];
+}
+
+/**
+ * Keyed apart from `['search']` on purpose: an add patches every cached title
+ * search in place, and a page of collections is not one.
+ */
+export function collectionSearchQuery(q: string) {
+  return infiniteQueryOptions({
+    queryKey: ['collections', q],
+    queryFn: ({ pageParam }) =>
+      apiFetch<CollectionSearchPage>(
+        `/search/collections?q=${encodeURIComponent(q)}${pageParam > 1 ? `&page=${pageParam}` : ''}`,
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
+    enabled: q !== '',
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function collectionTitlesQuery(id: number) {
+  return queryOptions({
+    queryKey: ['collection-titles', id],
+    queryFn: () => apiFetch<CollectionTitles>(`/search/collections/${id}`),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 /** A season as `POST /titles` reports it back, with what the grid holds. */
 export interface AddedSeason {
   season: number;

@@ -137,8 +137,22 @@ export interface TmdbSearchPage {
   totalPages: number;
 }
 
+/** A collection as a search finds it: enough to recognise it and open it. */
+export interface TmdbCollectionHit {
+  id: number;
+  name: string;
+  posterPath: string | null;
+  overview: string | null;
+}
+
 export interface TmdbClient {
   search(query: string, filter?: TmdbSearchFilter, page?: number): Promise<TmdbSearchPage>;
+  searchCollections(
+    query: string,
+    page?: number,
+  ): Promise<{ results: TmdbCollectionHit[]; page: number; totalPages: number }>;
+  /** A collection's films as candidates to add, in release order, the undated last. */
+  collectionTitles(id: number): Promise<{ name: string; results: TmdbCandidate[] }>;
   /** What a pasted id or link names: usually one title, none when TMDB has no such id. */
   find(reference: TitleReference): Promise<TmdbCandidate[]>;
   details(kind: TitleKind, tmdbId: string): Promise<TmdbTitleDetails>;
@@ -204,12 +218,14 @@ interface FindBody {
 interface CollectionBody {
   id?: number;
   name?: string;
-  parts?: {
-    id?: number;
-    title?: string;
-    release_date?: string;
-    poster_path?: string | null;
-  }[];
+  parts?: SearchRow[];
+}
+
+/** Release order, an announced part with no date yet at the end rather than the front. */
+function byRelease(a: string | null | undefined, b: string | null | undefined): number {
+  if (!a) return b ? 1 : 0;
+  if (!b) return -1;
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 interface SeasonBody {
@@ -464,13 +480,46 @@ export function createTmdbClient(options: TmdbClientOptions): TmdbClient {
           releaseDate: part.release_date || null,
           posterPath: part.poster_path ?? null,
         }));
-      // An announced part has no date yet and belongs at the end, not the front.
-      parts.sort((a, b) => {
-        if (a.releaseDate === null) return b.releaseDate === null ? 0 : 1;
-        if (b.releaseDate === null) return -1;
-        return a.releaseDate < b.releaseDate ? -1 : a.releaseDate > b.releaseDate ? 1 : 0;
-      });
+      parts.sort((a, b) => byRelease(a.releaseDate, b.releaseDate));
       return { id: body.id, name: body.name, parts };
+    },
+
+    async searchCollections(query, page = 1) {
+      const body = (await get('/search/collection', { query, page: String(page) })) as {
+        results?: { id?: number; name?: string; poster_path?: string | null; overview?: string }[];
+        total_pages?: number;
+      } | null;
+      const results = (body?.results ?? []).flatMap((row) =>
+        typeof row.id === 'number' && row.name
+          ? [
+              {
+                id: row.id,
+                name: row.name,
+                posterPath: row.poster_path ?? null,
+                overview: row.overview || null,
+              },
+            ]
+          : [],
+      );
+      return {
+        results,
+        page,
+        totalPages: typeof body?.total_pages === 'number' ? body.total_pages : page,
+      };
+    },
+
+    async collectionTitles(id) {
+      const body = (await get(`/collection/${id}`, {})) as CollectionBody | null;
+      if (!body || typeof body.id !== 'number' || !body.name) {
+        throw new TmdbError('TMDB has no such collection', 404);
+      }
+      // A part is a search row in all but name, so it reads as a candidate
+      // the way a hit does — overview and original title included.
+      const results = [...(body.parts ?? [])]
+        .sort((a, b) => byRelease(a.release_date, b.release_date))
+        .map((part) => candidateOf(part, 'movie'))
+        .filter((c): c is TmdbCandidate => c !== null);
+      return { name: body.name, results };
     },
   };
 }

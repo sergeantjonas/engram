@@ -4,19 +4,24 @@ import {
   type UseInfiniteQueryResult,
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Backfill } from '../add/Backfill.tsx';
 import { Batch, type BatchItem } from '../add/Batch.tsx';
 import { CandidateRow } from '../add/CandidateRow.tsx';
+import { CollectionResults } from '../add/CollectionResults.tsx';
+import { describe } from '../add/describe.ts';
 import { meQuery } from '../api/auth.ts';
-import { ApiError } from '../api/client.ts';
 import {
   type AddedTitle,
   addTitle,
+  type CollectionTitles,
   candidateKey,
+  collectionSearchQuery,
+  collectionTitlesQuery,
   type SearchPage,
   searchQuery,
   setIntent,
@@ -43,13 +48,27 @@ function unique(candidates: TmdbCandidate[]): TmdbCandidate[] {
   });
 }
 
+/** What `/add` searches for: a kind of title, or a film series to open. */
+type AddKind = KindFilter | 'collection';
+
 interface AddSearch {
   q?: string | undefined;
   /** Absent searches both kinds, and is what the screen opens on. */
-  kind?: KindFilter | undefined;
-  /** Only ever beside a kind: `/search/multi` takes no year. */
+  kind?: AddKind | undefined;
+  /** Only ever beside a series or a film: nothing else TMDB searches takes a year. */
   year?: number | undefined;
 }
+
+/** The kind a year can narrow, which is neither All nor a collection. */
+const yearKindOf = (kind: AddKind | undefined): KindFilter | undefined =>
+  kind === 'collection' ? undefined : kind;
+
+const SEARCHED_FOR: Record<AddKind | 'all', string> = {
+  all: 'film or series',
+  show: 'series',
+  movie: 'film',
+  collection: 'collection',
+};
 
 /** A year TMDB will search on. The router has already parsed `1984` as a number. */
 const isYear = (value: unknown): value is number =>
@@ -62,12 +81,12 @@ const readYear = (text: string): number | undefined =>
 export const Route = createFileRoute('/add')({
   // Every key answered, as the wall's are: one left out keeps its raw value.
   validateSearch: (search: Record<string, unknown>): AddSearch => {
-    const kind = isKind(search.kind) ? search.kind : undefined;
+    const kind = isKind(search.kind) || search.kind === 'collection' ? search.kind : undefined;
     return {
       q: typeof search.q === 'string' && search.q.trim() !== '' ? search.q.trim() : undefined,
       kind,
       // Dropped rather than passed on without a kind, which the API refuses.
-      year: kind && isYear(search.year) ? search.year : undefined,
+      year: yearKindOf(kind) && isYear(search.year) ? search.year : undefined,
     };
   },
   /**
@@ -108,6 +127,10 @@ function Add() {
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const [showStored, setShowStored] = useState(false);
   const [batch, setBatch] = useState<BatchItem[] | null>(null);
+  const [opened, setOpened] = useState<number | null>(null);
+  // Which collection the latest open was for, so a slow answer for one that
+  // has since been closed or passed over cannot tick its films.
+  const opening = useRef<number | null>(null);
 
   // Only the search params change between one search and the next, so the
   // component is never remounted and the initializer above runs once. Without
@@ -120,20 +143,68 @@ function Add() {
     // and not yet searched for. The year's is emptied under All too, where it
     // is not drawn and would otherwise come back holding what the URL does not.
     if (q !== last.q) setDraft(q ?? '');
-    if (year !== last.year || kind === undefined) {
+    if (year !== last.year || yearKindOf(kind) === undefined) {
       setYearDraft(year === undefined ? '' : String(year));
     }
     // A selection belongs to the results it was made over; carrying it to the
     // next search would add titles nobody is looking at any more.
     setChosen(new Set());
+    setOpened(null);
   }
+  // Kept in step with what is open, however it closed — a new search closes
+  // it during render, where a ref is not to be written.
+  useEffect(() => {
+    opening.current = opened;
+  }, [opened]);
 
-  const asked = { q: q ?? '', kind, year };
-  const results = useInfiniteQuery(searchQuery(asked));
+  const yearKind = yearKindOf(kind);
+  // A pasted link names a title whatever is being searched for, collections
+  // included, so it goes to the title search.
+  const collectionMode = kind === 'collection' && q !== undefined && !parseTitleReference(q);
+  const asked = { q: q ?? '', kind: yearKind, year };
+  const results = useInfiniteQuery({
+    ...searchQuery(asked),
+    enabled: asked.q !== '' && !collectionMode,
+  });
   const found = unique(results.data?.pages.flatMap((page) => page.results) ?? []);
+  const collections = useInfiniteQuery({
+    ...collectionSearchQuery(q ?? ''),
+    enabled: collectionMode,
+  });
+  const parts = useQuery({
+    ...collectionTitlesQuery(opened ?? 0),
+    enabled: opened !== null,
+  });
   // Refused rather than dropped from the search: a search the owner narrowed
   // and TMDB did not would read as TMDB not having the title.
-  const yearUnreadable = kind !== undefined && yearDraft.trim() !== '' && !readYear(yearDraft);
+  const yearUnreadable = yearKind !== undefined && yearDraft.trim() !== '' && !readYear(yearDraft);
+
+  /**
+   * Opens a collection with every film in it the record does not hold
+   * ticked, since that is what it was opened to do; a second press closes it.
+   */
+  const openCollection = (id: number) => {
+    setChosen(new Set());
+    if (opened === id) {
+      setOpened(null);
+      opening.current = null;
+      return;
+    }
+    setOpened(id);
+    opening.current = id;
+    queryClient.fetchQuery(collectionTitlesQuery(id)).then(
+      (data) => {
+        if (opening.current !== id) return;
+        setChosen(
+          new Set(
+            data.results.filter((candidate) => candidate.storedTitleId === null).map(candidateKey),
+          ),
+        );
+      },
+      // The parts query holds the same failure and draws it.
+      () => undefined,
+    );
+  };
 
   /**
    * Moves what was just added into the already-stored group of every cached
@@ -156,6 +227,9 @@ function Add() {
             ...old,
             pages: old.pages.map((page) => ({ ...page, results: page.results.map(mark) })),
           },
+    );
+    queryClient.setQueriesData<CollectionTitles>({ queryKey: ['collection-titles'] }, (old) =>
+      old === undefined ? old : { ...old, results: old.results.map(mark) },
     );
   };
 
@@ -307,10 +381,22 @@ function Add() {
   // What the bar counts and what it sends, worked out once: a chosen key whose
   // candidate is no longer selectable must not be counted into a number the
   // button will not act on.
-  const picked = found.filter(
+  const onScreen = collectionMode ? (opened === null ? [] : (parts.data?.results ?? [])) : found;
+  const picked = onScreen.filter(
     (candidate) => candidate.storedTitleId === null && chosen.has(candidateKey(candidate)),
   );
   const busy = add.isPending || addSelected.isPending || want.isPending || wantSelected.isPending;
+  const pending = add.isPending
+    ? { key: candidateKey(add.variables), verb: 'add' as const }
+    : want.isPending
+      ? { key: candidateKey(want.variables), verb: 'want' as const }
+      : null;
+  const toggle = (candidate: TmdbCandidate) =>
+    setChosen((open) => {
+      const next = new Set(open);
+      if (!next.delete(candidateKey(candidate))) next.add(candidateKey(candidate));
+      return next;
+    });
 
   return (
     // Past 48rem a result row is a poster at one edge and its button at the
@@ -332,7 +418,7 @@ function Add() {
             search: {
               q: draft.trim() || undefined,
               kind,
-              year: kind ? readYear(yearDraft) : undefined,
+              year: yearKind ? readYear(yearDraft) : undefined,
             },
           });
         }}
@@ -363,6 +449,17 @@ function Add() {
               {KIND_LABEL[option]}
             </Link>
           ))}
+          {/* A film series rather than a kind of title: it searches TMDB's
+              collections, and opening one lists its films to add. */}
+          <Link
+            to="/add"
+            search={{ q, kind: 'collection' }}
+            activeOptions={{ exact: true, includeSearch: true }}
+            className={`${SEG} -ml-px`}
+            activeProps={{ className: ACTIVE_SEG }}
+          >
+            Collections
+          </Link>
         </nav>
         {/* Wraps as one piece, so a narrow screen breaks the bar between the
             kind and the query rather than leaving the query a sliver beside
@@ -374,7 +471,7 @@ function Add() {
               of the bar's borders one colour, still get a ring. */}
           <input
             aria-label="Search TMDB"
-            placeholder={`Search for a ${kind === 'show' ? 'series' : kind === 'movie' ? 'film' : 'film or series'}, or paste a link`}
+            placeholder={`Search for a ${SEARCHED_FOR[kind ?? 'all']}, or paste a link`}
             enterKeyHint="search"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
@@ -384,10 +481,10 @@ function Add() {
               that did nothing under All would be worse than no field. Labelled
               by what the year is of, since a series matches on its first air
               date and not on any later season's. */}
-          {kind ? (
-            <Tip label={kind === 'show' ? 'First aired' : 'Released'}>
+          {yearKind ? (
+            <Tip label={yearKind === 'show' ? 'First aired' : 'Released'}>
               <input
-                aria-label={kind === 'show' ? 'First aired' : 'Released'}
+                aria-label={yearKind === 'show' ? 'First aired' : 'Released'}
                 aria-invalid={yearUnreadable}
                 placeholder="Year"
                 inputMode="numeric"
@@ -411,34 +508,48 @@ function Add() {
         </div>
       </form>
 
-      <Results
-        q={q}
-        kind={kind}
-        year={year}
-        results={results}
-        found={found}
-        showStored={showStored}
-        onToggleStored={() => setShowStored(!showStored)}
-        chosen={chosen}
-        onSelect={(candidate) =>
-          setChosen((open) => {
-            const next = new Set(open);
-            if (!next.delete(candidateKey(candidate))) next.add(candidateKey(candidate));
-            return next;
-          })
-        }
-        onAdd={(candidate) => add.mutate(candidate)}
-        onWant={(candidate) => want.mutate(candidate)}
-        pending={
-          add.isPending
-            ? { key: candidateKey(add.variables), verb: 'add' }
-            : want.isPending
-              ? { key: candidateKey(want.variables), verb: 'want' }
-              : null
-        }
-        busy={busy}
-        failed={failed}
-      />
+      {collectionMode ? (
+        <CollectionResults
+          q={q}
+          collections={collections}
+          opened={opened}
+          parts={parts}
+          onOpen={openCollection}
+          row={(candidate) => {
+            const key = candidateKey(candidate);
+            return (
+              <CandidateRow
+                heading="h3"
+                candidate={candidate}
+                selected={chosen.has(key)}
+                onSelect={() => toggle(candidate)}
+                onAdd={() => add.mutate(candidate)}
+                onWant={() => want.mutate(candidate)}
+                pending={pending?.key === key ? pending.verb : null}
+                disabled={busy}
+                error={failed?.key === key ? failed.message : null}
+              />
+            );
+          }}
+        />
+      ) : (
+        <Results
+          q={q}
+          kind={yearKind}
+          year={year}
+          results={results}
+          found={found}
+          showStored={showStored}
+          onToggleStored={() => setShowStored(!showStored)}
+          chosen={chosen}
+          onSelect={toggle}
+          onAdd={(candidate) => add.mutate(candidate)}
+          onWant={(candidate) => want.mutate(candidate)}
+          pending={pending}
+          busy={busy}
+          failed={failed}
+        />
+      )}
 
       {/* Sticky, because the tick that starts a selection happens at the top of
           a page of twenty results and the one that ends it does not. */}
@@ -615,19 +726,4 @@ function Results({
       ) : null}
     </div>
   );
-}
-
-/**
- * The API's own message, except where its code names a condition the viewer
- * can act on. A missing key is the owner's to fix, and "TMDB did not answer"
- * is worth retrying; neither reads that way as a bare status.
- */
-function describe(error: unknown): string {
-  if (!(error instanceof ApiError)) return error instanceof Error ? error.message : String(error);
-  if (error.status === 401) return 'Sign in to add a title.';
-  if (error.code === 'search_unavailable' || error.code === 'tmdb_unavailable') {
-    return 'TMDB is not configured, so nothing can be looked up or added.';
-  }
-  if (error.code === 'upstream_failed') return 'TMDB did not answer. Try again.';
-  return error.message;
 }

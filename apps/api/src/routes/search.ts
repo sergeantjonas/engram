@@ -1,6 +1,6 @@
 import { parseTitleReference } from '@engram/shared';
 import { inArray } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db/client.js';
 import { titles as titleTable } from '../db/schema.js';
@@ -23,6 +23,13 @@ const querySchema = z
     page: z.coerce.number().int().min(1).max(LAST_PAGE).default(1),
   })
   .refine((query) => query.year === undefined || query.kind !== undefined, 'year needs a kind');
+
+const collectionQuerySchema = z.object({
+  q: z.string().trim().min(1, 'q is required'),
+  page: z.coerce.number().int().min(1).max(LAST_PAGE).default(1),
+});
+
+const collectionParams = z.object({ id: z.coerce.number().int().positive() });
 
 /** A candidate with the id of the title already holding it, when there is one. */
 export interface SearchResult extends TmdbCandidate {
@@ -67,17 +74,10 @@ export function registerSearchRoutes(
   tmdb: TmdbClient | null,
 ): void {
   app.get('/search', async (request, reply) => {
-    if (!tmdb) {
-      return reply
-        .code(503)
-        .send({ error: 'search_unavailable', message: 'TMDB_API_KEY is not configured' });
-    }
+    if (!tmdb) return unavailable(reply);
 
     const parsed = querySchema.safeParse(request.query);
-    if (!parsed.success) {
-      const message = parsed.error.issues.map((issue) => issue.message).join('; ');
-      return reply.code(400).send({ error: 'bad_request', message });
-    }
+    if (!parsed.success) return badRequest(reply, parsed.error);
 
     const { q, kind, year, page } = parsed.data;
     try {
@@ -99,11 +99,65 @@ export function registerSearchRoutes(
         hasMore: found.page < Math.min(found.totalPages, LAST_PAGE),
       };
     } catch (error) {
-      if (!(error instanceof TmdbError)) throw error;
-      // Only the status, never the error itself: its message or cause can carry
-      // the request URL, and the API key rides in that URL's query string.
-      request.log.error({ upstreamStatus: error.upstreamStatus }, 'tmdb search failed');
-      return reply.code(502).send({ error: 'upstream_failed', message: 'TMDB did not answer' });
+      return upstreamFailed(request, reply, error);
     }
   });
+
+  /**
+   * A film series by name, which is the trilogy case done in one step: open
+   * the collection and every film in it is a candidate, ticked.
+   */
+  app.get('/search/collections', async (request, reply) => {
+    if (!tmdb) return unavailable(reply);
+
+    const parsed = collectionQuerySchema.safeParse(request.query);
+    if (!parsed.success) return badRequest(reply, parsed.error);
+
+    try {
+      const found = await tmdb.searchCollections(parsed.data.q, parsed.data.page);
+      return {
+        results: found.results,
+        page: found.page,
+        hasMore: found.page < Math.min(found.totalPages, LAST_PAGE),
+      };
+    } catch (error) {
+      return upstreamFailed(request, reply, error);
+    }
+  });
+
+  app.get('/search/collections/:id', async (request, reply) => {
+    if (!tmdb) return unavailable(reply);
+
+    const parsed = collectionParams.safeParse(request.params);
+    if (!parsed.success) return badRequest(reply, parsed.error);
+
+    try {
+      const found = await tmdb.collectionTitles(parsed.data.id);
+      return { name: found.name, results: await markStored(db, found.results) };
+    } catch (error) {
+      if (error instanceof TmdbError && error.upstreamStatus === 404) {
+        return reply.code(404).send({ error: 'not_found', message: 'TMDB has no such collection' });
+      }
+      return upstreamFailed(request, reply, error);
+    }
+  });
+}
+
+function unavailable(reply: FastifyReply) {
+  return reply
+    .code(503)
+    .send({ error: 'search_unavailable', message: 'TMDB_API_KEY is not configured' });
+}
+
+function badRequest(reply: FastifyReply, error: z.ZodError) {
+  const message = error.issues.map((issue) => issue.message).join('; ');
+  return reply.code(400).send({ error: 'bad_request', message });
+}
+
+function upstreamFailed(request: FastifyRequest, reply: FastifyReply, error: unknown) {
+  if (!(error instanceof TmdbError)) throw error;
+  // Only the status, never the error itself: its message or cause can carry
+  // the request URL, and the API key rides in that URL's query string.
+  request.log.error({ upstreamStatus: error.upstreamStatus }, 'tmdb search failed');
+  return reply.code(502).send({ error: 'upstream_failed', message: 'TMDB did not answer' });
 }

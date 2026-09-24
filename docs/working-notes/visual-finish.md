@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** In progress — chunks 1 to 6 landed 2026-09-24, not deployed. Scoped the
+**Status:** In progress — chunks 1 to 7 landed 2026-09-24, not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. Nine
 chunks, one commit each, in order. No chunk carries a migration or touches the
@@ -262,13 +262,15 @@ measures 57px signed in as it does signed out.
 
 ## Chunk 7 · The year's pane beside its calendars
 
-The calendars are fixed at 11px a cell, on purpose, and the grid spreads them
-away from the pane with `xl:justify-between`
-([year.tsx:115](../../apps/web/src/routes/year.tsx#L115)): 270px of nothing
-between the last week and the pane at 1440px, 750px at 1920px, so the day
-being read is listed a window's width from the ringed cell it came from.
-`justify-start`, with the gap already there, keeps the pane beside what it
-describes.
+Landed 2026-09-24. The calendars are fixed at 11px a cell, on purpose, and the
+grid spread them away from the pane with `xl:justify-between`: 270px of
+nothing between the last week and the pane at 1440px, 750px at 1920px, so the
+day being read was listed a window's width from the ringed cell it came from.
+The grid packs to the start
+([year.tsx:115](../../apps/web/src/routes/year.tsx#L115)) — `justify-start`
+rather than no value, since a grid's default stretches the `auto` column and
+would push the pane back to the edge — and the pane sits the grid's 32px from
+the calendars at 1280, 1440 and 1920px alike.
 
 The pane comes first in the markup and moves right with `xl:order-2`
 ([year.tsx:117](../../apps/web/src/routes/year.tsx#L117)), so the Tab key
@@ -350,3 +352,7 @@ on its own.
   and `apps/api/src/titles/plan.ts` still documents gold for it.
 - § 02 calls an episode cell's tip native, which § Tooltips rules out; the
   cell uses `Tip`.
+- A figure box that wraps doubles its rule: `Figure` drops `border-r` only on
+  the last cell ([TitleHeader.tsx:25](../../apps/web/src/title/TitleHeader.tsx#L25)),
+  so in the year pane's 2×2 box the first row's second cell draws one inside
+  the box's own border — plainer since `--line` was lightened.

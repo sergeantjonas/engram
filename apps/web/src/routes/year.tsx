@@ -112,7 +112,7 @@ function YearPage() {
     // and the pane 20rem. Narrower, the pane goes first, so the figures lead
     // and a picked day's plays are not a screen away from the figures. First
     // in the document too, so the tab order agrees with what is drawn first.
-    <div className="grid gap-8 xl:grid-cols-[auto_20rem] xl:justify-between">
+    <div className="grid gap-8 xl:grid-cols-[auto_20rem] xl:justify-start">
       <h1 className="sr-only">The record by year</h1>
       <aside className="space-y-8 self-start xl:sticky xl:top-[calc(var(--spacing-topbar)+18px)] xl:order-2">
         <YearReading year={year} figures={reading} />

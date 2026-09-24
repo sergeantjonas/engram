@@ -267,7 +267,12 @@ runs in rotation, "what now" is a choice between them. Compact cards in one
 row, as many as the strip's width holds at 300px or more — one on a phone,
 up to four — each with its own "Not now", and one card left fills the
 row as the band did. `NEXT UP` sits once above the row. See
-[web-depth.md](web-depth.md) arc 4 chunk 1.
+[web-depth.md](web-depth.md) arc 4 chunk 1. A card's scrim holds at 80% from
+its middle on, where the band's thinned to a fifth: a card's *Not now* and a
+reason that wraps run to its right edge, and at 80% even a white pixel of the
+still leaves `--dim` text at 4.6:1. The cards' names sit on one line across
+the strip. Since 2026-09-24; [visual-finish.md](visual-finish.md)
+chunk 4.
 
 Titles wrap to two lines under the tile and are clamped there, with the full
 name on hover. Truncation was accepted as a layout problem rather than a font

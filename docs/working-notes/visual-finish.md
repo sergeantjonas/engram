@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** In progress — chunks 1 to 3 landed 2026-09-24, not deployed. Scoped the
+**Status:** In progress — chunks 1 to 4 landed 2026-09-24, not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. Nine
 chunks, one commit each, in order. No chunk carries a migration or touches the
@@ -179,7 +179,7 @@ apart. Four places did not:
 - **Jade on something not seen.** Next up set the next episode's code in jade,
   the colour that means *seen*, on the one episode that is not. It is `--tx`,
   as the mockup set it
-  ([NextUp.tsx:140](../../apps/web/src/wall/NextUp.tsx#L140)).
+  ([NextUp.tsx:142](../../apps/web/src/wall/NextUp.tsx#L142)).
 
 Jade, gold, drift and gap keep their values. § The system records the two
 departures from the mockup — `--line`'s value, and gold's job as built, a
@@ -188,24 +188,30 @@ more — and § 02 the filled missing cell.
 
 ## Chunk 4 · Next up over any still
 
-Measured with the text hidden, against the backdrop's pixels under each line:
-*Not now* reads 1.9:1 on NieR, 2.3 on Black Mirror, 4.0 on The Sandman and 4.5
-on The Witcher, and on the busier stills the worst tenth of *You stopped
-after…* falls to 3.1–3.7. The names hold at 13:1 and up. The scrim fades to
-`bg/20`, and the whole layer, image and scrim alike, sits at 50%
-([NextUp.tsx:98](../../apps/web/src/wall/NextUp.tsx#L98)). The mockup's
-full-width band could afford that because its text stopped in the left third;
-a compact card runs its text to the right edge, which is where *Not now* sits.
+Landed 2026-09-24. Measured with the text hidden, against the backdrop's
+pixels under each line, *Not now* read 1.9:1 on NieR, 2.3 on Black Mirror, 4.0
+on The Sandman and 4.5 on The Witcher, and on the busier stills the worst tenth
+of *You stopped after…* fell to 3.1–3.7. The names held at 13:1 and up. The
+scrim faded to `bg/20`, and the whole layer, image and scrim alike, sits at
+50%. The mockup's full-width band could afford that because its text stopped
+in the left third; a compact card runs its text to the right edge, which is
+where *Not now* sits.
 
-Hold the scrim at `bg/70` or more under the text, or lay it under the text
-column rather than the card. While there: the card centres its content
-([NextUp.tsx:102](../../apps/web/src/wall/NextUp.tsx#L102)), so a reason that
-wraps lifts that card's name 8px above its neighbours, and `items-start` keeps
-the names on one line across the strip. *Not now* is a 44×16 target, under
-WCAG 2.2's 24.
+The scrim holds at `bg/85` through the middle and `bg/80` at the right edge
+([NextUp.tsx:99](../../apps/web/src/wall/NextUp.tsx#L99)), `dim` kept for
+*Not now* and the reason so the card keeps its order. Measured the same way
+after, at 1440 and 1920px, no line on any of the four cards falls under 4.73:1
+even at its brightest pixel; `bg/75` left NieR's *Not now* at 4.48, which is
+what set the right edge. The stills still show at the cards' right edges. The
+card's content sits at the top rather than centred
+([NextUp.tsx:103](../../apps/web/src/wall/NextUp.tsx#L103)), so a reason that
+wraps no longer lifts its card's name 8px above its neighbours, and *Not now*
+is 24px tall to hit and pulled back by as much, 44×24 where it was 44×16
+([NextUp.tsx:134](../../apps/web/src/wall/NextUp.tsx#L134)).
+[web-design.md](web-design.md) § 01 records the scrim.
 
-If [open-work.md](open-work.md) Next 7, *Now watching*, is scoped first and
-reworks this band, this chunk goes with it.
+*Now watching* ([open-work.md](open-work.md) Next 7) still competes for this
+band; whatever it draws there inherits the same measurement.
 
 ## Chunk 5 · The type, as written
 
@@ -280,7 +286,7 @@ The build has four fallbacks instead, over eight places: an empty box
 [Collection.tsx:66](../../apps/web/src/title/Collection.tsx#L66)), a block of
 `--line` ([TitleList.tsx:150](../../apps/web/src/title/TitleList.tsx#L150)),
 and nothing at all in Next up
-([NextUp.tsx:103](../../apps/web/src/wall/NextUp.tsx#L103)).
+([NextUp.tsx:104](../../apps/web/src/wall/NextUp.tsx#L104)).
 
 One `Cover`, its hue derived from the title's name so it is the same on every
 screen and needs nothing stored, drawn wherever a poster can be missing. It is

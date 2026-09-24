@@ -89,17 +89,18 @@ function Card({ candidate, onPass }: { candidate: Candidate; onPass?: (() => voi
       {/* The artwork is keyed by title though the slot is not, so a card moving
           in never sits beside the one it replaced while its own loads. */}
       {backdrop ? (
-        // Half-strength under a left-to-right scrim: the text sits on the left
-        // and has to stay legible over whatever the still happens to hold.
+        // Half-strength under a scrim that holds at 80% from the middle on: a
+        // compact card runs its text to the right edge, where "Not now" sits,
+        // and every line has to clear 4.5:1 over whatever the still holds.
         <div
           key={candidate.titleId}
           aria-hidden="true"
           style={{ backgroundImage: `url(${backdrop})` }}
-          className="absolute inset-0 -z-10 bg-cover bg-[center_30%] opacity-50 after:absolute after:inset-0 after:bg-gradient-to-r after:from-bg after:via-bg/80 after:to-bg/20"
+          className="absolute inset-0 -z-10 bg-cover bg-[center_30%] opacity-50 after:absolute after:inset-0 after:bg-gradient-to-r after:from-bg after:via-bg/85 after:to-bg/80"
         />
       ) : null}
 
-      <div className="flex h-full items-center gap-4 p-3">
+      <div className="flex items-start gap-4 p-3">
         {poster ? (
           <img
             key={candidate.titleId}
@@ -129,7 +130,8 @@ function Card({ candidate, onPass }: { candidate: Candidate; onPass?: (() => voi
                 type="button"
                 onClick={onPass}
                 aria-label={`Not now for ${candidate.name}`}
-                className="ml-auto shrink-0 text-xs text-dim underline-offset-4 hover:text-tx hover:underline"
+                // 24px tall to hit, pulled back by as much so the line holds.
+                className="-my-1 ml-auto shrink-0 py-1 text-xs text-dim underline-offset-4 hover:text-tx hover:underline"
               >
                 Not now
               </button>

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { backdropUrl, type NextUp as Candidate, nextUpQuery, posterUrl } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { Tip } from '../shell/Tooltip.tsx';
 import { formatAgo } from '../title/format.ts';
 
@@ -108,7 +109,9 @@ function Card({ candidate, onPass }: { candidate: Candidate; onPass?: (() => voi
             alt=""
             className="h-[52px] w-[35px] shrink-0 rounded-sm object-cover"
           />
-        ) : null}
+        ) : (
+          <Cover name={candidate.name} bare className="h-[52px] w-[35px] shrink-0 rounded-sm" />
+        )}
 
         <div className="min-w-0 flex-1 space-y-0.5">
           {/* The name, the episode and the reason each get a line, so a narrow

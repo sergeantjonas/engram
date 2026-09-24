@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { historyQuery } from '../api/history.ts';
 import { markWatched, nextUpQuery, posterUrl, type TmdbCandidate } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { useToast } from '../shell/Toasts.tsx';
 import { type BatchEntry, type BatchPlan, describeBatch, markable, planBatch } from './plan.ts';
 
@@ -208,7 +209,7 @@ function TitleCheck({
         {poster ? (
           <img src={poster} alt="" loading="lazy" className="aspect-2/3 size-full object-cover" />
         ) : (
-          <span className="block aspect-2/3" />
+          <Cover name={item.added.title.name} bare className="aspect-2/3 w-full" />
         )}
       </span>
       <span className="min-w-0 flex-1 truncate">{item.added.title.name}</span>

@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { backdropUrl, posterUrl } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { STATE_LABEL } from '../wall/TitleCard.tsx';
 import { airingLine } from './airing.ts';
 import {
@@ -251,7 +252,7 @@ export function TitleHeader({
           {poster ? (
             <img src={poster} alt="" className="aspect-2/3 size-full object-cover" />
           ) : (
-            <div className="aspect-2/3" />
+            <Cover name={title.name} className="aspect-2/3 w-full p-2 text-xs" />
           )}
         </div>
         <div className="min-w-0 flex-1">

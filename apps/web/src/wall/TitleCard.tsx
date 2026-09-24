@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { type MouseEvent, useRef } from 'react';
 import { posterUrl, type TitleState, type TitleSummary } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { markMorph } from '../shell/morph.ts';
 import { Tip } from '../shell/Tooltip.tsx';
 import { formatSince } from '../title/format.ts';
@@ -106,9 +107,7 @@ export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilt
             // reader, and repeating it here would read every card twice.
             <img src={poster} alt="" loading="lazy" className="size-full object-cover" />
           ) : (
-            <span className="flex size-full items-center justify-center p-3 text-center text-xs text-faint">
-              {title.name}
-            </span>
+            <Cover name={title.name} className="size-full p-3 text-xs" />
           )}
         </div>
         <StateBar title={title} />

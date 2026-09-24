@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { Collection as CollectionData, CollectionPart } from '../api/titles.ts';
 import { posterUrl } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { Tip } from '../shell/Tooltip.tsx';
 import type { KindFilter } from '../wall/facets.ts';
 import { STATE_BAR, STATE_LABEL } from '../wall/TitleCard.tsx';
@@ -63,9 +64,7 @@ function Part({
         {poster ? (
           <img src={poster} alt="" loading="lazy" className="size-full object-cover" />
         ) : (
-          <span className="flex size-full items-center justify-center p-3 text-center text-xs text-faint">
-            {part.name}
-          </span>
+          <Cover name={part.name} className="size-full p-3 text-xs" />
         )}
       </div>
       <span className={`block h-[3px] ${part.title === null ? '' : STATE_BAR[part.title.state]}`} />

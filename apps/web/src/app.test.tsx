@@ -499,7 +499,7 @@ describe('the wall', () => {
     await renderAt('/');
 
     const fillOf = (name: string) =>
-      screen.getByRole('link', { name }).querySelector<HTMLElement>('[style]');
+      screen.getByRole('link', { name }).querySelector<HTMLElement>('[style*="width"]');
     // The count is in the name as well as the bar, since the bar is only drawn.
     const begun = fillOf('Bleach, In progress, 8 of 424 episodes');
     expect(begun?.style.width).toBe(`${(8 / 424) * 100}%`);
@@ -510,7 +510,7 @@ describe('the wall', () => {
     expect(done?.classList.contains('max-w-[calc(100%-3px)]')).toBe(false);
     expect(fillOf('Dark, Unwatched')).toBeNull();
     const film = screen.getByRole('link', { name: 'Heat, Seen' });
-    expect(film.querySelector('[style]')).toBeNull();
+    expect(film.querySelector('[style*="width"]')).toBeNull();
     expect(film.querySelector('.bg-jade')).not.toBeNull();
   });
 
@@ -1086,7 +1086,12 @@ describe('the title page', () => {
     expect(screen.getByRole('heading', { name: /When you watched it/i })).toBeDefined();
     // The backdrop is atmosphere, so it is hidden from the reader rather than
     // described — but it has to be on the page for the header to sit on it.
-    expect(document.querySelector('header [aria-hidden="true"]')).not.toBeNull();
+    expect(document.querySelector('header [aria-hidden="true"][style*="url("]')).not.toBeNull();
+    // No poster on record, so the header draws the generated cover in its place,
+    // named and hidden from the reader like the poster it stands in for.
+    expect(
+      document.querySelector('header [aria-hidden="true"][style*="linear-gradient"]')?.textContent,
+    ).toBe('ONE PIECE');
     expect(screen.getByText('rewatch')).toBeDefined();
     expect(screen.getByText('by hand')).toBeDefined();
     // The pill says it in words as well as in colour, and it only appears at
@@ -3098,7 +3103,7 @@ describe('adding a title', () => {
     // a dangling dot.
     // TMDB has a backdrop for far less than it has posters, so the header has
     // to read with nothing behind it.
-    expect(document.querySelector('header [aria-hidden="true"]')).toBeNull();
+    expect(document.querySelector('header [aria-hidden="true"][style*="url("]')).toBeNull();
     const header = heading.closest('header')?.textContent ?? '';
     expect(header).toContain('tmdb 949');
     expect(header).not.toContain('·  ');

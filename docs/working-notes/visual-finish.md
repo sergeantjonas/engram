@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** In progress — chunks 1 to 7 landed 2026-09-24, not deployed. Scoped the
+**Status:** In progress — chunks 1 to 8 landed 2026-09-24, not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. Nine
 chunks, one commit each, in order. No chunk carries a migration or touches the
@@ -48,7 +48,7 @@ it was measured against the backdrop's own pixels, with the text hidden.
   meets it.
 - **2026-09-24 — The list pane's bar follows the wall's.** Progress in jade and
   nothing else, as [web-depth.md](web-depth.md) arc 5 chunk 1 made the wall's
-  ([TitleCard.tsx:35-51](../../apps/web/src/wall/TitleCard.tsx#L35-L51)). The
+  ([TitleCard.tsx:36-52](../../apps/web/src/wall/TitleCard.tsx#L36-L52)). The
   pane had kept a drifting run in `--drift`, so one mark meant two things
   across a single click — The Witcher jade on the wall, orange in the pane —
   and on a 2px bar the second meaning rested on hue alone. A drifting run is
@@ -77,7 +77,7 @@ sit 4px apart and a calendar's days 2px
 [Calendar.tsx:135](../../apps/web/src/year/Calendar.tsx#L135), whose own ring
 classes went) — and the list pane draws it 4px inside the row, where the
 pane's scroll box would clip it and clear of the current row's jade edge
-([TitleList.tsx:138](../../apps/web/src/title/TitleList.tsx#L138)). The year
+([TitleList.tsx:139](../../apps/web/src/title/TitleList.tsx#L139)). The year
 column is padded by a ring's width and pulled back by as much, so its scroll
 box clips neither a year's ring nor a day's
 ([year.tsx:129](../../apps/web/src/routes/year.tsx#L129)). The search bar's
@@ -89,12 +89,12 @@ open panel being what is read. The convention is written into
 [web-design.md](web-design.md) § Focus.
 
 A ticked box was the browser's blue too. The six checkboxes on `/add`
-([CandidateRow.tsx:57](../../apps/web/src/add/CandidateRow.tsx#L57),
+([CandidateRow.tsx:58](../../apps/web/src/add/CandidateRow.tsx#L58),
 [Backfill.tsx:99](../../apps/web/src/add/Backfill.tsx#L99),
 [:110](../../apps/web/src/add/Backfill.tsx#L110) and
 [:192](../../apps/web/src/add/Backfill.tsx#L192),
-[Batch.tsx:117](../../apps/web/src/add/Batch.tsx#L117) and
-[:206](../../apps/web/src/add/Batch.tsx#L206)) and the hole's reason radios
+[Batch.tsx:118](../../apps/web/src/add/Batch.tsx#L118) and
+[:207](../../apps/web/src/add/Batch.tsx#L207)) and the hole's reason radios
 ([EpisodeCell.tsx:300](../../apps/web/src/title/EpisodeCell.tsx#L300)) set no
 `accent-color`, where the mockup ticks them in jade. `accent-color` is
 inherited, so `var(--color-jade)` on `:root`, beside the focus rule, covers
@@ -108,15 +108,15 @@ Landed 2026-09-24. `--faint` measures 3.26:1 on `--bg`, 3.02 on `--surf` and
 2.80 on `--raise`; AA wants 4.5 for text this size. It was set as text 37
 times, and not only on landmarks: the activity feed's dates
 ([Activity.tsx:122](../../apps/web/src/title/Activity.tsx#L122)), the external
-ids ([TitleHeader.tsx:74](../../apps/web/src/title/TitleHeader.tsx#L74)), a
+ids ([TitleHeader.tsx:75](../../apps/web/src/title/TitleHeader.tsx#L75)), a
 section's aside such as `422 OF 424 · 3 REWATCHED`
 ([Section.tsx:25](../../apps/web/src/title/Section.tsx#L25)), the list pane's
 time since last watched
-([TitleList.tsx:161](../../apps/web/src/title/TitleList.tsx#L161)), a year's
+([TitleList.tsx:162](../../apps/web/src/title/TitleList.tsx#L162)), a year's
 play count ([Calendar.tsx:106](../../apps/web/src/year/Calendar.tsx#L106)) and
-a day's sources ([Pane.tsx:119](../../apps/web/src/year/Pane.tsx#L119)). The
+a day's sources ([Pane.tsx:120](../../apps/web/src/year/Pane.tsx#L120)). The
 wall already set the same time-since figure in `--dim`
-([TitleCard.tsx:128](../../apps/web/src/wall/TitleCard.tsx#L128)), so the pane
+([TitleCard.tsx:127](../../apps/web/src/wall/TitleCard.tsx#L127)), so the pane
 and the wall disagreed about how quiet one value is.
 
 Lightening the token is not the fix. The tone of it that clears 4.5 on
@@ -163,7 +163,7 @@ apart. Four places did not:
   other run is jade, and under simulated deuteranopia the two sit 0.012 apart
   in lightness — on a 2px bar, hue is all that is left. The bar is progress in
   jade and nothing else, as § Settled has it
-  ([TitleList.tsx:158](../../apps/web/src/title/TitleList.tsx#L158)).
+  ([TitleList.tsx:159](../../apps/web/src/title/TitleList.tsx#L159)).
 - **Skipped against missing.** Both were outlined cells, told apart by the
   colour of the line and the number: gold and `--gap`, 0.18 apart in
   lightness, which held only until the number was lightened for contrast. The
@@ -179,7 +179,7 @@ apart. Four places did not:
 - **Jade on something not seen.** Next up set the next episode's code in jade,
   the colour that means *seen*, on the one episode that is not. It is `--tx`,
   as the mockup set it
-  ([NextUp.tsx:142](../../apps/web/src/wall/NextUp.tsx#L142)).
+  ([NextUp.tsx:145](../../apps/web/src/wall/NextUp.tsx#L145)).
 
 Jade, gold, drift and gap keep their values. § The system records the two
 departures from the mockup — `--line`'s value, and gold's job as built, a
@@ -198,16 +198,16 @@ in the left third; a compact card runs its text to the right edge, which is
 where *Not now* sits.
 
 The scrim holds at `bg/85` through the middle and `bg/80` at the right edge
-([NextUp.tsx:99](../../apps/web/src/wall/NextUp.tsx#L99)), `dim` kept for
+([NextUp.tsx:100](../../apps/web/src/wall/NextUp.tsx#L100)), `dim` kept for
 *Not now* and the reason so the card keeps its order. Measured the same way
 after, at 1440 and 1920px, no line on any of the four cards falls under 4.73:1
 even at its brightest pixel; `bg/75` left NieR's *Not now* at 4.48, which is
 what set the right edge. The stills still show at the cards' right edges. The
 card's content sits at the top rather than centred
-([NextUp.tsx:103](../../apps/web/src/wall/NextUp.tsx#L103)), so a reason that
+([NextUp.tsx:104](../../apps/web/src/wall/NextUp.tsx#L104)), so a reason that
 wraps no longer lifts its card's name 8px above its neighbours, and *Not now*
 is 24px tall to hit and pulled back by as much, 44×24 where it was 44×16
-([NextUp.tsx:134](../../apps/web/src/wall/NextUp.tsx#L134)).
+([NextUp.tsx:137](../../apps/web/src/wall/NextUp.tsx#L137)).
 [web-design.md](web-design.md) § 01 records the scrim.
 
 *Now watching* ([open-work.md](open-work.md) Next 7) still competes for this
@@ -223,25 +223,25 @@ system says, none of them marked as a departure:
   `-.03em`. They share one token now, `text-display` in
   [index.css](../../apps/web/src/index.css) (24px, 700, `-.03em`), so a
   heading cannot drift back to a weight of its own:
-  [TitleHeader.tsx:259](../../apps/web/src/title/TitleHeader.tsx#L259),
+  [TitleHeader.tsx:260](../../apps/web/src/title/TitleHeader.tsx#L260),
   [add.tsx:519](../../apps/web/src/routes/add.tsx#L519),
   [Backfill.tsx:95](../../apps/web/src/add/Backfill.tsx#L95),
-  [Batch.tsx:108](../../apps/web/src/add/Batch.tsx#L108),
+  [Batch.tsx:109](../../apps/web/src/add/Batch.tsx#L109),
   [settings.tsx:33](../../apps/web/src/routes/settings.tsx#L33),
   [login.tsx:39](../../apps/web/src/routes/login.tsx#L39). Archivo 700 was
   already loaded.
 - **Mono a step below.** On the title's meta line the year, the runtime and
   the air dates were 12px Martian beside 12px Archivo, so `Oct 20` outweighed
   *next*, which is what the rule exists to stop. They are 10px
-  ([TitleHeader.tsx:261](../../apps/web/src/title/TitleHeader.tsx#L261) on).
+  ([TitleHeader.tsx:262](../../apps/web/src/title/TitleHeader.tsx#L262) on).
 - **The name under a figure** was Archivo 9px; it is Martian 9px, as the note
   lists it among the mono labels — the mockup, taking its body face, drew it
   in Archivo, and the 2026-09-22 small-mono rule wins
-  ([TitleHeader.tsx:29](../../apps/web/src/title/TitleHeader.tsx#L29)).
+  ([TitleHeader.tsx:30](../../apps/web/src/title/TitleHeader.tsx#L30)).
   `Figure` is shared, so the year's pane changed with it.
 - **A result's year** on `/add` was Archivo at the heading's size, `2017 ·
   film`. It is Martian at 14px beside the 16px name, a step below
-  ([CandidateRow.tsx:87](../../apps/web/src/add/CandidateRow.tsx#L87)), and
+  ([CandidateRow.tsx:88](../../apps/web/src/add/CandidateRow.tsx#L88)), and
   *year unknown* stays in Archivo, being words. The row keeps its one line,
   which add-search.md chunk 3 settled.
 
@@ -280,26 +280,36 @@ as it is until the responsive question in § Still open is answered.
 
 ## Chunk 8 · A cover for a title with no poster
 
-The mockup draws one: the name, centred, on a 160° gradient from a mid tone to
-a near-black of the same hue, a different hue for each title
-([engram-app.template.html:542-552](../design/engram-app.template.html#L542-L552)),
+Landed 2026-09-24. The mockup draws one: the name, centred, on a 160° gradient
+from a mid tone to a near-black of the same hue, a different hue for each
+title ([engram-app.template.html:542-552](../design/engram-app.template.html#L542-L552)),
 and [web-design.md](web-design.md) calls those covers the fallback for a title
-TMDB has no poster for. `--tx` on the mockup's mid tones reads 6.3 to 8.1:1.
-The build has four fallbacks instead, over eight places: an empty box
-([CandidateRow.tsx:73](../../apps/web/src/add/CandidateRow.tsx#L73),
-[TitleHeader.tsx:254](../../apps/web/src/title/TitleHeader.tsx#L254),
-[Excluded.tsx:61](../../apps/web/src/settings/Excluded.tsx#L61),
-[Pane.tsx:97](../../apps/web/src/year/Pane.tsx#L97)), the name in `--faint`
-([TitleCard.tsx:109](../../apps/web/src/wall/TitleCard.tsx#L109),
-[Collection.tsx:66](../../apps/web/src/title/Collection.tsx#L66)), a block of
-`--line` ([TitleList.tsx:150](../../apps/web/src/title/TitleList.tsx#L150)),
-and nothing at all in Next up
-([NextUp.tsx:104](../../apps/web/src/wall/NextUp.tsx#L104)).
+TMDB has no poster for. The build had four fallbacks instead, over ten places:
+an empty box, the name in `--faint`, a block of `--line`, and nothing at all in
+Next up.
 
-One `Cover`, its hue derived from the title's name so it is the same on every
-screen and needs nothing stored, drawn wherever a poster can be missing. It is
-live on `/add` now, where a posterless TMDB result is a blank box, and latent
-everywhere else: none of the 85 stored titles lacked a poster on 2026-09-24.
+One `Cover` ([shell/Cover.tsx](../../apps/web/src/shell/Cover.tsx)) draws it
+everywhere a poster can be missing — the wall's tile, a collection's tile, the
+title header, the list pane's and the year pane's rows, Next up, an `/add`
+result, a collection hit, a batch row and an excluded title. The hue comes
+from the name alone — FNV-1a finished with murmur3's mix, mod 360, since FNV-1a
+alone put "Toy Story 2" and "Toy Story 4" 2° apart
+([shell/cover.ts](../../apps/web/src/shell/cover.ts)) — so a title draws the
+same cover on every screen and nothing is stored; the gradient runs from
+`oklch(0.42 0.06 h)` to `oklch(0.25 0.035 h)`, low enough in chroma to sit with
+the artwork, and `--tx` on its lightest point clears 7.0:1 at every hue — on a
+tile the wall or a collection fades on purpose, off disk or not on record, it
+fades with it, and the name printed under the tile stays at full contrast. It
+is hidden from a screen reader like the poster it replaces, and the thumbnails
+too small to hold a name take it `bare`. Tested for a stable hue and for
+same-stem names landing at least 20° apart
+([shell/cover.test.ts](../../apps/web/src/shell/cover.test.ts)), and the title
+page's test asserts the cover stands in the header for a title with no
+poster; four assertions in `app.test.tsx` that found the bar or the backdrop by
+"any styled or hidden element" now name what they mean, a width or a `url()`,
+one of which the cover had quietly made vacuous. Live on
+`/add` now; latent elsewhere, since none of the 85 stored titles lacked a
+poster on 2026-09-24.
 
 ## Chunk 9 · The backfill step, drawn
 
@@ -324,7 +334,7 @@ on its own.
 
 - Jade buttons have no hover or pressed state
   ([TopBar.tsx:97](../../apps/web/src/shell/TopBar.tsx#L97),
-  [CandidateRow.tsx:118](../../apps/web/src/add/CandidateRow.tsx#L118),
+  [CandidateRow.tsx:119](../../apps/web/src/add/CandidateRow.tsx#L119),
   [Backfill.tsx:164](../../apps/web/src/add/Backfill.tsx#L164),
   [login.tsx:47](../../apps/web/src/routes/login.tsx#L47)); every bordered
   button has one.
@@ -335,7 +345,7 @@ on its own.
   ([EpisodeCell.tsx:191](../../apps/web/src/title/EpisodeCell.tsx#L191)). The
   prop's own doc says the fallback is for films, whose events name no episode.
 - The presence pill is the one `rounded-full` element
-  ([TitleHeader.tsx:47](../../apps/web/src/title/TitleHeader.tsx#L47)); the
+  ([TitleHeader.tsx:48](../../apps/web/src/title/TitleHeader.tsx#L48)); the
   mockup's tags are squared like the chips.
 - No favicon and no `theme-color` in
   [index.html](../../apps/web/index.html).
@@ -347,12 +357,12 @@ on its own.
   charset, so opened from disk, as § The mockup files says to, they are read
   as windows-1252: `Â·` for `·`.
 - `STATE_BAR`'s `in_progress: 'bg-gold'`
-  ([TitleCard.tsx:22](../../apps/web/src/wall/TitleCard.tsx#L22)) can never
+  ([TitleCard.tsx:23](../../apps/web/src/wall/TitleCard.tsx#L23)) can never
   draw, since `deriveState` gives neither a film nor an empty run that state,
   and `apps/api/src/titles/plan.ts` still documents gold for it.
 - § 02 calls an episode cell's tip native, which § Tooltips rules out; the
   cell uses `Tip`.
 - A figure box that wraps doubles its rule: `Figure` drops `border-r` only on
-  the last cell ([TitleHeader.tsx:25](../../apps/web/src/title/TitleHeader.tsx#L25)),
+  the last cell ([TitleHeader.tsx:26](../../apps/web/src/title/TitleHeader.tsx#L26)),
   so in the year pane's 2×2 box the first row's second cell draws one inside
   the box's own border — plainer since `--line` was lightened.

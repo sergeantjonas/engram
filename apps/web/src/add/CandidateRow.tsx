@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { posterUrl, type TmdbCandidate } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 
 export function CandidateRow({
   candidate,
@@ -70,7 +71,7 @@ export function CandidateRow({
         {poster ? (
           <img src={poster} alt="" loading="lazy" className="aspect-2/3 size-full object-cover" />
         ) : (
-          <div className="aspect-2/3" />
+          <Cover name={candidate.name} className="aspect-2/3 w-full p-1.5 text-[10px]" />
         )}
       </div>
       <div className="min-w-0 flex-1 space-y-1">

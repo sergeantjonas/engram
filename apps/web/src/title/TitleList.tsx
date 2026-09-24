@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { posterUrl, type TitleSummary } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { KIND_LABEL, KINDS, type KindFilter } from '../wall/facets.ts';
 import { rememberKind } from '../wall/kindMemory.ts';
 import { formatSince } from './format.ts';
@@ -147,7 +148,7 @@ function Row({
           className="h-9 w-6 flex-none bg-line object-cover"
         />
       ) : (
-        <span aria-hidden="true" className="h-9 w-6 flex-none bg-line" />
+        <Cover name={title.name} bare className="h-9 w-6 flex-none" />
       )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-medium text-tx">{title.name}</span>

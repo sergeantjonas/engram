@@ -7,6 +7,7 @@ import {
   posterUrl,
   type TmdbCandidate,
 } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { describe } from './describe.ts';
 
 /**
@@ -77,7 +78,7 @@ export function CollectionResults({
                       className="aspect-2/3 size-full object-cover"
                     />
                   ) : (
-                    <div className="aspect-2/3" />
+                    <Cover name={hit.name} className="aspect-2/3 w-full p-1.5 text-[10px]" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">

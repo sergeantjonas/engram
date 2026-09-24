@@ -21,7 +21,9 @@ instead of 963 KB, and is the one to read as source.
 
 Buttons do nothing, Breaking Bad on the add screen is an illustrative TMDB
 result rather than something on record, and the generated covers there are the
-fallback for a title TMDB has no poster for.
+fallback for a title TMDB has no poster for. Built as `Cover`
+(`apps/web/src/shell/Cover.tsx`) since 2026-09-24, its hue taken from the name
+alone, and used wherever a poster can be missing.
 
 ## What was rejected, and why it stays rejected
 

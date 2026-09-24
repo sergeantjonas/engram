@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { HistoryTitle } from '../api/history.ts';
 import { posterUrl } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { formatDuration } from '../title/format.ts';
 import { Section } from '../title/Section.tsx';
 import { Figure } from '../title/TitleHeader.tsx';
@@ -94,7 +95,7 @@ export function DayReading({
                 {poster ? (
                   <img src={poster} alt="" className="h-9 w-6 shrink-0 rounded-sm object-cover" />
                 ) : (
-                  <span aria-hidden="true" className="h-9 w-6 shrink-0 rounded-sm bg-surf" />
+                  <Cover name={title.name} bare className="h-9 w-6 shrink-0 rounded-sm" />
                 )}
                 <div className="min-w-0 flex-1">
                   <Link

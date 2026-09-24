@@ -9,6 +9,7 @@ import {
   titleQuery,
   titlesQuery,
 } from '../api/titles.ts';
+import { Cover } from '../shell/Cover.tsx';
 import { useToast } from '../shell/Toasts.tsx';
 import { Section } from '../title/Section.tsx';
 
@@ -59,7 +60,11 @@ export function Excluded() {
             return (
               <li key={title.id} className="flex items-center gap-3 py-2">
                 <div className="aspect-2/3 w-8 flex-none overflow-hidden rounded-sm bg-surf">
-                  {poster ? <img src={poster} alt="" className="size-full object-cover" /> : null}
+                  {poster ? (
+                    <img src={poster} alt="" className="size-full object-cover" />
+                  ) : (
+                    <Cover name={title.name} bare className="size-full" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <Link

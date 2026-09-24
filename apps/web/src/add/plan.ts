@@ -55,18 +55,32 @@ export function planFilm(seen: boolean, when: string): BackfillPlan {
   return { scopes: seen ? ['all'] : [], writes: seen ? 1 : 0, precision: precisionOf(when) };
 }
 
+/** The commit bar's statement as one sentence, as it reads aloud. */
+export function describePlan(plan: BackfillPlan, unit: 'episode' | 'play'): string {
+  return planClauses(plan, unit)
+    .map(({ label, value }) => `${label} ${value}`)
+    .join(' · ');
+}
+
 /**
- * The commit bar: what the write will do, before it happens.
+ * The commit bar: what the write will do, before it happens, in parts — a name
+ * and the value the write will carry — so the bar can set the values apart
+ * from the words around them.
  *
  * Every entry here is manual and none of it claims the files are on disk, so
  * those two are stated rather than chosen — this screen exists for history
  * older than the disk, and nothing in the project writes `library_presence`.
  */
-export function describePlan(plan: BackfillPlan, unit: 'episode' | 'play'): string {
-  const rows = `writes ${plan.writes} ${plan.writes === 1 ? unit : `${unit}s`}`;
-  const precision =
-    plan.precision === null ? 'precision unreadable' : `precision ${plan.precision}`;
-  return `${rows} · source manual · ${precision} · presence not on disk`;
+export function planClauses(
+  plan: BackfillPlan,
+  unit: 'episode' | 'play',
+): { label: 'writes' | 'source' | 'precision' | 'presence'; value: string }[] {
+  return [
+    { label: 'writes', value: `${plan.writes} ${plan.writes === 1 ? unit : `${unit}s`}` },
+    { label: 'source', value: 'manual' },
+    { label: 'precision', value: plan.precision ?? 'unreadable' },
+    { label: 'presence', value: 'not on disk' },
+  ];
 }
 
 /** One title added in a batch, and the kind that decides what a mark of it covers. */

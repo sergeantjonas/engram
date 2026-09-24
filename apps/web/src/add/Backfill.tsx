@@ -3,11 +3,19 @@ import { useId, useRef, useState } from 'react';
 import { type AddedSeason, type AddedTitle, markWatched } from '../api/titles.ts';
 import { useToast } from '../shell/Toasts.tsx';
 import { useSettle } from '../title/settle.ts';
-import { describePlan, planFilm, planSeasons } from './plan.ts';
+import { planClauses, planFilm, planSeasons } from './plan.ts';
 
 const SPECIALS = 0;
 
 const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
+
+/**
+ * The row every tick on this step shares — a season, *All seasons*, a film's
+ * *Seen it* — as the mockup lists seasons: on the surface, its name, and a
+ * season's episode count at the far end, so a column of them reads as things
+ * to tick rather than a run of checkboxes.
+ */
+const ROW = 'flex items-center gap-3 border border-line bg-surf px-2.5 py-[7px] text-[13px]';
 
 /**
  * Saying what of a newly added title was already watched, in the same visit.
@@ -16,6 +24,7 @@ const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`
  * screen: backfilling a decade of television one episode at a time is how a
  * feature like this quietly never gets used.
  */
+
 export function Backfill({
   added,
   kind,
@@ -89,15 +98,15 @@ export function Backfill({
   const blocked = plan.writes === 0 || plan.precision === null;
 
   return (
-    <section aria-label="What you have already watched" className="space-y-4">
+    <section aria-label="What you have already watched" className="max-w-3xl space-y-4">
       {/* The heading for this step: it stands in place of the search rather
           than under it. */}
       <h1 className="text-display">{added.title.name} is on the record. Seen any of it?</h1>
 
       {film ? (
-        <label className="flex items-center gap-2 text-sm">
+        <label className={ROW}>
           <input type="checkbox" checked={seen} onChange={() => setSeen(!seen)} />
-          <span>Seen it</span>
+          <span className="flex-1 font-medium">Seen it</span>
         </label>
       ) : added.seasons.length === 0 ? (
         <p className="text-dim">It has no seasons on record, so there is nothing to mark.</p>
@@ -105,7 +114,7 @@ export function Backfill({
         <ul className="space-y-1">
           {regular.length > 1 ? (
             <li>
-              <label className="flex items-center gap-2 text-sm">
+              <label className={ROW}>
                 <input
                   type="checkbox"
                   checked={everyRegular}
@@ -122,7 +131,7 @@ export function Backfill({
                     })
                   }
                 />
-                <span className="font-medium">All seasons</span>
+                <span className="flex-1 font-medium">All seasons</span>
               </label>
             </li>
           ) : null}
@@ -155,13 +164,25 @@ export function Backfill({
           standing between a half-remembered decade and 54 rows of it. */}
       <div className="flex flex-wrap items-center gap-4 border-t border-line pt-4">
         <p className="font-mono text-[10px] tracking-[.06em] text-dim">
-          {describePlan(plan, unit)}
+          {planClauses(plan, unit).map(({ label, value }, index) => (
+            <span key={label}>
+              {index > 0 ? ' · ' : null}
+              {label}{' '}
+              {/* The values in jade, as the mockup picks them out: they are
+                  what the write will carry. An unreadable date is not one. */}
+              <b
+                className={`font-medium ${label === 'precision' && plan.precision === null ? 'text-gap-tx' : 'text-jade'}`}
+              >
+                {value}
+              </b>
+            </span>
+          ))}
         </p>
         <button
           type="button"
           disabled={blocked || commit.isPending}
           onClick={() => commit.mutate()}
-          className="rounded bg-jade px-4 py-1.5 text-sm text-on-jade disabled:opacity-50"
+          className="rounded bg-jade px-4 py-1.5 text-sm font-medium text-on-jade disabled:opacity-50"
         >
           Write it
         </button>
@@ -188,9 +209,9 @@ function SeasonCheck({
 }) {
   const name = season.season === SPECIALS ? 'Specials' : `Season ${season.season}`;
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className={ROW}>
       <input type="checkbox" checked={checked} onChange={onChange} />
-      <span>{name}</span>
+      <span className="flex-1 font-medium">{name}</span>
       <span className="font-mono text-[10px] text-dim">
         {count(season.episodeCount, 'episode')}
       </span>

@@ -2245,6 +2245,19 @@ const candidate = (overrides: Partial<TmdbCandidate>): TmdbCandidate => ({
   ...overrides,
 });
 
+/**
+ * The backfill's commit bar, found by its whole sentence: its values are set
+ * apart in elements of their own, so no one text node holds all of it.
+ */
+const commitBar = (says: string | RegExp) =>
+  screen.findByText(
+    (_, element) =>
+      element?.tagName === 'P' &&
+      (typeof says === 'string'
+        ? element.textContent === says
+        : says.test(element.textContent ?? '')),
+  );
+
 describe('adding a title', () => {
   // Nothing on this screen reads without being able to act, so there is no
   // narrower version of it to show a stranger.
@@ -3148,9 +3161,7 @@ describe('adding a title', () => {
 
     // The bar states the write before it happens; the specials are outside it,
     // because "all seasons" is the mark that steps over them.
-    await screen.findByText(
-      'writes 18 episodes · source manual · precision year · presence not on disk',
-    );
+    await commitBar('writes 18 episodes · source manual · precision year · presence not on disk');
     screen.getByRole('button', { name: 'Write it' }).click();
 
     await screen.findByText('Marked 18 episodes of Heat.');
@@ -3193,7 +3204,7 @@ describe('adding a title', () => {
     (await screen.findByRole('checkbox', { name: /Specials/ })).click();
     screen.getByRole('checkbox', { name: /Season 1/ }).click();
 
-    await screen.findByText(/writes 11 episodes/);
+    await commitBar(/writes 11 episodes/);
     screen.getByRole('button', { name: 'Write it' }).click();
 
     await screen.findByText('Marked 11 episodes of Heat.');
@@ -3261,7 +3272,7 @@ describe('adding a title', () => {
       target: { value: 'summer 2019' },
     });
 
-    await screen.findByText(/precision unreadable/);
+    await commitBar(/precision unreadable/);
     expect(screen.getByRole('button', { name: 'Write it' })).toHaveProperty('disabled', true);
   });
 

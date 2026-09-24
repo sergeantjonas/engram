@@ -339,8 +339,8 @@ the viewer wants of a title. The SPA calls all four.
    a result or a selection, a pasted IMDb or TMDB link answered with the
    title it names, and a collection opened with its films ticked. Chunk 7,
    search as the owner types, landed 2026-09-24.
-9. **Visual finish** — scoped 2026-09-24 in [visual-finish.md](visual-finish.md);
-   chunks 1 to 8 landed the same day, not deployed. A review of the running app against
+9. **Visual finish** — built 2026-09-24, all nine chunks, not deployed. Scoped
+   the same day in [visual-finish.md](visual-finish.md). A review of the running app against
    [web-design.md](web-design.md) and its mockup, at four widths and measured
    rather than judged by eye: the palette, the wall, the grid and the tint
    hold; what does not is the states the mockup never drew and the text set in
@@ -361,7 +361,7 @@ the viewer wants of a title. The SPA calls all four.
    Chunk 5: headings on one display token, and mono a step below its Archivo.
    Chunk 6: the owner's top bar back on its 57px token. Chunk 7: the year's
    pane beside its calendars. Chunk 8: the mockup's generated cover wherever a
-   poster can be missing.
+   poster can be missing. Chunk 9: the backfill step drawn as the mockup has it.
 
 ## Blocked
 

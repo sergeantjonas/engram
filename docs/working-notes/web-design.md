@@ -416,7 +416,10 @@ a decade of television one episode at a time is how a feature like this
 quietly never gets used.
 
 The commit bar states what the write will do before it happens: `writes 54
-episodes · source manual · precision year · presence not on disk`.
+episodes · source manual · precision year · presence not on disk`, each value
+in jade after its word, and the seasons above it are rows on the surface with
+their counts at the far end, as the mockup draws them. Since 2026-09-24;
+[visual-finish.md](visual-finish.md) chunk 9.
 
 Built as described, in two steps rather than one screen: the search and its
 results, then the seasons, once the title exists and its grid is known. The

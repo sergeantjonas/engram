@@ -1,10 +1,9 @@
 # Visual finish
 
-**Status:** In progress — chunks 1 to 8 landed 2026-09-24, not deployed. Scoped the
+**Status:** Built 2026-09-24 — all nine chunks landed, not deployed. Scoped the
 same day from a review of the running app against
-[web-design.md](web-design.md) and the mockup it was approved from. Nine
-chunks, one commit each, in order. No chunk carries a migration or touches the
-API.
+[web-design.md](web-design.md) and the mockup it was approved from. One commit
+per chunk. No chunk carries a migration or touches the API.
 
 The palette, the wall, the grid and the tint hold up in the running app, and
 every route's loader fills its data before the first paint, so nothing arrives
@@ -90,9 +89,9 @@ open panel being what is read. The convention is written into
 
 A ticked box was the browser's blue too. The six checkboxes on `/add`
 ([CandidateRow.tsx:58](../../apps/web/src/add/CandidateRow.tsx#L58),
-[Backfill.tsx:99](../../apps/web/src/add/Backfill.tsx#L99),
-[:110](../../apps/web/src/add/Backfill.tsx#L110) and
-[:192](../../apps/web/src/add/Backfill.tsx#L192),
+[Backfill.tsx:108](../../apps/web/src/add/Backfill.tsx#L108),
+[:119](../../apps/web/src/add/Backfill.tsx#L119) and
+[:213](../../apps/web/src/add/Backfill.tsx#L213),
 [Batch.tsx:118](../../apps/web/src/add/Batch.tsx#L118) and
 [:207](../../apps/web/src/add/Batch.tsx#L207)) and the hole's reason radios
 ([EpisodeCell.tsx:300](../../apps/web/src/title/EpisodeCell.tsx#L300)) set no
@@ -225,7 +224,7 @@ system says, none of them marked as a departure:
   heading cannot drift back to a weight of its own:
   [TitleHeader.tsx:260](../../apps/web/src/title/TitleHeader.tsx#L260),
   [add.tsx:519](../../apps/web/src/routes/add.tsx#L519),
-  [Backfill.tsx:95](../../apps/web/src/add/Backfill.tsx#L95),
+  [Backfill.tsx:104](../../apps/web/src/add/Backfill.tsx#L104),
   [Batch.tsx:109](../../apps/web/src/add/Batch.tsx#L109),
   [settings.tsx:33](../../apps/web/src/routes/settings.tsx#L33),
   [login.tsx:39](../../apps/web/src/routes/login.tsx#L39). Archivo 700 was
@@ -313,19 +312,26 @@ poster on 2026-09-24.
 
 ## Chunk 9 · The backfill step, drawn
 
-The screen § 03 says reframed the project is the plainest one built. The
-seasons are a bare stack of checkboxes, and the commit bar — which exists to
-state what the write will do before it happens — is a 10px mono sentence in
-`--dim`, quieter than the season names above it, beside the one write the
-screen is for ([Backfill.tsx:105-171](../../apps/web/src/add/Backfill.tsx#L105-L171)).
-The mockup draws each season as a row on `--surf` inside a `--line` border,
-its name at 13px and its count right-aligned in mono, and picks the commit
-bar's figures out in jade
+Landed 2026-09-24. The screen § 03 says reframed the project was the plainest
+one built: the seasons a bare stack of checkboxes, and the commit bar — which
+exists to state what the write will do before it happens — a 10px mono
+sentence in one tone beside the one write the screen is for. The mockup draws
+each season as a row on `--surf` inside a `--line` border, its name at 13px and
+its count right-aligned in mono, and picks the commit bar's figures out in jade
 ([engram-app.template.html:248-253](../design/engram-app.template.html#L248-L253)
 and [:279](../design/engram-app.template.html#L279)).
 
-Carry those over. The free-text date stays, the same field the title page's
-mark uses, and so do the two steps and *All seasons* leaving the specials out.
+Both are carried over. The seasons, *All seasons* and a film's *Seen it* share
+one row ([Backfill.tsx:18](../../apps/web/src/add/Backfill.tsx#L18)), and
+the bar sets each value in jade after its word
+([Backfill.tsx:167](../../apps/web/src/add/Backfill.tsx#L167)) — an unreadable
+date in `--gap-tx` instead, since it is not a value the write will carry. The
+sentence is built from `planClauses`
+([plan.ts:74](../../apps/web/src/add/plan.ts#L74)), and `describePlan` joins
+the same clauses, so its tests stand; three tests that found the bar by its
+text now find it by its whole sentence. The step stops at 48rem like the
+search before it, and *Write it* is set at 500 like *Add* on a result. The free-text date stays, the same field the title page's mark uses,
+and so do the two steps and *All seasons* leaving the specials out.
 
 ## Not scheduled
 
@@ -335,7 +341,7 @@ on its own.
 - Jade buttons have no hover or pressed state
   ([TopBar.tsx:97](../../apps/web/src/shell/TopBar.tsx#L97),
   [CandidateRow.tsx:119](../../apps/web/src/add/CandidateRow.tsx#L119),
-  [Backfill.tsx:164](../../apps/web/src/add/Backfill.tsx#L164),
+  [Backfill.tsx:185](../../apps/web/src/add/Backfill.tsx#L185),
   [login.tsx:47](../../apps/web/src/routes/login.tsx#L47)); every bordered
   button has one.
 - An episode with no name takes its show's in the activity feed,
@@ -362,6 +368,9 @@ on its own.
   and `apps/api/src/titles/plan.ts` still documents gold for it.
 - § 02 calls an episode cell's tip native, which § Tooltips rules out; the
   cell uses `Tip`.
+- The batch step, `/add`'s other commit, still draws what this one did:
+  plain rows, no 48rem stop, a one-tone bar and *Write it* at 400
+  ([Batch.tsx](../../apps/web/src/add/Batch.tsx)).
 - A figure box that wraps doubles its rule: `Figure` drops `border-r` only on
   the last cell ([TitleHeader.tsx:26](../../apps/web/src/title/TitleHeader.tsx#L26)),
   so in the year pane's 2×2 box the first row's second cell draws one inside

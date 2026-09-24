@@ -4,18 +4,11 @@ import { type AddedSeason, type AddedTitle, markWatched } from '../api/titles.ts
 import { useToast } from '../shell/Toasts.tsx';
 import { useSettle } from '../title/settle.ts';
 import { planClauses, planFilm, planSeasons } from './plan.ts';
+import { CommitBar, TickRow } from './Step.tsx';
 
 const SPECIALS = 0;
 
 const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
-
-/**
- * The row every tick on this step shares — a season, *All seasons*, a film's
- * *Seen it* — as the mockup lists seasons: on the surface, its name, and a
- * season's episode count at the far end, so a column of them reads as things
- * to tick rather than a run of checkboxes.
- */
-const ROW = 'flex items-center gap-3 border border-line bg-surf px-2.5 py-[7px] text-[13px]';
 
 /**
  * Saying what of a newly added title was already watched, in the same visit.
@@ -104,35 +97,32 @@ export function Backfill({
       <h1 className="text-display">{added.title.name} is on the record. Seen any of it?</h1>
 
       {film ? (
-        <label className={ROW}>
-          <input type="checkbox" checked={seen} onChange={() => setSeen(!seen)} />
+        <TickRow checked={seen} onChange={() => setSeen(!seen)}>
           <span className="flex-1 font-medium">Seen it</span>
-        </label>
+        </TickRow>
       ) : added.seasons.length === 0 ? (
         <p className="text-dim">It has no seasons on record, so there is nothing to mark.</p>
       ) : (
         <ul className="space-y-1">
           {regular.length > 1 ? (
             <li>
-              <label className={ROW}>
-                <input
-                  type="checkbox"
-                  checked={everyRegular}
-                  // Specials are left out of "all seasons" the way they are
-                  // left out of a whole-title mark; they are ticked by name.
-                  onChange={() =>
-                    setChosen((open) => {
-                      const next = new Set(open);
-                      for (const season of regular) {
-                        if (everyRegular) next.delete(season.season);
-                        else next.add(season.season);
-                      }
-                      return next;
-                    })
-                  }
-                />
+              <TickRow
+                checked={everyRegular}
+                // Specials are left out of "all seasons" the way they are
+                // left out of a whole-title mark; they are ticked by name.
+                onChange={() =>
+                  setChosen((open) => {
+                    const next = new Set(open);
+                    for (const season of regular) {
+                      if (everyRegular) next.delete(season.season);
+                      else next.add(season.season);
+                    }
+                    return next;
+                  })
+                }
+              >
                 <span className="flex-1 font-medium">All seasons</span>
-              </label>
+              </TickRow>
             </li>
           ) : null}
           {added.seasons.map((season) => (
@@ -160,40 +150,13 @@ export function Backfill({
         />
       </div>
 
-      {/* The bar states the write before it happens, which is the only thing
-          standing between a half-remembered decade and 54 rows of it. */}
-      <div className="flex flex-wrap items-center gap-4 border-t border-line pt-4">
-        <p className="font-mono text-[10px] tracking-[.06em] text-dim">
-          {planClauses(plan, unit).map(({ label, value }, index) => (
-            <span key={label}>
-              {index > 0 ? ' · ' : null}
-              {label}{' '}
-              {/* The values in jade, as the mockup picks them out: they are
-                  what the write will carry. An unreadable date is not one. */}
-              <b
-                className={`font-medium ${label === 'precision' && plan.precision === null ? 'text-gap-tx' : 'text-jade'}`}
-              >
-                {value}
-              </b>
-            </span>
-          ))}
-        </p>
-        <button
-          type="button"
-          disabled={blocked || commit.isPending}
-          onClick={() => commit.mutate()}
-          className="rounded bg-jade px-4 py-1.5 text-sm font-medium text-on-jade disabled:opacity-50"
-        >
-          Write it
-        </button>
-        <button
-          type="button"
-          onClick={onCommitted}
-          className="text-sm text-dim underline-offset-4 hover:text-tx hover:underline"
-        >
-          Nothing yet — open the title
-        </button>
-      </div>
+      <CommitBar
+        clauses={planClauses(plan, unit)}
+        disabled={blocked || commit.isPending}
+        onWrite={() => commit.mutate()}
+        leave="Nothing yet — open the title"
+        onLeave={onCommitted}
+      />
     </section>
   );
 }
@@ -209,12 +172,11 @@ function SeasonCheck({
 }) {
   const name = season.season === SPECIALS ? 'Specials' : `Season ${season.season}`;
   return (
-    <label className={ROW}>
-      <input type="checkbox" checked={checked} onChange={onChange} />
+    <TickRow checked={checked} onChange={onChange}>
       <span className="flex-1 font-medium">{name}</span>
       <span className="font-mono text-[10px] text-dim">
         {count(season.episodeCount, 'episode')}
       </span>
-    </label>
+    </TickRow>
   );
 }

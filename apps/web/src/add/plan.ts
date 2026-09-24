@@ -21,6 +21,8 @@ export interface BackfillPlan {
 
 const SPECIALS = 0;
 
+const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
+
 const precisionOf = (when: string) => parseWatchedAt(when)?.precision ?? null;
 
 export function planSeasons(
@@ -55,11 +57,12 @@ export function planFilm(seen: boolean, when: string): BackfillPlan {
   return { scopes: seen ? ['all'] : [], writes: seen ? 1 : 0, precision: precisionOf(when) };
 }
 
-/** The commit bar's statement as one sentence, as it reads aloud. */
-export function describePlan(plan: BackfillPlan, unit: 'episode' | 'play'): string {
-  return planClauses(plan, unit)
-    .map(({ label, value }) => `${label} ${value}`)
-    .join(' · ');
+/** One part of the commit bar: a name, and the value after it. */
+export interface Clause {
+  label: 'writes' | 'source' | 'precision' | 'presence';
+  value: string;
+  /** False for an unreadable date: stated, but not a value the write carries. */
+  carried: boolean;
 }
 
 /**
@@ -71,16 +74,23 @@ export function describePlan(plan: BackfillPlan, unit: 'episode' | 'play'): stri
  * those two are stated rather than chosen — this screen exists for history
  * older than the disk, and nothing in the project writes `library_presence`.
  */
-export function planClauses(
-  plan: BackfillPlan,
-  unit: 'episode' | 'play',
-): { label: 'writes' | 'source' | 'precision' | 'presence'; value: string }[] {
-  return [
-    { label: 'writes', value: `${plan.writes} ${plan.writes === 1 ? unit : `${unit}s`}` },
-    { label: 'source', value: 'manual' },
-    { label: 'precision', value: plan.precision ?? 'unreadable' },
-    { label: 'presence', value: 'not on disk' },
-  ];
+const clauses = (writes: string, precision: WatchPrecision | null): Clause[] => [
+  { label: 'writes', value: writes, carried: true },
+  { label: 'source', value: 'manual', carried: true },
+  { label: 'precision', value: precision ?? 'unreadable', carried: precision !== null },
+  { label: 'presence', value: 'not on disk', carried: true },
+];
+
+/** The commit bar's statement as one sentence, as it reads aloud. */
+const sentence = (parts: Clause[]) =>
+  parts.map(({ label, value }) => `${label} ${value}`).join(' · ');
+
+export function planClauses(plan: BackfillPlan, unit: 'episode' | 'play'): Clause[] {
+  return clauses(count(plan.writes, unit), plan.precision);
+}
+
+export function describePlan(plan: BackfillPlan, unit: 'episode' | 'play'): string {
+  return sentence(planClauses(plan, unit));
 }
 
 /** One title added in a batch, and the kind that decides what a mark of it covers. */
@@ -136,21 +146,20 @@ export function planBatch(
   };
 }
 
-const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
-
 /**
  * The commit bar for a batch, in the same words as the single-title one. A
  * mixed selection writes both kinds of row, so it names both rather than
  * picking a unit and being wrong about half of them.
  */
-export function describeBatch(plan: BatchPlan): string {
+export function batchClauses(plan: BatchPlan): Clause[] {
   const written = [
     plan.episodes > 0 ? count(plan.episodes, 'episode') : null,
     plan.plays > 0 ? count(plan.plays, 'play') : null,
   ].filter((part): part is string => part !== null);
 
-  const precision =
-    plan.precision === null ? 'precision unreadable' : `precision ${plan.precision}`;
-  const rows = written.length === 0 ? 'nothing' : written.join(' and ');
-  return `writes ${rows} · source manual · ${precision} · presence not on disk`;
+  return clauses(written.length === 0 ? 'nothing' : written.join(' and '), plan.precision);
+}
+
+export function describeBatch(plan: BatchPlan): string {
+  return sentence(batchClauses(plan));
 }

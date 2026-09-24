@@ -1,6 +1,7 @@
 # Visual finish
 
-**Status:** Built 2026-09-24 — all nine chunks landed, not deployed. Scoped the
+**Status:** Built 2026-09-24 — all nine chunks landed, and one finding left out
+of them taken up since (§ Taken up after); not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. One commit
 per chunk. No chunk carries a migration or touches the API.
@@ -89,11 +90,11 @@ open panel being what is read. The convention is written into
 
 A ticked box was the browser's blue too. The six checkboxes on `/add`
 ([CandidateRow.tsx:58](../../apps/web/src/add/CandidateRow.tsx#L58),
-[Backfill.tsx:108](../../apps/web/src/add/Backfill.tsx#L108),
-[:119](../../apps/web/src/add/Backfill.tsx#L119) and
-[:213](../../apps/web/src/add/Backfill.tsx#L213),
-[Batch.tsx:118](../../apps/web/src/add/Batch.tsx#L118) and
-[:207](../../apps/web/src/add/Batch.tsx#L207)) and the hole's reason radios
+[Backfill.tsx:100](../../apps/web/src/add/Backfill.tsx#L100),
+[:109](../../apps/web/src/add/Backfill.tsx#L109) and
+[:175](../../apps/web/src/add/Backfill.tsx#L175),
+[Batch.tsx:117](../../apps/web/src/add/Batch.tsx#L117) and
+[:192](../../apps/web/src/add/Batch.tsx#L192)) and the hole's reason radios
 ([EpisodeCell.tsx:300](../../apps/web/src/title/EpisodeCell.tsx#L300)) set no
 `accent-color`, where the mockup ticks them in jade. `accent-color` is
 inherited, so `var(--color-jade)` on `:root`, beside the focus rule, covers
@@ -224,8 +225,8 @@ system says, none of them marked as a departure:
   heading cannot drift back to a weight of its own:
   [TitleHeader.tsx:260](../../apps/web/src/title/TitleHeader.tsx#L260),
   [add.tsx:519](../../apps/web/src/routes/add.tsx#L519),
-  [Backfill.tsx:104](../../apps/web/src/add/Backfill.tsx#L104),
-  [Batch.tsx:109](../../apps/web/src/add/Batch.tsx#L109),
+  [Backfill.tsx:97](../../apps/web/src/add/Backfill.tsx#L97),
+  [Batch.tsx:110](../../apps/web/src/add/Batch.tsx#L110),
   [settings.tsx:33](../../apps/web/src/routes/settings.tsx#L33),
   [login.tsx:39](../../apps/web/src/routes/login.tsx#L39). Archivo 700 was
   already loaded.
@@ -322,16 +323,33 @@ its count right-aligned in mono, and picks the commit bar's figures out in jade
 and [:279](../design/engram-app.template.html#L279)).
 
 Both are carried over. The seasons, *All seasons* and a film's *Seen it* share
-one row ([Backfill.tsx:18](../../apps/web/src/add/Backfill.tsx#L18)), and
+one row ([Step.tsx:14](../../apps/web/src/add/Step.tsx#L14)), and
 the bar sets each value in jade after its word
-([Backfill.tsx:167](../../apps/web/src/add/Backfill.tsx#L167)) — an unreadable
+([Step.tsx:60](../../apps/web/src/add/Step.tsx#L60)) — an unreadable
 date in `--gap-tx` instead, since it is not a value the write will carry. The
 sentence is built from `planClauses`
-([plan.ts:74](../../apps/web/src/add/plan.ts#L74)), and `describePlan` joins
+([plan.ts:88](../../apps/web/src/add/plan.ts#L88)), and `describePlan` joins
 the same clauses, so its tests stand; three tests that found the bar by its
 text now find it by its whole sentence. The step stops at 48rem like the
 search before it, and *Write it* is set at 500 like *Add* on a result. The free-text date stays, the same field the title page's mark uses,
 and so do the two steps and *All seasons* leaving the specials out.
+
+## Taken up after
+
+Findings from § Not scheduled, closed once the nine chunks had landed. One
+commit each, checked in the app like the chunks.
+
+- **The batch step, drawn.** `/add`'s other commit still drew what the
+  backfill step did before chunk 9: plain rows, no stop, a one-tone bar and
+  *Write it* at 400. The two steps share their rows and their commit bar now
+  ([Step.tsx](../../apps/web/src/add/Step.tsx)), so neither can fall behind
+  the other again: a batch's titles are rows on `--surf` inside a
+  `--line` border, the bar sets each value in jade after its word, *Write it*
+  is at 500, and the step stops at 48rem. Its bar is built from the same
+  clauses as the backfill's, `batchClauses` beside `planClauses`
+  ([plan.ts](../../apps/web/src/add/plan.ts)), and each clause says whether
+  the write carries its value, so an unreadable date takes `--gap-tx` on
+  either step by one rule. Checked at 1440px.
 
 ## Not scheduled
 
@@ -341,7 +359,7 @@ on its own.
 - Jade buttons have no hover or pressed state
   ([TopBar.tsx:97](../../apps/web/src/shell/TopBar.tsx#L97),
   [CandidateRow.tsx:119](../../apps/web/src/add/CandidateRow.tsx#L119),
-  [Backfill.tsx:185](../../apps/web/src/add/Backfill.tsx#L185),
+  [Step.tsx:68](../../apps/web/src/add/Step.tsx#L68),
   [login.tsx:47](../../apps/web/src/routes/login.tsx#L47)); every bordered
   button has one.
 - An episode with no name takes its show's in the activity feed,
@@ -368,9 +386,6 @@ on its own.
   and `apps/api/src/titles/plan.ts` still documents gold for it.
 - § 02 calls an episode cell's tip native, which § Tooltips rules out; the
   cell uses `Tip`.
-- The batch step, `/add`'s other commit, still draws what this one did:
-  plain rows, no 48rem stop, a one-tone bar and *Write it* at 400
-  ([Batch.tsx](../../apps/web/src/add/Batch.tsx)).
 - A figure box that wraps doubles its rule: `Figure` drops `border-r` only on
   the last cell ([TitleHeader.tsx:26](../../apps/web/src/title/TitleHeader.tsx#L26)),
   so in the year pane's 2×2 box the first row's second cell draws one inside

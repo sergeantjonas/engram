@@ -2246,8 +2246,9 @@ const candidate = (overrides: Partial<TmdbCandidate>): TmdbCandidate => ({
 });
 
 /**
- * The backfill's commit bar, found by its whole sentence: its values are set
- * apart in elements of their own, so no one text node holds all of it.
+ * A commit bar, the backfill's or the batch's, found by its whole sentence:
+ * its values are set apart in elements of their own, so no one text node
+ * holds all of it.
  */
 const commitBar = (says: string | RegExp) =>
   screen.findByText(
@@ -3383,9 +3384,7 @@ describe('adding a title', () => {
     });
 
     // One date for the batch, and the bar states the write before it happens.
-    await screen.findByText(
-      'writes 2 plays · source manual · precision year · presence not on disk',
-    );
+    await commitBar('writes 2 plays · source manual · precision year · presence not on disk');
     fireEvent.click(screen.getByRole('button', { name: 'Write it' }));
 
     await screen.findByText('Marked 2 titles.');

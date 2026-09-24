@@ -437,7 +437,10 @@ Every candidate the record does not already hold carries a checkbox, and a
 selection is added in one pass and marked from one screen — a whole-title tick
 each against a single shared date, no seasons. Finer than that is what the
 title's own page is for, and asking for it over a batch would make the batch
-worse than adding one at a time.
+worse than adding one at a time. The batch step is drawn as the backfill step
+is, the two sharing their rows and their commit bar, and stops at 48rem like
+the search. Since 2026-09-24; [visual-finish.md](visual-finish.md) § Taken up
+after.
 
 Results the record already holds are held back rather than listed, behind a
 line counting them that opens them again; shown, each points at the title it is

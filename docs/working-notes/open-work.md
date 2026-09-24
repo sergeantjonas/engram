@@ -362,6 +362,8 @@ the viewer wants of a title. The SPA calls all four.
    Chunk 6: the owner's top bar back on its 57px token. Chunk 7: the year's
    pane beside its calendars. Chunk 8: the mockup's generated cover wherever a
    poster can be missing. Chunk 9: the backfill step drawn as the mockup has it.
+   Taken up after, from the findings left out of the arc: the batch step drawn
+   as the backfill step is.
 
 ## Blocked
 

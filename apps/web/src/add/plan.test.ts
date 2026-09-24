@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AddedSeason } from '../api/titles.ts';
 import {
   type BatchEntry,
+  batchClauses,
   describeBatch,
   describePlan,
   markable,
@@ -158,5 +159,20 @@ describe('describeBatch', () => {
 
   it('says nothing is written when nothing is ticked', () => {
     expect(describeBatch(batch([film('a')], []))).toContain('writes nothing ·');
+  });
+});
+
+describe('batchClauses', () => {
+  // The bar sets what the write carries apart from the words around it, and a
+  // date it cannot read is stated without being one of those values.
+  it('does not count an unreadable date among the values the write carries', () => {
+    const clauses = batchClauses(batch([film('a')], ['a'], 'summer 2019'));
+
+    expect(clauses.find((clause) => clause.label === 'precision')).toEqual({
+      label: 'precision',
+      value: 'unreadable',
+      carried: false,
+    });
+    expect(clauses.filter((clause) => !clause.carried)).toHaveLength(1);
   });
 });

@@ -4,7 +4,8 @@ import { historyQuery } from '../api/history.ts';
 import { markWatched, nextUpQuery, posterUrl, type TmdbCandidate } from '../api/titles.ts';
 import { Cover } from '../shell/Cover.tsx';
 import { useToast } from '../shell/Toasts.tsx';
-import { type BatchEntry, type BatchPlan, describeBatch, markable, planBatch } from './plan.ts';
+import { type BatchEntry, type BatchPlan, batchClauses, markable, planBatch } from './plan.ts';
+import { CommitBar, TickRow } from './Step.tsx';
 
 const count = (n: number, unit: string) => `${n} ${n === 1 ? unit : `${unit}s`}`;
 
@@ -105,32 +106,30 @@ export function Batch({ items, onDone }: { items: BatchItem[]; onDone: () => voi
   const blocked = plan.marks.length === 0 || plan.precision === null;
 
   return (
-    <section aria-label="What you have already watched" className="space-y-4">
+    <section aria-label="What you have already watched" className="max-w-3xl space-y-4">
       <h1 className="text-display">
         {count(items.length, 'title')} on the record. Seen any of them?
       </h1>
 
       <ul className="space-y-1">
         {tickable.length > 1 ? (
-          <li className="pb-1">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={everyOne}
-                disabled={commit.isPending}
-                onChange={() =>
-                  setChosen((open) => {
-                    const next = new Set(open);
-                    for (const item of tickable) {
-                      if (everyOne) next.delete(item.added.title.id);
-                      else next.add(item.added.title.id);
-                    }
-                    return next;
-                  })
-                }
-              />
-              <span className="font-medium">All of them</span>
-            </label>
+          <li>
+            <TickRow
+              checked={everyOne}
+              disabled={commit.isPending}
+              onChange={() =>
+                setChosen((open) => {
+                  const next = new Set(open);
+                  for (const item of tickable) {
+                    if (everyOne) next.delete(item.added.title.id);
+                    else next.add(item.added.title.id);
+                  }
+                  return next;
+                })
+              }
+            >
+              <span className="flex-1 font-medium">All of them</span>
+            </TickRow>
           </li>
         ) : null}
         {items.map((item) => (
@@ -161,26 +160,13 @@ export function Batch({ items, onDone }: { items: BatchItem[]; onDone: () => voi
         />
       </div>
 
-      {/* The bar states the write before it happens, which is the only thing
-          standing between a half-remembered decade and 54 rows of it. */}
-      <div className="flex flex-wrap items-center gap-4 border-t border-line pt-4">
-        <p className="font-mono text-[10px] tracking-[.06em] text-dim">{describeBatch(plan)}</p>
-        <button
-          type="button"
-          disabled={blocked || commit.isPending}
-          onClick={() => commit.mutate()}
-          className="rounded bg-jade px-4 py-1.5 text-sm text-on-jade disabled:opacity-50"
-        >
-          Write it
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="text-sm text-dim underline-offset-4 hover:text-tx hover:underline"
-        >
-          Nothing yet — back to the search
-        </button>
-      </div>
+      <CommitBar
+        clauses={batchClauses(plan)}
+        disabled={blocked || commit.isPending}
+        onWrite={() => commit.mutate()}
+        leave="Nothing yet — back to the search"
+        onLeave={onDone}
+      />
     </section>
   );
 }
@@ -203,16 +189,15 @@ function TitleCheck({
     .reduce((total, season) => total + season.episodeCount, 0);
 
   return (
-    <label className="flex items-center gap-3 text-sm">
-      <input type="checkbox" checked={checked} disabled={!can || disabled} onChange={onChange} />
-      <span className="w-8 shrink-0 overflow-hidden rounded bg-surf">
+    <TickRow checked={checked} disabled={!can || disabled} onChange={onChange}>
+      <span className="w-8 shrink-0 overflow-hidden rounded bg-bg">
         {poster ? (
           <img src={poster} alt="" loading="lazy" className="aspect-2/3 size-full object-cover" />
         ) : (
           <Cover name={item.added.title.name} bare className="aspect-2/3 w-full" />
         )}
       </span>
-      <span className="min-w-0 flex-1 truncate">{item.added.title.name}</span>
+      <span className="min-w-0 flex-1 truncate font-medium">{item.added.title.name}</span>
       <span className="shrink-0 font-mono text-[10px] text-dim">
         {can
           ? item.kind === 'movie'
@@ -220,6 +205,6 @@ function TitleCheck({
             : count(episodes, 'episode')
           : 'no seasons on record'}
       </span>
-    </label>
+    </TickRow>
   );
 }

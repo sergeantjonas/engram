@@ -92,6 +92,14 @@ drawn over the whole page rather than inside the column. A colour too light
 to sit under text is darkened first. Added 2026-09-23; see
 [web-depth.md](web-depth.md) arc 5 chunk 3.
 
+**No state rests on hue alone.** Two states that must be told apart differ in
+lightness, in fill against outline, in border style or in a word, never in hue
+by itself, and the difference is measured in the worst of simulated protan,
+deutan and tritan vision rather than judged by eye. Text clears 4.5:1 against
+what is actually behind it, a backdrop included, so `--faint` is for strokes
+and for what recedes on purpose, not for a value. Settled 2026-09-24;
+[visual-finish.md](visual-finish.md) chunks 2 and 3 bring the build to it.
+
 **Type.** Two families split by job rather than by size, both from Google
 Fonts.
 

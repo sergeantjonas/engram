@@ -43,8 +43,9 @@ it was measured against the backdrop's own pixels, with the text hidden.
 - **2026-09-24 — No state rests on hue alone.** Two states that must be told
   apart differ in lightness, in fill against outline, in border style or in a
   word, and the difference is measured in the worst of simulated protan,
-  deutan and tritan vision rather than judged by eye. Chunk 3 is where the
-  palette meets it.
+  deutan and tritan vision rather than judged by eye. Written into
+  [web-design.md](web-design.md) § The system; chunk 3 is where the palette
+  meets it.
 - **2026-09-24 — The list pane's bar follows the wall's.** Progress in jade and
   nothing else, as [web-depth.md](web-depth.md) arc 5 chunk 1 made the wall's
   ([TitleCard.tsx:35-51](../../apps/web/src/wall/TitleCard.tsx#L35-L51)). The
@@ -171,9 +172,9 @@ four shades are a lightness ramp, 0.085 to 0.16 apart. Four places do not:
   means *seen*, on the one episode that is not. The mockup set it in `--tx`.
 
 Jade, gold, drift and gap keep their values. § The system's table is amended
-in the same commit: `--line`'s value, the rule that no state rests on hue
-alone, and gold's job as built — a skipped cell and a rewatch — since the
-progress bar stopped drawing it and nothing is *in progress* in gold any more.
+in the same commit: `--line`'s value and gold's job as built — a skipped cell
+and a rewatch — since the progress bar stopped drawing it and nothing is *in
+progress* in gold any more.
 
 ## Chunk 4 · Next up over any still
 

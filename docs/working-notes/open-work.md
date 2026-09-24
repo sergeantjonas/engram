@@ -340,7 +340,7 @@ the viewer wants of a title. The SPA calls all four.
    title it names, and a collection opened with its films ticked. Chunk 7,
    search as the owner types, landed 2026-09-24.
 9. **Visual finish** — scoped 2026-09-24 in [visual-finish.md](visual-finish.md);
-   chunks 1 to 5 landed the same day, not deployed. A review of the running app against
+   chunks 1 to 6 landed the same day, not deployed. A review of the running app against
    [web-design.md](web-design.md) and its mockup, at four widths and measured
    rather than judged by eye: the palette, the wall, the grid and the tint
    hold; what does not is the states the mockup never drew and the text set in
@@ -359,6 +359,7 @@ the viewer wants of a title. The SPA calls all four.
    seen, the list pane's bar in jade only, Next up's episode code in `--tx`.
    Chunk 4: Next up's scrim holds, so no line on a card falls under 4.5:1.
    Chunk 5: headings on one display token, and mono a step below its Archivo.
+   Chunk 6: the owner's top bar back on its 57px token.
 
 ## Blocked
 

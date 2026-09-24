@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** In progress — chunks 1 to 5 landed 2026-09-24, not deployed. Scoped the
+**Status:** In progress — chunks 1 to 6 landed 2026-09-24, not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. Nine
 chunks, one commit each, in order. No chunk carries a migration or touches the
@@ -250,13 +250,15 @@ the figure label Martian 9px.
 
 ## Chunk 6 · The owner's top bar is 57px
 
-`--spacing-topbar` is 57px, and the comment beside it promises the offset is
-never short ([index.css:28-33](../../apps/web/src/index.css#L28-L33)). That
-holds for a stranger. For the owner, *+ Add watched* at `py-2` is 36.75px tall
-([TopBar.tsx:97](../../apps/web/src/shell/TopBar.tsx#L97)), the bar grows to
-61.75px, and the title page's list pane, stuck at `top-topbar`, slides 4.75px
-under it — both measured. `py-1.5` makes the button 32.75px and puts the bar
-back on its token.
+Landed 2026-09-24. `--spacing-topbar` is 57px, and the comment beside it
+promises the offset is never short
+([index.css:28-33](../../apps/web/src/index.css#L28-L33)). That held for a
+stranger. For the owner, *+ Add watched* at `py-2` was 36.75px tall, the bar
+grew to 61.75px, and the title page's list pane, stuck at `top-topbar`, slid
+4.75px under it. `py-1.5` alone left the bar at 57.75px, since the bar's own
+1px rule counts against the 57; the button is 32px, `py-1.5` with an 18px
+line ([TopBar.tsx:99](../../apps/web/src/shell/TopBar.tsx#L99)), and the bar
+measures 57px signed in as it does signed out.
 
 ## Chunk 7 · The year's pane beside its calendars
 

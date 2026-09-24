@@ -55,7 +55,8 @@ Their height is a token, `--spacing-topbar`, not a number written twice. The
 title page's list pane sticks to the same scrollport, so it offsets by exactly
 that much or it slides under the bar; the bar is held to it as a floor, so the
 offset can only ever be right or generous. Measured at 57px, which is what the
-token says.
+token says — signed in too, since 2026-09-24: the bar's padding and its 1px
+rule leave *+ Add watched* 32px, and the button is held to that.
 
 **One thing moves.** Opening a title from the wall grows its tile into the
 title page's poster through a view transition while the rest of the page

@@ -26,7 +26,7 @@ export function Figure({ value, label }: { value: string; label: string }) {
       <b className="block font-mono text-[17px] font-medium tracking-[-.02em] whitespace-nowrap tabular-nums">
         {value}
       </b>
-      <span className="block whitespace-nowrap text-[9px] tracking-[.11em] text-faint uppercase">
+      <span className="block whitespace-nowrap text-[9px] tracking-[.11em] text-dim uppercase">
         {label}
       </span>
     </div>
@@ -71,7 +71,7 @@ function Identity({ ids, kind }: { ids: ExternalIds; kind: TitleSummary['kind'] 
 
   if (linked.length === 0) return null;
   return (
-    <p className="font-mono text-[10px] text-faint">
+    <p className="font-mono text-[10px] text-dim">
       {linked.map(({ source, id, href }, index) => (
         <span key={source}>
           {index > 0 ? ' · ' : null}
@@ -79,7 +79,7 @@ function Identity({ ids, kind }: { ids: ExternalIds; kind: TitleSummary['kind'] 
             href={href}
             target="_blank"
             rel="noreferrer"
-            className="underline-offset-4 hover:text-dim hover:underline"
+            className="underline-offset-4 hover:text-tx hover:underline"
           >
             {source} {id}
           </a>
@@ -145,7 +145,7 @@ function Overview({ text }: { text: string | null }) {
           aria-expanded={expanded}
           aria-controls={id}
           onClick={() => setExpanded((value) => !value)}
-          className="text-xs text-faint underline decoration-line underline-offset-2 hover:text-tx"
+          className="text-xs text-dim underline decoration-faint underline-offset-2 hover:text-tx"
         >
           {expanded ? 'less' : 'more'}
         </button>
@@ -292,7 +292,7 @@ export function TitleHeader({
                     next <span className="font-mono">{formatAirDay(run.nextAirDate, today)}</span>
                   </span>
                   {run.asOf !== null ? (
-                    <span className="text-xs text-faint">
+                    <span className="text-xs text-dim">
                       as of <span className="font-mono">{formatAirDay(run.asOf, today)}</span>
                     </span>
                   ) : null}
@@ -340,7 +340,7 @@ export function TitleHeader({
         </div>
       ) : null}
 
-      {title.excluded ? <p className="mt-2 text-sm text-faint">Excluded from the wall.</p> : null}
+      {title.excluded ? <p className="mt-2 text-sm text-dim">Excluded from the wall.</p> : null}
     </header>
   );
 }

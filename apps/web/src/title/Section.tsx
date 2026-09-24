@@ -22,7 +22,7 @@ export function Section({
     <section aria-labelledby={id} className="space-y-2.5">
       <h2
         id={id}
-        className="flex justify-between gap-2.5 font-mono text-[10px] tracking-[.14em] text-faint uppercase"
+        className="flex justify-between gap-2.5 font-mono text-[10px] tracking-[.14em] text-dim uppercase"
       >
         {heading}
         {aside === undefined ? null : <span>{aside}</span>}

@@ -109,7 +109,7 @@ function Part({
         ) : null}
       </div>
       {part.title === null ? (
-        <p className="mt-0.5 text-[10px] text-faint">{label.toLowerCase()}</p>
+        <p className="mt-0.5 text-[10px] text-dim">{label.toLowerCase()}</p>
       ) : null}
     </article>
   );

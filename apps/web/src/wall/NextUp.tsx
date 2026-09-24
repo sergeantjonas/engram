@@ -46,7 +46,7 @@ export function NextUp() {
   return (
     <section aria-label="Next up" className="@container space-y-1.5">
       {/* The region's name already says it to anything reading the page. */}
-      <p aria-hidden="true" className="font-mono text-[9px] tracking-[.08em] text-faint">
+      <p aria-hidden="true" className="font-mono text-[9px] tracking-[.08em] text-dim">
         NEXT UP
       </p>
       {/* One card fills the row. */}

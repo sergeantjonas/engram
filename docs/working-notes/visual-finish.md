@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** In progress — chunk 1 landed 2026-09-24, not deployed. Scoped the
+**Status:** In progress — chunks 1 and 2 landed 2026-09-24, not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. Nine
 chunks, one commit each, in order. No chunk carries a migration or touches the
@@ -104,9 +104,9 @@ button and a ticked box.
 
 ## Chunk 2 · Text that can be read
 
-`--faint` measures 3.26:1 on `--bg`, 3.02 on `--surf` and 2.80 on `--raise`;
-AA wants 4.5 for text this size. It is set as text 37 times, and not only on
-landmarks: the activity feed's dates
+Landed 2026-09-24. `--faint` measures 3.26:1 on `--bg`, 3.02 on `--surf` and
+2.80 on `--raise`; AA wants 4.5 for text this size. It was set as text 37
+times, and not only on landmarks: the activity feed's dates
 ([Activity.tsx:122](../../apps/web/src/title/Activity.tsx#L122)), the external
 ids ([TitleHeader.tsx:74](../../apps/web/src/title/TitleHeader.tsx#L74)), a
 section's aside such as `422 OF 424 · 3 REWATCHED`
@@ -115,23 +115,32 @@ time since last watched
 ([TitleList.tsx:164](../../apps/web/src/title/TitleList.tsx#L164)), a year's
 play count ([Calendar.tsx:106](../../apps/web/src/year/Calendar.tsx#L106)) and
 a day's sources ([Pane.tsx:119](../../apps/web/src/year/Pane.tsx#L119)). The
-wall already sets the same time-since figure in `--dim`
+wall already set the same time-since figure in `--dim`
 ([TitleCard.tsx:128](../../apps/web/src/wall/TitleCard.tsx#L128)), so the pane
-and the wall disagree about how quiet one value is.
+and the wall disagreed about how quiet one value is.
 
 Lightening the token is not the fix. The tone of it that clears 4.5 on
 `--raise`, `#8E857B`, sits 1.19:1 from `--dim`, and the two stop reading as
-two. So by job instead: anything read as a value — a date, an id, a count, a
-figure — moves to `--dim`, and `--faint` stays for strokes and for what
-recedes on purpose, a cell not out yet or not on TMDB
+two. So by job instead: 27 of the 37 moved to `--dim` — every value, every
+9px landmark, and the quiet controls, *show all*, *more*, a toast's ×. The
+landmarks went with them, settled the same day: they rank by form already,
+uppercase mono with tracking, and lose nothing to a readable tone. `--faint`
+stays where the text recedes on purpose: the meta line's `·` separators, the
+signed-in check's `…`, and a cell not out yet or not on TMDB
 ([EpisodeCell.tsx:47-48](../../apps/web/src/title/EpisodeCell.tsx#L47-L48)),
-which § 02 draws as receding into the page.
+which § 02 draws as receding into the page. The two posterless names on a tile
+wait for chunk 8, which replaces them.
 
-**Decide first:** the 9px landmarks — a group heading, `NEXT UP`, a strip's
-month names, the name under a figure. They are text at the same 3.26:1, but
-they already rank by form, uppercase mono with tracking, so they could move to
-`--dim` with nothing lost, or stay faint as a known exception. The
-recommendation is `--dim`.
+Measured after, on every text node the wall, a series, a film, the year and
+`/add` render against the flat colours behind it: nothing under 4.5:1 but
+those separators and the not-yet-aired cells, all at 3.1. Three things are
+still owed and are not flat: a missing episode's number (chunk 3), Next up's
+text over its stills (chunk 4) and the posterless names (chunk 8). Two
+controls changed with the move: an id link now lifts to `--tx` on hover, as
+every other quiet control does, and the synopsis's *more* carries its
+underline in `--faint`, a stroke, where `--line` left it invisible. A past
+year's label sits over its play count in the same tone, so the year is set at
+500 to keep the two apart.
 
 A missing episode's number is `text-gap` at 3.97:1
 ([EpisodeCell.tsx:41](../../apps/web/src/title/EpisodeCell.tsx#L41)), and

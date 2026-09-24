@@ -102,14 +102,11 @@ export const Year = memo(function Year({
         // Level with the first row of cells, under the month labels.
         className={`w-14 shrink-0 self-start pt-4 text-left font-mono leading-tight hover:text-tx ${current ? 'text-tx' : 'text-dim'}`}
       >
-        <span className="block text-[10px]">{year}</span>
-        <span className="block text-[10px] text-faint">{plays}</span>
+        <span className="block text-[10px] font-medium">{year}</span>
+        <span className="block text-[10px] text-dim">{plays}</span>
       </button>
       <div className="space-y-1">
-        <div
-          aria-hidden="true"
-          className={`grid ${WEEKS} font-mono text-[9px] text-faint uppercase`}
-        >
+        <div aria-hidden="true" className={`grid ${WEEKS} font-mono text-[9px] text-dim uppercase`}>
           {monthStarts(cells).map(({ month, week }) => (
             <span
               key={month}

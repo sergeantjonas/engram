@@ -116,7 +116,7 @@ export function DayReading({
                       </>
                     )}
                   </p>
-                  <p className="truncate font-mono text-[10px] text-faint">
+                  <p className="truncate font-mono text-[10px] text-dim">
                     {viewing.sources.join(' · ')}
                   </p>
                 </div>

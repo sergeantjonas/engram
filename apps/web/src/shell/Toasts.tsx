@@ -71,7 +71,7 @@ export function ToastHost({ children }: { children: ReactNode }) {
                 </button>
               </Toast.Action>
             ) : null}
-            <Toast.Close aria-label="Dismiss" className="text-faint hover:text-tx">
+            <Toast.Close aria-label="Dismiss" className="text-dim hover:text-tx">
               ×
             </Toast.Close>
           </Toast.Root>

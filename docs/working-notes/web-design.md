@@ -74,7 +74,7 @@ screen.
 | `--line` | `#2C2621` | every border |
 | `--tx` | `#F2EDE4` | primary text |
 | `--dim` | `#9C9288` | secondary text |
-| `--faint` | `#6B635A` | tertiary |
+| `--faint` | `#6B635A` | strokes, and what recedes on purpose |
 | `--jade` | `#4E9C86` | finished, and the affirmative accent |
 | `--gold` | `#D9A441` | in progress |
 | `--drift` | `#C4662F` | drifting |
@@ -97,7 +97,10 @@ lightness, in fill against outline, in border style or in a word, never in hue
 by itself, and the difference is measured in the worst of simulated protan,
 deutan and tritan vision rather than judged by eye. Text clears 4.5:1 against
 what is actually behind it, a backdrop included, so `--faint` is for strokes
-and for what recedes on purpose, not for a value. Settled 2026-09-24;
+and for what recedes on purpose, not for a value. The 9px landmarks and
+labels — a group heading, a section's heading, the name under a figure, a
+strip's month names — are `--dim`, where the mockup drew them faint: they
+rank by form already, uppercase mono with tracking. Settled 2026-09-24;
 [visual-finish.md](visual-finish.md) chunks 2 and 3 bring the build to it.
 
 **Type.** Two families split by job rather than by size, both from Google

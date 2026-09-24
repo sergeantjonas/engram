@@ -78,7 +78,7 @@ export function Activity({
         <button
           type="button"
           onClick={() => setAll(true)}
-          className="font-mono text-[10px] tracking-[.08em] text-faint underline-offset-4 hover:text-tx hover:underline"
+          className="font-mono text-[10px] tracking-[.08em] text-dim underline-offset-4 hover:text-tx hover:underline"
         >
           show all {plays}
         </button>
@@ -88,7 +88,7 @@ export function Activity({
           type="button"
           disabled={rest.isFetchingNextPage}
           onClick={() => void rest.fetchNextPage()}
-          className="font-mono text-[10px] tracking-[.08em] text-faint underline-offset-4 hover:text-tx hover:underline disabled:opacity-50"
+          className="font-mono text-[10px] tracking-[.08em] text-dim underline-offset-4 hover:text-tx hover:underline disabled:opacity-50"
         >
           show {ACTIVITY_PAGE} more
         </button>
@@ -119,7 +119,7 @@ function Moment({ moment, titleName }: { moment: WatchMoment; titleName: string 
           phone the name needs the width more, so there the time wraps. */}
       <time
         dateTime={moment.watchedAt ?? undefined}
-        className="w-24 flex-none font-mono text-[10px] text-faint sm:w-36"
+        className="w-24 flex-none font-mono text-[10px] text-dim sm:w-36"
       >
         {formatMoment(moment.watchedAt, moment.precision)}
       </time>

@@ -193,7 +193,7 @@ function SeasonCheck({
     <label className="flex items-center gap-2 text-sm">
       <input type="checkbox" checked={checked} onChange={onChange} />
       <span>{name}</span>
-      <span className="font-mono text-[10px] text-faint">
+      <span className="font-mono text-[10px] text-dim">
         {count(season.episodeCount, 'episode')}
       </span>
     </label>

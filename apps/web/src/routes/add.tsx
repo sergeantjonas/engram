@@ -543,7 +543,7 @@ function Add() {
           burstRef.current = false;
         }}
       >
-        <span className="font-mono text-[9px] tracking-[.1em] text-faint">TMDB</span>
+        <span className="font-mono text-[9px] tracking-[.1em] text-dim">TMDB</span>
         {/* Links, as the wall's kind is: a narrowed search is a place too. A
             kind searches again at once over the query already in the URL, and
             All drops the year, which nothing searching both kinds can take. */}
@@ -920,7 +920,7 @@ function Results({
           type="button"
           disabled={results.isFetchingNextPage}
           onClick={() => void results.fetchNextPage()}
-          className="font-mono text-[10px] tracking-[.08em] text-faint underline-offset-4 hover:text-tx hover:underline disabled:opacity-50"
+          className="font-mono text-[10px] tracking-[.08em] text-dim underline-offset-4 hover:text-tx hover:underline disabled:opacity-50"
         >
           {results.isFetchingNextPage ? 'asking TMDB…' : 'more from TMDB'}
         </button>

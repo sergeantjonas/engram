@@ -107,7 +107,7 @@ export function MarkWatched({
         mark.mutate(when);
       }}
     >
-      {hint ? <p className="text-xs text-faint">{hint}</p> : null}
+      {hint ? <p className="text-xs text-dim">{hint}</p> : null}
       <label htmlFor={fieldId} className="block text-xs text-dim">
         When? Leave it blank if you don’t remember.
       </label>

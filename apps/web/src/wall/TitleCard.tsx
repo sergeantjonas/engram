@@ -128,7 +128,7 @@ export function TitleCard({ title, kind }: { title: TitleSummary; kind: KindFilt
         {since ? <span className="shrink-0 font-mono text-[10px] text-dim">{since}</span> : null}
       </div>
       {flags.length > 0 ? (
-        <p className="mt-0.5 font-mono text-[10px] text-faint">{flags.join(' · ')}</p>
+        <p className="mt-0.5 font-mono text-[10px] text-dim">{flags.join(' · ')}</p>
       ) : null}
     </article>
   );

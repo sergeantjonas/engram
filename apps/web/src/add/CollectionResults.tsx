@@ -117,7 +117,7 @@ export function CollectionResults({
           type="button"
           disabled={collections.isFetchingNextPage}
           onClick={() => void collections.fetchNextPage()}
-          className="font-mono text-[10px] tracking-[.08em] text-faint underline-offset-4 hover:text-tx hover:underline disabled:opacity-50"
+          className="font-mono text-[10px] tracking-[.08em] text-dim underline-offset-4 hover:text-tx hover:underline disabled:opacity-50"
         >
           {collections.isFetchingNextPage ? 'asking TMDB…' : 'more from TMDB'}
         </button>

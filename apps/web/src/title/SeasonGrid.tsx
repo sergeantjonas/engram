@@ -148,7 +148,7 @@ export function SeasonGrid({
       <div className="space-y-1.5">
         {years.map((year) => (
           <div key={year} className="flex gap-2.5">
-            <span className="w-8 shrink-0 pt-1.5 text-right font-mono text-[9px] text-faint">
+            <span className="w-8 shrink-0 pt-1.5 text-right font-mono text-[9px] text-dim">
               {year}
             </span>
             {cells(season.episodes.filter((episode) => airYear(episode) === year))}
@@ -169,7 +169,7 @@ export function SeasonGrid({
       what={heading.toLowerCase()}
       label={`mark ${heading.toLowerCase()} watched`}
       complete={seen === season.episodes.length}
-      className="font-mono text-[10px] tracking-[.08em] text-faint underline-offset-4 hover:text-jade hover:underline"
+      className="font-mono text-[10px] tracking-[.08em] text-dim underline-offset-4 hover:text-jade hover:underline"
     />
   ) : null;
 

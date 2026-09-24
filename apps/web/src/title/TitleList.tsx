@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { posterUrl, type TitleSummary } from '../api/titles.ts';
-import { KIND_LABEL, KINDS, type KindFilter, matchesFacet } from '../wall/facets.ts';
+import { KIND_LABEL, KINDS, type KindFilter } from '../wall/facets.ts';
 import { rememberKind } from '../wall/kindMemory.ts';
 import { formatSince } from './format.ts';
 import { groupedTitles } from './order.ts';
@@ -42,8 +42,8 @@ export function TitleList({
   currentId: string;
   kind: KindFilter | undefined;
 }) {
-  // One clock for the whole render, so two rows cannot disagree about what is
-  // drifting — the same rule the wall's chip counts follow.
+  // One clock for the whole render, so two rows cannot disagree about how long
+  // ago — the same rule the wall's chip counts follow.
   const now = new Date();
   // The title being read stays in the list whatever the filter says. A
   // bookmark can name a kind that excludes it, and a pane that does not
@@ -128,9 +128,6 @@ function Row({
 }) {
   const poster = posterUrl(title.posterPath);
   const since = formatSince(title.lastWatchedAt, title.lastWatchedPrecision, now);
-  // Drift is the one thing the bar says beyond how far in you are, and it is
-  // the reason a row is worth looking at twice.
-  const drifting = matchesFacet(title, 'drifting', now);
 
   return (
     <Link
@@ -154,11 +151,11 @@ function Row({
       )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-medium text-tx">{title.name}</span>
+        {/* Progress in the wall's jade and nothing else. A drifting run
+            painted in its own colour would be told apart by hue alone on a
+            2px bar; how long ago says it here, and the wall's chip lists them. */}
         <span className="mt-1 block h-0.5 bg-line">
-          <span
-            className={`block h-full ${drifting ? 'bg-drift' : 'bg-jade'}`}
-            style={{ width: `${progress(title)}%` }}
-          />
+          <span className="block h-full bg-jade" style={{ width: `${progress(title)}%` }} />
         </span>
       </span>
       {since ? <span className="flex-none font-mono text-[10px] text-dim">{since}</span> : null}

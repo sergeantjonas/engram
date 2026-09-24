@@ -136,7 +136,8 @@ function Card({ candidate, onPass }: { candidate: Candidate; onPass?: (() => voi
             ) : null}
           </p>
           <p className="truncate">
-            <span className="font-mono text-xs text-jade">{at(candidate.next)}</span>
+            {/* Not jade, which says seen, on the one episode that is not. */}
+            <span className="font-mono text-xs text-tx">{at(candidate.next)}</span>
             {candidate.next.name ? <span className="text-tx"> {candidate.next.name}</span> : null}
           </p>
           {/* Two lines rather than a truncation: "but this one is still unseen"

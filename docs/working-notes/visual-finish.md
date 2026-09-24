@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** In progress — chunks 1 and 2 landed 2026-09-24, not deployed. Scoped the
+**Status:** In progress — chunks 1 to 3 landed 2026-09-24, not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. Nine
 chunks, one commit each, in order. No chunk carries a migration or touches the
@@ -73,18 +73,18 @@ Focus is one `:focus-visible` rule in
 terms: a 2px `--tx` outline, 2px clear of the element so it clears a tile's
 hover ring. The two dense grids pull it back to the edge — a season's cells
 sit 4px apart and a calendar's days 2px
-([EpisodeCell.tsx:139](../../apps/web/src/title/EpisodeCell.tsx#L139),
-[Calendar.tsx:138](../../apps/web/src/year/Calendar.tsx#L138), whose own ring
+([EpisodeCell.tsx:142](../../apps/web/src/title/EpisodeCell.tsx#L142),
+[Calendar.tsx:135](../../apps/web/src/year/Calendar.tsx#L135), whose own ring
 classes went) — and the list pane draws it 4px inside the row, where the
 pane's scroll box would clip it and clear of the current row's jade edge
-([TitleList.tsx:141](../../apps/web/src/title/TitleList.tsx#L141)). The year
+([TitleList.tsx:138](../../apps/web/src/title/TitleList.tsx#L138)). The year
 column is padded by a ring's width and pulled back by as much, so its scroll
 box clips neither a year's ring nor a day's
 ([year.tsx:129](../../apps/web/src/routes/year.tsx#L129)). The search bar's
 fields keep `outline-hidden`, a utility, which wins over the base rule. A
 popover opened from the keyboard hands focus to its first control; an
 episode's panel holding none takes the focus itself and draws no ring
-([EpisodeCell.tsx:165](../../apps/web/src/title/EpisodeCell.tsx#L165)), the
+([EpisodeCell.tsx:168](../../apps/web/src/title/EpisodeCell.tsx#L168)), the
 open panel being what is read. The convention is written into
 [web-design.md](web-design.md) § Focus.
 
@@ -95,7 +95,7 @@ A ticked box was the browser's blue too. The six checkboxes on `/add`
 [:194](../../apps/web/src/add/Backfill.tsx#L194),
 [Batch.tsx:117](../../apps/web/src/add/Batch.tsx#L117) and
 [:206](../../apps/web/src/add/Batch.tsx#L206)) and the hole's reason radios
-([EpisodeCell.tsx:297](../../apps/web/src/title/EpisodeCell.tsx#L297)) set no
+([EpisodeCell.tsx:300](../../apps/web/src/title/EpisodeCell.tsx#L300)) set no
 `accent-color`, where the mockup ticks them in jade. `accent-color` is
 inherited, so `var(--color-jade)` on `:root`, beside the focus rule, covers
 them all, and Chrome draws the tick dark on it. Checked in the app at 1440px
@@ -112,7 +112,7 @@ ids ([TitleHeader.tsx:74](../../apps/web/src/title/TitleHeader.tsx#L74)), a
 section's aside such as `422 OF 424 · 3 REWATCHED`
 ([Section.tsx:25](../../apps/web/src/title/Section.tsx#L25)), the list pane's
 time since last watched
-([TitleList.tsx:164](../../apps/web/src/title/TitleList.tsx#L164)), a year's
+([TitleList.tsx:161](../../apps/web/src/title/TitleList.tsx#L161)), a year's
 play count ([Calendar.tsx:106](../../apps/web/src/year/Calendar.tsx#L106)) and
 a day's sources ([Pane.tsx:119](../../apps/web/src/year/Pane.tsx#L119)). The
 wall already set the same time-since figure in `--dim`
@@ -127,7 +127,7 @@ landmarks went with them, settled the same day: they rank by form already,
 uppercase mono with tracking, and lose nothing to a readable tone. `--faint`
 stays where the text recedes on purpose: the meta line's `·` separators, the
 signed-in check's `…`, and a cell not out yet or not on TMDB
-([EpisodeCell.tsx:47-48](../../apps/web/src/title/EpisodeCell.tsx#L47-L48)),
+([EpisodeCell.tsx:50-51](../../apps/web/src/title/EpisodeCell.tsx#L50-L51)),
 which § 02 draws as receding into the page. The two posterless names on a tile
 wait for chunk 8, which replaces them.
 
@@ -142,48 +142,49 @@ underline in `--faint`, a stroke, where `--line` left it invisible. A past
 year's label sits over its play count in the same tone, so the year is set at
 500 to keep the two apart.
 
-A missing episode's number is `text-gap` at 3.97:1
-([EpisodeCell.tsx:41](../../apps/web/src/title/EpisodeCell.tsx#L41)), and
-`--color-gap-tx` was derived for text like it
-([index.css:20-23](../../apps/web/src/index.css#L20-L23)) — but here it would
-bring the number within 0.045 in lightness of a skipped cell's gold. Chunk 3
-redraws that cell instead.
+A missing episode's number was `text-gap` at 3.97:1, and `--color-gap-tx` was
+derived for text like it
+([index.css:23-26](../../apps/web/src/index.css#L23-L26)) — but here it would
+have brought the number within 0.045 in lightness of a skipped cell's gold.
+Chunk 3 redrew that cell instead
+([EpisodeCell.tsx:44](../../apps/web/src/title/EpisodeCell.tsx#L44)).
 
 ## Chunk 3 · Colour that holds without hue
 
-Every pair of states that must be told apart was checked in OKLab in the worst
-of simulated protan, deutan and tritan vision (Machado 2009, full severity).
-Most of the palette already holds, because the design rarely leans on hue: the
-toggles, the activity's tags and the presence pill say what they are in words,
-the grid tells *seen* from a hole by fill against outline, and the calendar's
-four shades are a lightness ramp, 0.085 to 0.16 apart. Four places do not:
+Landed 2026-09-24. Every pair of states that must be told apart was checked in
+OKLab in the worst of simulated protan, deutan and tritan vision (Machado
+2009, full severity). Most of the palette already held, because the design
+rarely leans on hue: the toggles, the activity's tags and the presence pill
+say what they are in words, the grid tells *seen* from a hole by fill against
+outline, and the calendar's four shades are a lightness ramp, 0.085 to 0.16
+apart. Four places did not:
 
-- **The list pane's bar.** A drifting run is painted `--drift` where every
-  other run is jade ([TitleList.tsx:159](../../apps/web/src/title/TitleList.tsx#L159)),
-  and under simulated deuteranopia the two sit 0.012 apart in lightness — on a
-  2px bar, hue is all that is left. The bar follows the wall's, as § Settled
-  has it.
-- **Skipped against missing.** Both are outlined cells, told apart by the
+- **The list pane's bar.** A drifting run was painted `--drift` where every
+  other run is jade, and under simulated deuteranopia the two sit 0.012 apart
+  in lightness — on a 2px bar, hue is all that is left. The bar is progress in
+  jade and nothing else, as § Settled has it
+  ([TitleList.tsx:158](../../apps/web/src/title/TitleList.tsx#L158)).
+- **Skipped against missing.** Both were outlined cells, told apart by the
   colour of the line and the number: gold and `--gap`, 0.18 apart in
-  lightness, which holds until the number is lightened for contrast. So the
-  missing cell takes a fill — `bg-gap/30` inside its `--gap` border, the
-  number in `--tx` at 12.2:1 — and differs from a skipped cell by having a
-  fill at all, 0.106 lighter than the page in the worst view, and by a number
-  0.19 lighter than gold. A hole stays `--surf` with no border. The mockup
-  drew a missing cell as an outline; § 02's grid paragraph is amended in the
-  same commit.
+  lightness, which held only until the number was lightened for contrast. The
+  missing cell is filled — `bg-gap/30` inside its `--gap` border, the number in
+  `--tx` at 12.2:1 ([EpisodeCell.tsx:44](../../apps/web/src/title/EpisodeCell.tsx#L44)).
+  Measured on the rendered cells of a tinted title page, its ground sits 0.10
+  in lightness from a skipped cell's in the worst view and its number 0.19
+  from gold's; a hole stays `--surf` with no border and a `--dim` number.
 - **`--line`.** It is the only thing between the page and the rail, the
-  inputs, the chips and the popovers, at 1.29:1. `#3D3530` makes it 1.61:1
-  and still leaves the progress bar's jade 0.30 lighter than its track, from
-  0.36.
-- **Jade on something not seen.** Next up sets the next episode's code in jade
-  ([NextUp.tsx:139](../../apps/web/src/wall/NextUp.tsx#L139)), the colour that
-  means *seen*, on the one episode that is not. The mockup set it in `--tx`.
+  inputs, the chips and the popovers, and stood at 1.29:1. `#3D3530` makes it
+  1.61:1 and still leaves the progress bar's jade 0.30 lighter than its track,
+  from 0.36.
+- **Jade on something not seen.** Next up set the next episode's code in jade,
+  the colour that means *seen*, on the one episode that is not. It is `--tx`,
+  as the mockup set it
+  ([NextUp.tsx:140](../../apps/web/src/wall/NextUp.tsx#L140)).
 
-Jade, gold, drift and gap keep their values. § The system's table is amended
-in the same commit: `--line`'s value and gold's job as built — a skipped cell
-and a rewatch — since the progress bar stopped drawing it and nothing is *in
-progress* in gold any more.
+Jade, gold, drift and gap keep their values. § The system records the two
+departures from the mockup — `--line`'s value, and gold's job as built, a
+skipped episode and a rewatch, since nothing draws *in progress* in gold any
+more — and § 02 the filled missing cell.
 
 ## Chunk 4 · Next up over any still
 
@@ -215,7 +216,7 @@ them marked as a departure:
   computed Archivo 24px at 600, no tracking — where the note says 700 with
   `-.03em` at 23px. Six headings:
   [TitleHeader.tsx:259](../../apps/web/src/title/TitleHeader.tsx#L259),
-  [add.tsx:494](../../apps/web/src/routes/add.tsx#L494),
+  [add.tsx:519](../../apps/web/src/routes/add.tsx#L519),
   [Backfill.tsx:95](../../apps/web/src/add/Backfill.tsx#L95),
   [Batch.tsx:108](../../apps/web/src/add/Batch.tsx#L108),
   [settings.tsx:33](../../apps/web/src/routes/settings.tsx#L33),
@@ -240,7 +241,7 @@ in its place instead.
 ## Chunk 6 · The owner's top bar is 57px
 
 `--spacing-topbar` is 57px, and the comment beside it promises the offset is
-never short ([index.css:25-30](../../apps/web/src/index.css#L25-L30)). That
+never short ([index.css:28-33](../../apps/web/src/index.css#L28-L33)). That
 holds for a stranger. For the owner, *+ Add watched* at `py-2` is 36.75px tall
 ([TopBar.tsx:97](../../apps/web/src/shell/TopBar.tsx#L97)), the bar grows to
 61.75px, and the title page's list pane, stuck at `top-topbar`, slides 4.75px
@@ -277,7 +278,7 @@ The build has four fallbacks instead, over eight places: an empty box
 [Pane.tsx:97](../../apps/web/src/year/Pane.tsx#L97)), the name in `--faint`
 ([TitleCard.tsx:109](../../apps/web/src/wall/TitleCard.tsx#L109),
 [Collection.tsx:66](../../apps/web/src/title/Collection.tsx#L66)), a block of
-`--line` ([TitleList.tsx:153](../../apps/web/src/title/TitleList.tsx#L153)),
+`--line` ([TitleList.tsx:150](../../apps/web/src/title/TitleList.tsx#L150)),
 and nothing at all in Next up
 ([NextUp.tsx:103](../../apps/web/src/wall/NextUp.tsx#L103)).
 
@@ -317,7 +318,7 @@ on its own.
   `moment.name ?? titleName`
   ([Activity.tsx:129](../../apps/web/src/title/Activity.tsx#L129)) — `S17E48
   Bleach` — while the same episode's popover says *Untitled*
-  ([EpisodeCell.tsx:188](../../apps/web/src/title/EpisodeCell.tsx#L188)). The
+  ([EpisodeCell.tsx:191](../../apps/web/src/title/EpisodeCell.tsx#L191)). The
   prop's own doc says the fallback is for films, whose events name no episode.
 - The presence pill is the one `rounded-full` element
   ([TitleHeader.tsx:47](../../apps/web/src/title/TitleHeader.tsx#L47)); the
@@ -331,3 +332,9 @@ on its own.
 - [engram-app.html](../design/engram-app.html) and its template declare no
   charset, so opened from disk, as § The mockup files says to, they are read
   as windows-1252: `Â·` for `·`.
+- `STATE_BAR`'s `in_progress: 'bg-gold'`
+  ([TitleCard.tsx:22](../../apps/web/src/wall/TitleCard.tsx#L22)) can never
+  draw, since `deriveState` gives neither a film nor an empty run that state,
+  and `apps/api/src/titles/plan.ts` still documents gold for it.
+- § 02 calls an episode cell's tip native, which § Tooltips rules out; the
+  cell uses `Tip`.

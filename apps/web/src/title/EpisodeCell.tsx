@@ -35,15 +35,18 @@ const STATUS_LABEL: Record<CellStatus, string> = {
 
 const STATUS_CLASS: Record<CellStatus, string> = {
   seen: 'bg-jade text-on-jade',
-  // Gold against the gap's rose, because drift against it is 1.22:1 and the two
-  // kinds of hole have to be told apart at cell size, not in the popover.
+  // The two kinds of hole are told apart at cell size, not in the popover, and
+  // by more than hue: a skipped episode is outlined, a missing one filled.
+  // Gold for the outline because drift against the gap's rose is 1.22:1.
   skipped: 'border border-gold text-gold',
-  missing: 'border border-gap text-gap',
+  // The number in the text colour: the rose as text is 3.97:1, and its lighter
+  // text tone would sit within 0.05 of gold's lightness.
+  missing: 'border border-gap bg-gap/30 text-tx',
   // Recedes into the page instead of sitting on a surface: an episode that is
   // not out is not part of the run yet, and it must not read as a hole in it.
-  // Nothing else in the grid is unfilled, which is the point — this was
-  // indistinguishable from an unwatched episode, and marking a season claimed
-  // two of them.
+  // Nothing else in the grid is unfilled but a skipped episode's solid gold
+  // outline, which is the point — this was indistinguishable from an
+  // unwatched episode, and marking a season claimed two of them.
   unaired: 'border border-dotted border-line bg-bg text-faint',
   unmatched: 'border border-dashed border-faint text-faint',
   hole: 'bg-surf text-dim',

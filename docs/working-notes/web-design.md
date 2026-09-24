@@ -71,19 +71,31 @@ screen.
 | `--bg` | `#100E0C` | page |
 | `--surf` | `#1A1714` | rail, inputs, tile placeholder |
 | `--raise` | `#221E1A` | active rail item |
-| `--line` | `#2C2621` | every border |
+| `--line` | `#3D3530` | every border |
 | `--tx` | `#F2EDE4` | primary text |
 | `--dim` | `#9C9288` | secondary text |
 | `--faint` | `#6B635A` | strokes, and what recedes on purpose |
 | `--jade` | `#4E9C86` | finished, and the affirmative accent |
-| `--gold` | `#D9A441` | in progress |
-| `--drift` | `#C4662F` | drifting |
+| `--gold` | `#D9A441` | a skipped episode, a rewatch |
+| `--drift` | `#C4662F` | not on disk, dropped |
 | `--gap` | `#C0485E` | gap in the run |
 
 Jade is deliberately not gold: "finished" and "in progress" must never collide,
 which is the whole reason the affirmative accent is green rather than the
 warmer colour a media app would reach for first. On jade fills, text is
 `#0B1713`, not black.
+
+Three departures from the mockup, recorded 2026-09-24 in
+[visual-finish.md](visual-finish.md) chunk 3. `--line` is lighter than its
+`#2C2621`, which stood 1.29:1 against the page: a border is all that separates
+the page from the rail, an input, a chip or a popover, and at 1.61:1 it does.
+Gold no longer means in progress: since a series' bar became its progress in
+jade, 2026-09-23, nothing draws in progress in gold, and what gold marks as
+built is an episode skipped on purpose and a rewatch in the activity feed. And
+drift no longer means drifting: the title page's list pane painted a drifting
+run's bar in it, which on a 2px bar rested on hue alone, and its bar is
+progress in jade as the wall's is. What drift marks as built is a title no
+longer on disk and one the owner dropped.
 
 A title page takes a cast from its poster: the column's ground mixes in 6%
 of the poster's dominant colour and `--surf` and `--raise` 15%, while the
@@ -345,7 +357,12 @@ Around it:
   is drawn unfilled, receding into the page rather than sitting on a surface,
   because an episode that has not aired is not part of the run and must not
   read as a hole in it. It was indistinguishable from an unwatched episode
-  until 2026-09-21, which is how two of them came to be marked watched. Every
+  until 2026-09-21, which is how two of them came to be marked watched. A
+  missing episode is filled — `--gap` at 30% inside its border, its number in
+  `--tx` — where the mockup outlined it, as the grid still outlines a skipped
+  one: the two kinds of hole differ by fill against outline, not by the colour
+  of a line alone.
+  Since 2026-09-24; [visual-finish.md](visual-finish.md) chunk 3. Every
   cell also carries a native tooltip with its name and air date, so reading the
   grid does not cost a click per cell. Season 0 arrives first from the API and is drawn last: four titles
   here carry dozens of featurettes, and `Specials · 0 of 89` was the first

@@ -8,7 +8,10 @@
   --color-bg: #100e0c;
   --color-surf: #1a1714;
   --color-raise: #221e1a;
-  --color-line: #2c2621;
+  /* Lighter than the mockup's #2c2621, which was 1.29:1 against the page: a
+     border is the only thing between the page and the rail, an input, a chip
+     or a popover, and it has to be seen to do that. 1.61:1. */
+  --color-line: #3d3530;
   --color-tx: #f2ede4;
   --color-dim: #9c9288;
   --color-faint: #6b635a;

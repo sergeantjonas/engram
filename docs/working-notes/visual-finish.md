@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** Built 2026-09-24 — all nine chunks landed, and two findings left
+**Status:** Built 2026-09-24 — all nine chunks landed, and three findings left
 out of them taken up since (§ Taken up after); not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. One commit
@@ -108,7 +108,7 @@ Landed 2026-09-24. `--faint` measures 3.26:1 on `--bg`, 3.02 on `--surf` and
 2.80 on `--raise`; AA wants 4.5 for text this size. It was set as text 37
 times, and not only on landmarks: the activity feed's dates
 ([Activity.tsx:122](../../apps/web/src/title/Activity.tsx#L122)), the external
-ids ([TitleHeader.tsx:75](../../apps/web/src/title/TitleHeader.tsx#L75)), a
+ids ([TitleHeader.tsx:91](../../apps/web/src/title/TitleHeader.tsx#L91)), a
 section's aside such as `422 OF 424 · 3 REWATCHED`
 ([Section.tsx:25](../../apps/web/src/title/Section.tsx#L25)), the list pane's
 time since last watched
@@ -223,7 +223,7 @@ system says, none of them marked as a departure:
   `-.03em`. They share one token now, `text-display` in
   [index.css](../../apps/web/src/index.css) (24px, 700, `-.03em`), so a
   heading cannot drift back to a weight of its own:
-  [TitleHeader.tsx:260](../../apps/web/src/title/TitleHeader.tsx#L260),
+  [TitleHeader.tsx:276](../../apps/web/src/title/TitleHeader.tsx#L276),
   [add.tsx:519](../../apps/web/src/routes/add.tsx#L519),
   [Backfill.tsx:97](../../apps/web/src/add/Backfill.tsx#L97),
   [Batch.tsx:110](../../apps/web/src/add/Batch.tsx#L110),
@@ -233,11 +233,11 @@ system says, none of them marked as a departure:
 - **Mono a step below.** On the title's meta line the year, the runtime and
   the air dates were 12px Martian beside 12px Archivo, so `Oct 20` outweighed
   *next*, which is what the rule exists to stop. They are 10px
-  ([TitleHeader.tsx:262](../../apps/web/src/title/TitleHeader.tsx#L262) on).
+  ([TitleHeader.tsx:278](../../apps/web/src/title/TitleHeader.tsx#L278) on).
 - **The name under a figure** was Archivo 9px; it is Martian 9px, as the note
   lists it among the mono labels — the mockup, taking its body face, drew it
   in Archivo, and the 2026-09-22 small-mono rule wins
-  ([TitleHeader.tsx:30](../../apps/web/src/title/TitleHeader.tsx#L30)).
+  ([TitleHeader.tsx:31](../../apps/web/src/title/TitleHeader.tsx#L31)).
   `Figure` is shared, so the year's pane changed with it.
 - **A result's year** on `/add` was Archivo at the heading's size, `2017 ·
   film`. It is Martian at 14px beside the 16px name, a step below
@@ -365,6 +365,18 @@ commit each, checked in the app like the chunks.
   Checked at 1440px with the states forced over CDP and with the pointer:
   each control lifts, a press wins over the hover, a disabled *Write it* does
   not move.
+- **The figure box, ruled once.** `Figure` ruled its right edge and dropped
+  the rule on the last cell only, so in a box that wraps — the year pane's
+  four in two rows at 1440px, a series' six in three at 390 — every row but
+  the last ended in a rule of its own against the box's border, a 2px line,
+  plainer since `--line` was lightened, and nothing ruled one row from the
+  next. The cells rule their left and top edges and are pulled back by a
+  pixel under `Figures`, the box they share on the title page and the year's
+  pane, which clips the first column's and the first row's
+  ([TitleHeader.tsx:38-51](../../apps/web/src/title/TitleHeader.tsx#L38-L51)):
+  every rule is drawn once however the cells wrap, rows included, and the
+  box keeps its height. Checked on the year and a series at 1440px and on a
+  series at 390px, by the cells' measured offsets and at 3×.
 
 ## Not scheduled
 
@@ -378,7 +390,7 @@ on its own.
   ([EpisodeCell.tsx:191](../../apps/web/src/title/EpisodeCell.tsx#L191)). The
   prop's own doc says the fallback is for films, whose events name no episode.
 - The presence pill is the one `rounded-full` element
-  ([TitleHeader.tsx:48](../../apps/web/src/title/TitleHeader.tsx#L48)); the
+  ([TitleHeader.tsx:64](../../apps/web/src/title/TitleHeader.tsx#L64)); the
   mockup's tags are squared like the chips.
 - No favicon and no `theme-color` in
   [index.html](../../apps/web/index.html).
@@ -395,7 +407,3 @@ on its own.
   and `apps/api/src/titles/plan.ts` still documents gold for it.
 - § 02 calls an episode cell's tip native, which § Tooltips rules out; the
   cell uses `Tip`.
-- A figure box that wraps doubles its rule: `Figure` drops `border-r` only on
-  the last cell ([TitleHeader.tsx:26](../../apps/web/src/title/TitleHeader.tsx#L26)),
-  so in the year pane's 2×2 box the first row's second cell draws one inside
-  the box's own border — plainer since `--line` was lightened.

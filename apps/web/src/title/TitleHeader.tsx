@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { ExternalIds, TitleDetail, TitleSummary } from '../api/titles.ts';
 import { backdropUrl, posterUrl } from '../api/titles.ts';
 import { Cover } from '../shell/Cover.tsx';
@@ -14,7 +14,8 @@ import {
 
 /**
  * One cell of the stat box: the figure large in mono, its name small and
- * uppercase beneath.
+ * uppercase beneath. Drawn only inside `Figures`, whose clip takes the rules
+ * each cell pulls onto the box's edge.
  *
  * Boxed and ruled rather than run together as a sentence, because these are
  * readings off the record and the design treats them as an instrument panel.
@@ -23,13 +24,28 @@ import {
  */
 export function Figure({ value, label }: { value: string; label: string }) {
   return (
-    <div className="flex-[1_1_104px] border-r border-line px-3.5 py-2.5 last:border-r-0">
+    <div className="-mt-px -ml-px flex-[1_1_104px] border-t border-l border-line px-3.5 py-2.5">
       <b className="block font-mono text-[17px] font-medium tracking-[-.02em] whitespace-nowrap tabular-nums">
         {value}
       </b>
       <span className="block whitespace-nowrap font-mono text-[9px] tracking-[.11em] text-dim uppercase">
         {label}
       </span>
+    </div>
+  );
+}
+
+/**
+ * The box the figures sit in. Each cell rules its left and top edges and is
+ * pulled back by the rule's width, so the box clips the first column's and
+ * the first row's: however the cells wrap, every rule is drawn once, between
+ * rows too. A rule on each cell's right edge would double the box's own
+ * border at the end of every row but the last.
+ */
+export function Figures({ className = '', children }: { className?: string; children: ReactNode }) {
+  return (
+    <div className={`flex flex-wrap overflow-hidden border border-line ${className}`}>
+      {children}
     </div>
   );
 }
@@ -340,11 +356,11 @@ export function TitleHeader({
       {/* Only the readings that exist, and no box at all when none do: an empty
           ruled strip under a title nobody has watched says less than nothing. */}
       {figureCells.length > 0 ? (
-        <div className="mt-3 flex flex-wrap border border-line">
+        <Figures className="mt-3">
           {figureCells.map((cell) => (
             <Figure key={cell.label} value={cell.value} label={cell.label} />
           ))}
-        </div>
+        </Figures>
       ) : null}
 
       {title.excluded ? <p className="mt-2 text-sm text-dim">Excluded from the wall.</p> : null}

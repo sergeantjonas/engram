@@ -1,6 +1,6 @@
 # Web design
 
-**Status:** Settled 2026-09-16; amended 2026-09-21, 2026-09-22, 2026-09-23 and 2026-09-24 where the build departs from
+**Status:** Settled 2026-09-16; amended 2026-09-21, 2026-09-22, 2026-09-23, 2026-09-24 and 2026-09-25 where the build departs from
 the mockup, each departure marked as such in place. The mockup is the reference,
 not this note: [../design/engram-app.html](../design/engram-app.html), or
 <https://claude.ai/artifact/8Tu2NYg7EXNS8kDw3LanJ5> for the hosted copy. Read
@@ -346,7 +346,9 @@ Around it:
   floor when some of it carries no runtime, and the label says so), first
   watched, days since last. A film's runtime sits on the meta line instead.
   The time cell was added 2026-09-22 by [web-depth.md](web-depth.md) arc 2
-  chunk 3.
+  chunk 3. Where the row wraps, as the year's pane holds its four in two
+  rows, each rule is drawn once and the rows are ruled apart. Since
+  2026-09-25; [visual-finish.md](visual-finish.md) § Taken up after.
 - A film's credits in one line under the synopsis — `Directed by … · with …`,
   the director and three top-billed names, names in the text colour — and,
   where a show's grid would be, the collection the film belongs to as wall

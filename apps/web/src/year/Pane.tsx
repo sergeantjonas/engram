@@ -4,7 +4,7 @@ import { posterUrl } from '../api/titles.ts';
 import { Cover } from '../shell/Cover.tsx';
 import { formatDuration } from '../title/format.ts';
 import { Section } from '../title/Section.tsx';
-import { Figure } from '../title/TitleHeader.tsx';
+import { Figure, Figures } from '../title/TitleHeader.tsx';
 import { formatDay } from './Calendar.tsx';
 import type { Day, Viewing, YearFigures } from './viewings.ts';
 
@@ -38,11 +38,11 @@ export function YearReading({ year, figures }: { year: number; figures: YearFigu
       {cells.length === 0 ? (
         <p className="text-sm text-dim">Nothing on record is dated {year}.</p>
       ) : (
-        <div className="flex flex-wrap border border-line bg-surf">
+        <Figures className="bg-surf">
           {cells.map((cell) => (
             <Figure key={cell.label} value={cell.value} label={cell.label} />
           ))}
-        </div>
+        </Figures>
       )}
       {/* Counted above and drawn nowhere below, so the difference between the
           figure and the cells is said rather than left to be noticed. */}

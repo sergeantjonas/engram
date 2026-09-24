@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** Built 2026-09-24 — all nine chunks landed, and four findings left
+**Status:** Built 2026-09-24 — all nine chunks landed, and five findings left
 out of them taken up since (§ Taken up after); not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. One commit
@@ -144,7 +144,7 @@ year's label sits over its play count in the same tone, so the year is set at
 
 A missing episode's number was `text-gap` at 3.97:1, and `--color-gap-tx` was
 derived for text like it
-([index.css:28-31](../../apps/web/src/index.css#L28-L31)) — but here it would
+([index.css:101-104](../../apps/web/src/index.css#L101-L104)) — but here it would
 have brought the number within 0.045 in lightness of a skipped cell's gold.
 Chunk 3 redrew that cell instead
 ([EpisodeCell.tsx:44](../../apps/web/src/title/EpisodeCell.tsx#L44)).
@@ -252,7 +252,7 @@ the figure label Martian 9px.
 
 Landed 2026-09-24. `--spacing-topbar` is 57px, and the comment beside it
 promises the offset is never short
-([index.css:33-38](../../apps/web/src/index.css#L33-L38)). That held for a
+([index.css:106-111](../../apps/web/src/index.css#L106-L111)). That held for a
 stranger. For the owner, *+ Add watched* at `py-2` was 36.75px tall, the bar
 grew to 61.75px, and the title page's list pane, stuck at `top-topbar`, slid
 4.75px under it. `py-1.5` alone left the bar at 57.75px, since the bar's own
@@ -386,11 +386,53 @@ commit each, checked in the app like the chunks.
   ([index.html](../../apps/web/index.html)). SVG only; a browser that takes
   no SVG icon keeps its default. Checked at 16, 32 and 64px on a dark and a
   light tab strip, and in the build, which ships it at `/favicon.svg`.
+- **The fonts, served with the app.** Both families came from Google Fonts
+  at run time with `display=swap`, behind a stylesheet on another origin that
+  had to arrive before a font could be asked for. The files ship with the
+  bundle now ([fonts/](../../apps/web/src/fonts/)): Google's own variable
+  files, byte for byte, every subset it served — Archivo's latin, latin-ext
+  and vietnamese, Martian Mono's latin, latin-ext, cyrillic and cyrillic-ext,
+  the last two because a date is formatted in the reader's locale and drawn
+  in mono — each declared once over its whole weight axis rather than once
+  per weight, in Google's order
+  ([index.css:3-74](../../apps/web/src/index.css#L3-L74)). None is inlined
+  ([vite.config.ts](../../apps/web/vite.config.ts)): the 3KB cyrillic-ext
+  file sits under Vite's limit and would otherwise ride in every page's
+  stylesheet. The OFL licences are in
+  [public/fonts/](../../apps/web/public/fonts/), so the build and the image
+  carry them with the files. Vite hashes the fonts into `/assets/`, which the
+  image's nginx already serves as immutable, and
+  [index.html](../../apps/web/index.html) preloads the two latin files under
+  the hashed names the stylesheet uses.
+
+  One weight moved with the axis. Google's stylesheet declared Martian Mono
+  at 400, 500 and 700 only, so the wall's chip counts, set at 600 as the
+  mockup's stylesheet writes them, were drawn at 700, in the mockup as in the
+  build; declared over its axis, 600 is a true 600. The counts are set at
+  700, the weight the design was approved at
+  ([chips.ts](../../apps/web/src/wall/chips.ts)). Every text node on the
+  wall, a film, a series, the year, `/add`, a backfill step, `/settings` and
+  `/login` was tallied by family and computed weight: Archivo draws at 400 to
+  700 as it did, Martian Mono at 400, 500 and, for the counts, 700, so nothing
+  else renders differently.
+
+  Measured on the development server with the cache off at 1440px: nothing
+  is asked of Google, the parser requests both latin files 12ms in and they
+  have arrived by 25, well before the first paint at 204–276ms across runs,
+  and the heading and the mono labels are drawn in the web fonts. No other
+  subset loaded on the wall, a film or the year, which hold no character of
+  theirs; a title such as *Shōgun* would fetch latin-ext. A month set in
+  Russian, `сент.`, put into a mono label on the year, fetched the cyrillic
+  file and drew in Martian Mono; a Kazakh `қаң.` fetched cyrillic-ext as
+  well, and its қ and ң, in neither of Google's cuts, drew in the system
+  mono. The
+  build names the same hashed files in its preloads and its stylesheet, and
+  served with `vite preview` fetches each once.
 
 ## Not scheduled
 
-Found in the same review and left out of the arc. Each is small enough to take
-on its own.
+Found in the same review or since, and left out of the arc. Each is small
+enough to take on its own.
 
 - An episode with no name takes its show's in the activity feed,
   `moment.name ?? titleName`
@@ -401,10 +443,6 @@ on its own.
 - The presence pill is the one `rounded-full` element
   ([TitleHeader.tsx:64](../../apps/web/src/title/TitleHeader.tsx#L64)); the
   mockup's tags are squared like the chips.
-- Both families come from Google Fonts at runtime with `display=swap`
-  ([index.html](../../apps/web/index.html)), so every mono label lays out
-  again when Martian Mono replaces its narrower fallback. Self-hosted and
-  preloaded, they would suit a self-hosted app.
 - [engram-app.html](../design/engram-app.html) and its template declare no
   charset, so opened from disk, as § The mockup files says to, they are read
   as windows-1252: `Â·` for `·`.
@@ -414,3 +452,8 @@ on its own.
   and `apps/api/src/titles/plan.ts` still documents gold for it.
 - § 02 calls an episode cell's tip native, which § Tooltips rules out; the
   cell uses `Tip`.
+- The wall shifts once as it first paints. Measured 2026-09-25 at 1440px with
+  the cache off: the grid and its chips move down 154px as Next up appears
+  above them, a layout shift of 0.089 at 202ms against a first contentful
+  paint at 204. Nothing changes size, so it is not the type; whether a frame
+  shows the grid before it moves was not measured.

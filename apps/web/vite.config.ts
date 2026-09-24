@@ -9,6 +9,11 @@ export default defineConfig({
   // out of it; the API's own variables are simply never read here.
   envDir: '../..',
   plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), tailwindcss()],
+  build: {
+    // A font inlined into the stylesheet is paid for by every page, where a
+    // file is fetched only by a page that draws a character in its range.
+    assetsInlineLimit: (file) => (file.endsWith('.woff2') ? false : undefined),
+  },
   server: {
     // Baked into the API's `WEB_ORIGIN`, so a fallback port would silently
     // break CORS and the post-login redirect rather than help.

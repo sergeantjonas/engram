@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { TitleSummary } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
-import { ACTIVE_CHIP, ACTIVE_SEG, CHIP, SEG } from './chips.ts';
+import { ACTIVE_CHIP, ACTIVE_SEG, CHIP, COUNT, SEG } from './chips.ts';
 import {
   appliesTo,
   countFacets,
@@ -106,7 +106,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
             className={SEG}
             activeProps={{ className: ACTIVE_SEG }}
           >
-            All <b className="font-semibold">{matching.length}</b>
+            All <b className={COUNT}>{matching.length}</b>
           </Link>
           {KINDS.map((option) => (
             <Link
@@ -119,9 +119,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
               activeProps={{ className: ACTIVE_SEG }}
             >
               {KIND_LABEL[option]}{' '}
-              <b className="font-semibold">
-                {matching.filter((title) => title.kind === option).length}
-              </b>
+              <b className={COUNT}>{matching.filter((title) => title.kind === option).length}</b>
             </Link>
           ))}
         </span>
@@ -133,7 +131,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
           className={CHIP}
           activeProps={{ className: ACTIVE_CHIP }}
         >
-          Any state <b className="font-semibold">{ofKind.length}</b>
+          Any state <b className={COUNT}>{ofKind.length}</b>
         </Link>
         {facetsFor(kind, isOwner).map((option) => (
           <Link
@@ -144,7 +142,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
             className={CHIP}
             activeProps={{ className: ACTIVE_CHIP }}
           >
-            {FACET_LABEL[option]} <b className="font-semibold">{counts[option]}</b>
+            {FACET_LABEL[option]} <b className={COUNT}>{counts[option]}</b>
           </Link>
         ))}
         {/* The API ignores the flag for anyone else, so offering it would be a

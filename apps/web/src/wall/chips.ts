@@ -21,3 +21,9 @@ export const ACTIVE_CHIP = 'border-tx text-tx';
  */
 export const SEG = `${CHIP} relative hover:z-10`;
 export const ACTIVE_SEG = `${ACTIVE_CHIP} z-10`;
+/**
+ * A chip's count. 700 where the mockup's stylesheet says 600: it loaded
+ * Martian Mono at 400, 500 and 700 only, so it drew the count at 700, and
+ * that is the weight the design was approved at.
+ */
+export const COUNT = 'font-bold';

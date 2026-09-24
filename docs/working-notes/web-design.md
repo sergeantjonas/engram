@@ -134,7 +134,9 @@ rank by form already, uppercase mono with tracking. Settled 2026-09-24;
 [visual-finish.md](visual-finish.md) chunks 2 and 3 bring the build to it.
 
 **Type.** Two families split by job rather than by size, both from Google
-Fonts.
+Fonts. The app serves them itself, the latin cut of each preloaded, rather
+than asking Google at run time; since 2026-09-25,
+[visual-finish.md](visual-finish.md) § Taken up after.
 
 - **Archivo** names things — every title, label, button and control. Display
   sizes run 700 weight with tight negative tracking (`-.03em` at 23px). In the
@@ -142,7 +144,11 @@ Fonts.
   page heading takes rather than a weight of its own; 24px, the size the
   headings already had, so no line box moves. Since 2026-09-24.
 - **Martian Mono** sets every figure, date, count and external id, and nothing
-  else: `10mo`, `S17E48`, `tvdb 392276`, the chips' uppercase labels.
+  else: `10mo`, `S17E48`, `tvdb 392276`, the chips' uppercase labels. A chip's
+  count is 700, a departure from the mockup's stylesheet, which asks for 600
+  but loaded the family at 400, 500 and 700 only and so drew it at 700, the
+  weight approved. Since 2026-09-25; [visual-finish.md](visual-finish.md)
+  § Taken up after.
 
 Every mono size sits a step below the Archivo next to it — Martian is wide and
 otherwise reads optically larger. The reason the split is by job is that it

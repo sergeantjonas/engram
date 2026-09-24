@@ -364,8 +364,9 @@ the viewer wants of a title. The SPA calls all four.
    poster can be missing. Chunk 9: the backfill step drawn as the mockup has it.
    Taken up after, from the findings left out of the arc: the batch step drawn
    as the backfill step is, a hover and a pressed state on every jade
-   control, a figure box that rules each line once however it wraps, and a
-   favicon and `theme-color`.
+   control, a figure box that rules each line once however it wraps, a
+   favicon and `theme-color`, and both families served with the app,
+   preloaded.
 
 ## Blocked
 

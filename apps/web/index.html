@@ -7,12 +7,12 @@
     <meta name="theme-color" content="#100e0c" />
     <title>Engram</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Martian+Mono:wght@400;500;700&display=swap"
-    />
+    <!-- The latin cuts every page sets text in, asked for with the document
+         rather than when rendered text first needs them, which waits on the
+         bundle. `crossorigin` on the same origin too: a font is fetched in
+         CORS mode, and a preload that is not would be fetched a second time. -->
+    <link rel="preload" href="/src/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/src/fonts/martian-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div id="root"></div>

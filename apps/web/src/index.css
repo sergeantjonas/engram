@@ -51,6 +51,21 @@
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
   }
+
+  /* The browser's own ring is a pale blue that exists nowhere else in the
+     palette, so focus is drawn in the text colour. It sits clear of the hover
+     ring a tile carries; the grids too dense for that pull it in, and the list
+     pane draws it inside the row, where its scroll box would clip it. */
+  :focus-visible {
+    outline: 2px solid var(--color-tx);
+    outline-offset: 2px;
+  }
+
+  /* Inherited, so every checkbox and radio ticks in the affirmative accent
+     rather than the browser's blue. */
+  :root {
+    accent-color: var(--color-jade);
+  }
 }
 
 /* The wall's tile and the title page's poster, drawn as one element across

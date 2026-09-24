@@ -124,7 +124,9 @@ function YearPage() {
           />
         )}
       </aside>
-      <div className="min-w-0 space-y-4 overflow-x-auto xl:order-1">
+      {/* Padded by a focus ring's width and pulled back by as much, so the
+          scroll box clips neither a year's ring nor a day's at its edge. */}
+      <div className="-m-1 min-w-0 space-y-4 overflow-x-auto p-1 xl:order-1">
         {years.map((each) => (
           <Year
             key={each}

@@ -135,7 +135,7 @@ export const Year = memo(function Year({
                 onClick={() => onSelect(cell.day, 'pick')}
                 onKeyDown={(event) => walk(cell.day, event)}
                 style={{ gridColumnStart: cell.week + 1, gridRowStart: cell.weekday + 1 }}
-                className={`rounded-[2px] ${SHADE[shadeOf(count)]} hover:ring-1 hover:ring-dim focus-visible:outline-2 focus-visible:outline-tx ${isSelected ? 'ring-1 ring-tx' : ''}`}
+                className={`rounded-[2px] ${SHADE[shadeOf(count)]} hover:ring-1 hover:ring-dim focus-visible:outline-offset-0 ${isSelected ? 'ring-1 ring-tx' : ''}`}
               />
             );
           })}

@@ -339,8 +339,8 @@ the viewer wants of a title. The SPA calls all four.
    a result or a selection, a pasted IMDb or TMDB link answered with the
    title it names, and a collection opened with its films ticked. Chunk 7,
    search as the owner types, landed 2026-09-24.
-9. **Visual finish** — scoped 2026-09-24 in [visual-finish.md](visual-finish.md),
-   nothing built. A review of the running app against
+9. **Visual finish** — scoped 2026-09-24 in [visual-finish.md](visual-finish.md);
+   chunk 1 landed the same day, not deployed. A review of the running app against
    [web-design.md](web-design.md) and its mockup, at four widths and measured
    rather than judged by eye: the palette, the wall, the grid and the tint
    hold; what does not is the states the mockup never drew and the text set in
@@ -352,7 +352,8 @@ the viewer wants of a title. The SPA calls all four.
    any still, the type rules as the note writes them, the owner's top bar back
    on its 57px token, the year's pane beside its calendars, a cover for a
    title with no poster, and the backfill step drawn as the mockup has it. No
-   migrations, no API.
+   migrations, no API. Chunk 1: focus drawn in `--tx` by one rule, and every
+   ticked box in jade.
 
 ## Blocked
 

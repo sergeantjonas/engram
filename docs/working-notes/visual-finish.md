@@ -1,9 +1,10 @@
 # Visual finish
 
-**Status:** Scoped 2026-09-24 — nothing built. Scoped from a review of the
-running app against [web-design.md](web-design.md) and the mockup it was
-approved from. Nine chunks, one commit each, in order. No chunk carries a
-migration or touches the API.
+**Status:** In progress — chunk 1 landed 2026-09-24, not deployed. Scoped the
+same day from a review of the running app against
+[web-design.md](web-design.md) and the mockup it was approved from. Nine
+chunks, one commit each, in order. No chunk carries a migration or touches the
+API.
 
 The palette, the wall, the grid and the tint hold up in the running app, and
 every route's loader fills its data before the first paint, so nothing arrives
@@ -55,34 +56,50 @@ it was measured against the backdrop's own pixels, with the text hidden.
 
 ## Chunk 1 · The states the mockup never drew
 
-Every control that takes focus draws the browser's ring. Tabbing forty-eight
-stops across the wall, a title and the year, each one computed Chrome's own
-`outline: auto 1px rgb(153, 200, 255)` — a pale blue that exists nowhere else
-in the palette. Two places have a focus state of their own: a calendar day,
-`focus-visible:outline-2 focus-visible:outline-tx`
-([Calendar.tsx:138](../../apps/web/src/year/Calendar.tsx#L138)), and `/add`'s
-search bar, whose border lifts to `--dim` while a field inside it has focus
-([add.tsx:501](../../apps/web/src/routes/add.tsx#L501)). The grid shows the
-cost most. It is the one surface built for the keyboard — one tab stop per
-season, the arrows walking the cells — and its focused cell carries a rounded
-blue ring inside the square `ring-dim` of the hover.
+Landed 2026-09-24. Every control that took focus drew the browser's ring:
+tabbing forty-eight stops across the wall, a title and the year, each one
+computed Chrome's own `outline: auto 1px rgb(153, 200, 255)`, a pale blue that
+exists nowhere else in the palette. Only a calendar day and `/add`'s search
+bar, whose border lifts to `--dim` while a field inside it has focus
+([add.tsx:526](../../apps/web/src/routes/add.tsx#L526)), had a focus state of
+their own. The grid showed the cost most: it is the one surface built for the
+keyboard, one tab stop per season with the arrows walking the cells, and its
+focused cell carried a rounded blue ring inside the square `ring-dim` of the
+hover.
 
-One `:focus-visible` rule in [index.css](../../apps/web/src/index.css)'s base
-layer, in the calendar's terms: a 2px `--tx` outline, offset far enough to
-clear a hover ring. The calendar's own classes go with it. The search bar keeps
-its border, and its fields' `outline-hidden` is deliberate and stays.
+Focus is one `:focus-visible` rule in
+[index.css](../../apps/web/src/index.css)'s base layer, in the calendar's
+terms: a 2px `--tx` outline, 2px clear of the element so it clears a tile's
+hover ring. The two dense grids pull it back to the edge — a season's cells
+sit 4px apart and a calendar's days 2px
+([EpisodeCell.tsx:139](../../apps/web/src/title/EpisodeCell.tsx#L139),
+[Calendar.tsx:138](../../apps/web/src/year/Calendar.tsx#L138), whose own ring
+classes went) — and the list pane draws it 4px inside the row, where the
+pane's scroll box would clip it and clear of the current row's jade edge
+([TitleList.tsx:141](../../apps/web/src/title/TitleList.tsx#L141)). The year
+column is padded by a ring's width and pulled back by as much, so its scroll
+box clips neither a year's ring nor a day's
+([year.tsx:129](../../apps/web/src/routes/year.tsx#L129)). The search bar's
+fields keep `outline-hidden`, a utility, which wins over the base rule. A
+popover opened from the keyboard hands focus to its first control; an
+episode's panel holding none takes the focus itself and draws no ring
+([EpisodeCell.tsx:165](../../apps/web/src/title/EpisodeCell.tsx#L165)), the
+open panel being what is read. The convention is written into
+[web-design.md](web-design.md) § Focus.
 
-A ticked box is the browser's blue too. The six checkboxes on `/add`
+A ticked box was the browser's blue too. The six checkboxes on `/add`
 ([CandidateRow.tsx:57](../../apps/web/src/add/CandidateRow.tsx#L57),
 [Backfill.tsx:101](../../apps/web/src/add/Backfill.tsx#L101),
 [:112](../../apps/web/src/add/Backfill.tsx#L112) and
 [:194](../../apps/web/src/add/Backfill.tsx#L194),
 [Batch.tsx:117](../../apps/web/src/add/Batch.tsx#L117) and
 [:206](../../apps/web/src/add/Batch.tsx#L206)) and the hole's reason radios
-([EpisodeCell.tsx:294](../../apps/web/src/title/EpisodeCell.tsx#L294)) set no
+([EpisodeCell.tsx:297](../../apps/web/src/title/EpisodeCell.tsx#L297)) set no
 `accent-color`, where the mockup ticks them in jade. `accent-color` is
 inherited, so `var(--color-jade)` on `:root`, beside the focus rule, covers
-them all.
+them all, and Chrome draws the tick dark on it. Checked in the app at 1440px
+on a rail item, a tile, a pane row, a grid cell, a calendar day, an `/add`
+button and a ticked box.
 
 ## Chunk 2 · Text that can be read
 
@@ -290,7 +307,7 @@ on its own.
   `moment.name ?? titleName`
   ([Activity.tsx:129](../../apps/web/src/title/Activity.tsx#L129)) — `S17E48
   Bleach` — while the same episode's popover says *Untitled*
-  ([EpisodeCell.tsx:185](../../apps/web/src/title/EpisodeCell.tsx#L185)). The
+  ([EpisodeCell.tsx:188](../../apps/web/src/title/EpisodeCell.tsx#L188)). The
   prop's own doc says the fallback is for films, whose events name no episode.
 - The presence pill is the one `rounded-full` element
   ([TitleHeader.tsx:47](../../apps/web/src/title/TitleHeader.tsx#L47)); the

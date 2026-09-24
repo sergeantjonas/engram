@@ -136,7 +136,7 @@ export function EpisodeCell({
           tabIndex={tabStop ? 0 : -1}
           onClick={(event) => setRange(event.shiftKey)}
           onKeyDown={onWalk}
-          className={`relative grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim ${STATUS_CLASS[status]}`}
+          className={`relative grid h-7 w-[34px] place-items-center font-mono text-[10px] font-medium hover:ring-2 hover:ring-dim focus-visible:outline-offset-0 ${STATUS_CLASS[status]}`}
         >
           {episode.number}
           {/* A corner tick for a second play, not a colour and not a figure:
@@ -159,7 +159,10 @@ export function EpisodeCell({
           // Capped at what Radix says fits and scrolling past it: with a still,
           // three lines of synopsis and both forms open, the controls must
           // stay reachable on a laptop rather than slide under the fold.
-          className="max-h-[var(--radix-popover-content-available-height)] w-80 overflow-y-auto rounded border border-line bg-surf p-4 text-sm text-tx shadow-lg"
+          // No ring of its own. A panel holding no control takes the focus
+          // itself, and the open panel is already what is being read; a
+          // frame around it would only cross its arrow.
+          className="max-h-[var(--radix-popover-content-available-height)] w-80 overflow-y-auto rounded border border-line bg-surf p-4 text-sm text-tx shadow-lg outline-hidden"
           onCloseAutoFocus={onCloseAutoFocus}
           // The arrows walk from inside the panel too, so a season is read
           // without closing and reopening it — except inside a field, where

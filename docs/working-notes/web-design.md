@@ -1,6 +1,6 @@
 # Web design
 
-**Status:** Settled 2026-09-16; amended 2026-09-21, 2026-09-22 and 2026-09-23 where the build departs from
+**Status:** Settled 2026-09-16; amended 2026-09-21, 2026-09-22, 2026-09-23 and 2026-09-24 where the build departs from
 the mockup, each departure marked as such in place. The mockup is the reference,
 not this note: [../design/engram-app.html](../design/engram-app.html), or
 <https://claude.ai/artifact/8Tu2NYg7EXNS8kDw3LanJ5> for the hosted copy. Read
@@ -498,6 +498,26 @@ A notice carrying an undo lives twelve seconds rather than five: a way back
 that expires before it can be read is decoration. It is mounted above the
 layout rather than inside the screen that posted it, because a notice is about
 the record and has to outlive a navigation.
+
+## Focus
+
+Not in the mockup, which was never driven from a keyboard. One `:focus-visible`
+rule in `apps/web/src/index.css` draws every ring: 2px of `--tx`, 2px clear of
+the element, so it clears a tile's hover ring. Settled 2026-09-24; see
+[visual-finish.md](visual-finish.md) chunk 1.
+
+- **A component moves the ring; it never recolours it.** Where the ring has to
+  sit differently, only `outline-offset` changes: the episode grid and the
+  calendar pull it to the edge, their cells being 4px and 2px apart, and the
+  list pane draws it 4px inside the row, clear of the current row's jade edge.
+- **`outline-hidden` only where something else shows the focus.** `/add`'s
+  search bar lifts its border instead, and an episode's panel that takes the
+  focus itself is already what is being read.
+- **A scroll box gives the ring room.** A container that scrolls and has
+  focusable children at its edge is padded by a ring's width and pulled back
+  by as much, as the year column is.
+- **Ticked is jade.** `accent-color` on `:root`, which every checkbox and radio
+  inherits.
 
 ## Still open
 

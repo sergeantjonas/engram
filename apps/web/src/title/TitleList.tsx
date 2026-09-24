@@ -138,7 +138,7 @@ function Row({
       params={{ id: title.id }}
       search={kind ? { kind } : {}}
       aria-current={current ? 'page' : undefined}
-      className={`flex items-center gap-[9px] px-3 py-1.5 ${
+      className={`flex items-center gap-[9px] px-3 py-1.5 focus-visible:-outline-offset-4 ${
         current ? 'bg-raise shadow-[inset_2px_0_0_var(--color-jade)]' : 'hover:bg-surf'
       }`}
     >

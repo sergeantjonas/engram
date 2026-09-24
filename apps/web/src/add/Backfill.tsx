@@ -92,9 +92,7 @@ export function Backfill({
     <section aria-label="What you have already watched" className="space-y-4">
       {/* The heading for this step: it stands in place of the search rather
           than under it. */}
-      <h1 className="text-2xl font-semibold">
-        {added.title.name} is on the record. Seen any of it?
-      </h1>
+      <h1 className="text-display">{added.title.name} is on the record. Seen any of it?</h1>
 
       {film ? (
         <label className="flex items-center gap-2 text-sm">

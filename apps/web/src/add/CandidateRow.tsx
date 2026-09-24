@@ -80,7 +80,13 @@ export function CandidateRow({
         <Heading className="font-medium">
           {candidate.name}{' '}
           <span className="font-normal text-dim">
-            {candidate.year ?? 'year unknown'} · {candidate.kind === 'show' ? 'series' : 'film'}
+            {candidate.year === null ? (
+              'year unknown'
+            ) : (
+              // A figure, so mono, a step below the name beside it.
+              <span className="font-mono text-sm">{candidate.year}</span>
+            )}{' '}
+            · {candidate.kind === 'show' ? 'series' : 'film'}
             {candidate.originCountry ? ` · ${candidate.originCountry}` : ''}
           </span>
         </Heading>

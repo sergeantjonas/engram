@@ -30,7 +30,7 @@ export const Route = createFileRoute('/settings')({
 function Settings() {
   return (
     <div className="max-w-2xl space-y-8">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="text-display">Settings</h1>
       <Excluded />
       <Export />
     </div>

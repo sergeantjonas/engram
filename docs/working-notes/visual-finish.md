@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** In progress — chunks 1 to 4 landed 2026-09-24, not deployed. Scoped the
+**Status:** In progress — chunks 1 to 5 landed 2026-09-24, not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. Nine
 chunks, one commit each, in order. No chunk carries a migration or touches the
@@ -90,9 +90,9 @@ open panel being what is read. The convention is written into
 
 A ticked box was the browser's blue too. The six checkboxes on `/add`
 ([CandidateRow.tsx:57](../../apps/web/src/add/CandidateRow.tsx#L57),
-[Backfill.tsx:101](../../apps/web/src/add/Backfill.tsx#L101),
-[:112](../../apps/web/src/add/Backfill.tsx#L112) and
-[:194](../../apps/web/src/add/Backfill.tsx#L194),
+[Backfill.tsx:99](../../apps/web/src/add/Backfill.tsx#L99),
+[:110](../../apps/web/src/add/Backfill.tsx#L110) and
+[:192](../../apps/web/src/add/Backfill.tsx#L192),
 [Batch.tsx:117](../../apps/web/src/add/Batch.tsx#L117) and
 [:206](../../apps/web/src/add/Batch.tsx#L206)) and the hole's reason radios
 ([EpisodeCell.tsx:300](../../apps/web/src/title/EpisodeCell.tsx#L300)) set no
@@ -215,34 +215,38 @@ band; whatever it draws there inherits the same measurement.
 
 ## Chunk 5 · The type, as written
 
-Four places where the build no longer does what § The system says, none of
-them marked as a departure:
+Landed 2026-09-24. Four places where the build no longer did what § The
+system says, none of them marked as a departure:
 
-- **Display weight.** Every page heading is `text-2xl font-semibold` —
+- **Display weight.** Every page heading was `text-2xl font-semibold` —
   computed Archivo 24px at 600, no tracking — where the note says 700 with
-  `-.03em` at 23px. Six headings:
+  `-.03em`. They share one token now, `text-display` in
+  [index.css](../../apps/web/src/index.css) (24px, 700, `-.03em`), so a
+  heading cannot drift back to a weight of its own:
   [TitleHeader.tsx:259](../../apps/web/src/title/TitleHeader.tsx#L259),
   [add.tsx:519](../../apps/web/src/routes/add.tsx#L519),
   [Backfill.tsx:95](../../apps/web/src/add/Backfill.tsx#L95),
   [Batch.tsx:108](../../apps/web/src/add/Batch.tsx#L108),
   [settings.tsx:33](../../apps/web/src/routes/settings.tsx#L33),
-  [login.tsx:39](../../apps/web/src/routes/login.tsx#L39). Archivo 700 is
+  [login.tsx:39](../../apps/web/src/routes/login.tsx#L39). Archivo 700 was
   already loaded.
 - **Mono a step below.** On the title's meta line the year, the runtime and
-  the air dates are 12px Martian beside 12px Archivo
-  ([TitleHeader.tsx:261-296](../../apps/web/src/title/TitleHeader.tsx#L261-L296)),
-  so `Oct 20` outweighs *next*, which is what the rule exists to stop.
-- **The name under a figure** is Archivo 9px
-  ([TitleHeader.tsx:29](../../apps/web/src/title/TitleHeader.tsx#L29)); the
-  note lists it among the 9px mono labels. `Figure` is shared, so the year's
-  pane changes with it.
-- **A result's year** on `/add` is Archivo at the heading's size, `2017 · film`
-  ([CandidateRow.tsx:83](../../apps/web/src/add/CandidateRow.tsx#L83)). Every
-  figure is mono, and the mockup gives a candidate's year a mono line of its
-  own.
+  the air dates were 12px Martian beside 12px Archivo, so `Oct 20` outweighed
+  *next*, which is what the rule exists to stop. They are 10px
+  ([TitleHeader.tsx:261](../../apps/web/src/title/TitleHeader.tsx#L261) on).
+- **The name under a figure** was Archivo 9px; it is Martian 9px, as the note
+  lists it among the mono labels — the mockup, taking its body face, drew it
+  in Archivo, and the 2026-09-22 small-mono rule wins
+  ([TitleHeader.tsx:29](../../apps/web/src/title/TitleHeader.tsx#L29)).
+  `Figure` is shared, so the year's pane changed with it.
+- **A result's year** on `/add` was Archivo at the heading's size, `2017 ·
+  film`. It is Martian at 14px beside the 16px name, a step below
+  ([CandidateRow.tsx:87](../../apps/web/src/add/CandidateRow.tsx#L87)), and
+  *year unknown* stays in Archivo, being words. The row keeps its one line,
+  which add-search.md chunk 3 settled.
 
-One commit. Where the owner prefers any of these as built, the note is amended
-in its place instead.
+Checked in the app: the heading computes Archivo 24px at 700 with `-0.72px`,
+the figure label Martian 9px.
 
 ## Chunk 6 · The owner's top bar is 57px
 
@@ -299,7 +303,7 @@ The screen § 03 says reframed the project is the plainest one built. The
 seasons are a bare stack of checkboxes, and the commit bar — which exists to
 state what the write will do before it happens — is a 10px mono sentence in
 `--dim`, quieter than the season names above it, beside the one write the
-screen is for ([Backfill.tsx:107-173](../../apps/web/src/add/Backfill.tsx#L107-L173)).
+screen is for ([Backfill.tsx:105-171](../../apps/web/src/add/Backfill.tsx#L105-L171)).
 The mockup draws each season as a row on `--surf` inside a `--line` border,
 its name at 13px and its count right-aligned in mono, and picks the commit
 bar's figures out in jade
@@ -316,8 +320,8 @@ on its own.
 
 - Jade buttons have no hover or pressed state
   ([TopBar.tsx:97](../../apps/web/src/shell/TopBar.tsx#L97),
-  [CandidateRow.tsx:112](../../apps/web/src/add/CandidateRow.tsx#L112),
-  [Backfill.tsx:166](../../apps/web/src/add/Backfill.tsx#L166),
+  [CandidateRow.tsx:118](../../apps/web/src/add/CandidateRow.tsx#L118),
+  [Backfill.tsx:164](../../apps/web/src/add/Backfill.tsx#L164),
   [login.tsx:47](../../apps/web/src/routes/login.tsx#L47)); every bordered
   button has one.
 - An episode with no name takes its show's in the activity feed,

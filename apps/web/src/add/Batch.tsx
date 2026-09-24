@@ -105,7 +105,7 @@ export function Batch({ items, onDone }: { items: BatchItem[]; onDone: () => voi
 
   return (
     <section aria-label="What you have already watched" className="space-y-4">
-      <h1 className="text-2xl font-semibold">
+      <h1 className="text-display">
         {count(items.length, 'title')} on the record. Seen any of them?
       </h1>
 

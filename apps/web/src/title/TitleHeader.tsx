@@ -26,7 +26,7 @@ export function Figure({ value, label }: { value: string; label: string }) {
       <b className="block font-mono text-[17px] font-medium tracking-[-.02em] whitespace-nowrap tabular-nums">
         {value}
       </b>
-      <span className="block whitespace-nowrap text-[9px] tracking-[.11em] text-dim uppercase">
+      <span className="block whitespace-nowrap font-mono text-[9px] tracking-[.11em] text-dim uppercase">
         {label}
       </span>
     </div>
@@ -256,15 +256,17 @@ export function TitleHeader({
         </div>
         <div className="min-w-0 flex-1">
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold">{title.name}</h1>
+            <h1 className="text-display">{title.name}</h1>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs text-dim">{title.year ?? '????'}</span>
+              <span className="font-mono text-[10px] text-dim">{title.year ?? '????'}</span>
               <span className="text-xs text-faint">·</span>
               <span className="text-xs text-dim">{isShow ? 'Series' : 'Film'}</span>
               {runtimeMin !== null ? (
                 <>
                   <span className="text-xs text-faint">·</span>
-                  <span className="font-mono text-xs text-dim">{formatRuntime(runtimeMin)}</span>
+                  <span className="font-mono text-[10px] text-dim">
+                    {formatRuntime(runtimeMin)}
+                  </span>
                 </>
               ) : null}
               <span className="text-xs text-faint">·</span>
@@ -279,7 +281,7 @@ export function TitleHeader({
                     {run.endedYear !== null ? (
                       <>
                         {' '}
-                        <span className="font-mono">{run.endedYear}</span>
+                        <span className="font-mono text-[10px]">{run.endedYear}</span>
                       </>
                     ) : null}
                   </span>
@@ -289,11 +291,15 @@ export function TitleHeader({
                 <>
                   <span className="text-xs text-faint">·</span>
                   <span className="text-xs text-dim">
-                    next <span className="font-mono">{formatAirDay(run.nextAirDate, today)}</span>
+                    next{' '}
+                    <span className="font-mono text-[10px]">
+                      {formatAirDay(run.nextAirDate, today)}
+                    </span>
                   </span>
                   {run.asOf !== null ? (
                     <span className="text-xs text-dim">
-                      as of <span className="font-mono">{formatAirDay(run.asOf, today)}</span>
+                      as of{' '}
+                      <span className="font-mono text-[10px]">{formatAirDay(run.asOf, today)}</span>
                     </span>
                   ) : null}
                 </>

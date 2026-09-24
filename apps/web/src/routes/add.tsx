@@ -516,7 +516,7 @@ function Add() {
     // Past 48rem a result row is a poster at one edge and its button at the
     // other, with a screen's width of nothing between them.
     <div className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold">Add a title</h1>
+      <h1 className="text-display">Add a title</h1>
 
       {/* One bar, as the mockup draws it — the TMDB label, then the kind
           beside it: the kind picks which search TMDB runs, so it belongs to

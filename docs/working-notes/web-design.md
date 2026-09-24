@@ -119,7 +119,10 @@ rank by form already, uppercase mono with tracking. Settled 2026-09-24;
 Fonts.
 
 - **Archivo** names things — every title, label, button and control. Display
-  sizes run 700 weight with tight negative tracking (`-.03em` at 23px).
+  sizes run 700 weight with tight negative tracking (`-.03em` at 23px). In the
+  build that is one token, `text-display` — 24px, 700, `-.03em` — which every
+  page heading takes rather than a weight of its own; 24px, the size the
+  headings already had, so no line box moves. Since 2026-09-24.
 - **Martian Mono** sets every figure, date, count and external id, and nothing
   else: `10mo`, `S17E48`, `tvdb 392276`, the chips' uppercase labels.
 

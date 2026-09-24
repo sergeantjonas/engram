@@ -36,7 +36,7 @@ function Login() {
 
   return (
     <div className="mx-auto max-w-sm space-y-6 pt-16 text-center">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
+      <h1 className="text-display">Sign in</h1>
       {error ? (
         <p role="alert" className="text-sm text-gap-tx">
           {EXPLANATIONS[error]}

@@ -60,6 +60,13 @@ offset can only ever be right or generous. Measured at 57px, which is what the
 token says — signed in too, since 2026-09-24: the bar's padding and its 1px
 rule leave *+ Add watched* 32px, and the button is held to that.
 
+The browser's own chrome takes the same terms. The tab's icon is the rail's
+mark, the *E* in `#0B1713` on jade, drawn on whole pixels of a 16px grid
+rather than set in Archivo, since an icon loads no web font and a glyph's
+stems would fall between a 16px icon's pixels; `theme-color` is `--bg`, for a browser that
+tints its bar to the page. Since 2026-09-25;
+[visual-finish.md](visual-finish.md) § Taken up after.
+
 **One thing moves.** Opening a title from the wall grows its tile into the
 title page's poster through a view transition while the rest of the page
 crossfades. No other navigation transitions, and reduced motion cuts it to a

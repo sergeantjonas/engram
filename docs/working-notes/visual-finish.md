@@ -1,6 +1,6 @@
 # Visual finish
 
-**Status:** Built 2026-09-24 — all nine chunks landed, and three findings left
+**Status:** Built 2026-09-24 — all nine chunks landed, and four findings left
 out of them taken up since (§ Taken up after); not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. One commit
@@ -377,6 +377,15 @@ commit each, checked in the app like the chunks.
   every rule is drawn once however the cells wrap, rows included, and the
   box keeps its height. Checked on the year and a series at 1440px and on a
   series at 390px, by the cells' measured offsets and at 3×.
+- **A favicon and a theme colour.** The tab drew the browser's default icon,
+  and a browser that tints its bar to a declared colour had none.
+  [favicon.svg](../../apps/web/public/favicon.svg) is the rail's mark, the *E*
+  in `--on-jade` on jade, drawn on whole pixels of a 16px grid rather than set
+  in Archivo: an icon loads no web font, and at 16px a glyph's stems would
+  fall between pixels. `theme-color` is `--bg`
+  ([index.html](../../apps/web/index.html)). SVG only; a browser that takes
+  no SVG icon keeps its default. Checked at 16, 32 and 64px on a dark and a
+  light tab strip, and in the build, which ships it at `/favicon.svg`.
 
 ## Not scheduled
 
@@ -392,8 +401,6 @@ on its own.
 - The presence pill is the one `rounded-full` element
   ([TitleHeader.tsx:64](../../apps/web/src/title/TitleHeader.tsx#L64)); the
   mockup's tags are squared like the chips.
-- No favicon and no `theme-color` in
-  [index.html](../../apps/web/index.html).
 - Both families come from Google Fonts at runtime with `display=swap`
   ([index.html](../../apps/web/index.html)), so every mono label lays out
   again when Martian Mono replaces its narrower fallback. Self-hosted and

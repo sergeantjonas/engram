@@ -65,7 +65,7 @@ export function CommitBar({
         type="button"
         disabled={disabled}
         onClick={onWrite}
-        className="rounded bg-jade px-4 py-1.5 text-sm font-medium text-on-jade disabled:opacity-50"
+        className="rounded bg-jade px-4 py-1.5 text-sm font-medium text-on-jade enabled:hover:bg-jade-hover enabled:active:bg-jade-press disabled:opacity-50"
       >
         Write it
       </button>

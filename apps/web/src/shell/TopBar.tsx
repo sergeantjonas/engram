@@ -96,7 +96,7 @@ export function TopBar() {
             to="/add"
             // 32px tall, so the bar stays on `--spacing-topbar`: 12px of padding
             // either side and its 1px rule leave the button 32px of the 57.
-            className="border border-jade bg-jade px-3.5 py-1.5 text-[12.5px] leading-[18px] font-semibold text-on-jade"
+            className="border border-jade bg-jade px-3.5 py-1.5 text-[12.5px] leading-[18px] font-semibold text-on-jade hover:border-jade-hover hover:bg-jade-hover active:border-jade-press active:bg-jade-press"
           >
             + Add watched
           </Link>

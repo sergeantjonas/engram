@@ -126,7 +126,7 @@ export function MarkWatched({
       <button
         type="submit"
         disabled={mark.isPending}
-        className="rounded bg-jade px-3 py-1 text-sm text-on-jade disabled:opacity-50"
+        className="rounded bg-jade px-3 py-1 text-sm text-on-jade enabled:hover:bg-jade-hover enabled:active:bg-jade-press disabled:opacity-50"
       >
         Mark watched
       </button>

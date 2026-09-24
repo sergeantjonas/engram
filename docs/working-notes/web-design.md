@@ -88,6 +88,14 @@ which is the whole reason the affirmative accent is green rather than the
 warmer colour a media app would reach for first. On jade fills, text is
 `#0B1713`, not black.
 
+A jade control lifts to `#61AF98` under the pointer and sinks to `#41907A`
+while pressed: jade's own hue moved in lightness alone, 0.06 up and 0.04 down
+in OKLab, so the state holds in every simulated view, and its text clears
+7.05:1 and 4.78:1 on them. A disabled one does neither, nor does the rail's
+*E*, which is the mark. A bordered control lifts its border instead: to
+`--dim` as a rule, to jade on the whole-run mark and to `--gap` on a take-back.
+Since 2026-09-24; [visual-finish.md](visual-finish.md) § Taken up after.
+
 Three departures from the mockup, recorded 2026-09-24 in
 [visual-finish.md](visual-finish.md) chunk 3. `--line` is lighter than its
 `#2C2621`, which stood 1.29:1 against the page: a border is all that separates

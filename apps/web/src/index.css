@@ -16,6 +16,11 @@
   --color-dim: #9c9288;
   --color-faint: #6b635a;
   --color-jade: #4e9c86;
+  /* A jade control under the pointer and while pressed: jade's own hue, moved
+     in lightness alone (+0.06 and -0.04 in OKLab), because lightness is what
+     survives colour-blind vision. Its text clears 7.05:1 and 4.78:1 on them. */
+  --color-jade-hover: #61af98;
+  --color-jade-press: #41907a;
   --color-on-jade: #0b1713;
   --color-gold: #d9a441;
   --color-drift: #c4662f;

@@ -1,7 +1,7 @@
 # Visual finish
 
-**Status:** Built 2026-09-24 — all nine chunks landed, and one finding left out
-of them taken up since (§ Taken up after); not deployed. Scoped the
+**Status:** Built 2026-09-24 — all nine chunks landed, and two findings left
+out of them taken up since (§ Taken up after); not deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. One commit
 per chunk. No chunk carries a migration or touches the API.
@@ -144,7 +144,7 @@ year's label sits over its play count in the same tone, so the year is set at
 
 A missing episode's number was `text-gap` at 3.97:1, and `--color-gap-tx` was
 derived for text like it
-([index.css:23-26](../../apps/web/src/index.css#L23-L26)) — but here it would
+([index.css:28-31](../../apps/web/src/index.css#L28-L31)) — but here it would
 have brought the number within 0.045 in lightness of a skipped cell's gold.
 Chunk 3 redrew that cell instead
 ([EpisodeCell.tsx:44](../../apps/web/src/title/EpisodeCell.tsx#L44)).
@@ -252,7 +252,7 @@ the figure label Martian 9px.
 
 Landed 2026-09-24. `--spacing-topbar` is 57px, and the comment beside it
 promises the offset is never short
-([index.css:28-33](../../apps/web/src/index.css#L28-L33)). That held for a
+([index.css:33-38](../../apps/web/src/index.css#L33-L38)). That held for a
 stranger. For the owner, *+ Add watched* at `py-2` was 36.75px tall, the bar
 grew to 61.75px, and the title page's list pane, stuck at `top-topbar`, slid
 4.75px under it. `py-1.5` alone left the bar at 57.75px, since the bar's own
@@ -350,18 +350,27 @@ commit each, checked in the app like the chunks.
   ([plan.ts](../../apps/web/src/add/plan.ts)), and each clause says whether
   the write carries its value, so an unreadable date takes `--gap-tx` on
   either step by one rule. Checked at 1440px.
+- **Jade controls, hovered and pressed.** Every bordered button lifted its
+  border under the pointer, to `--dim` on most; the jade ones did nothing,
+  hovered or pressed. The finding named four and there were seven: *+ Add watched*,
+  *Continue with GitHub*, a result's *Add* and the selection's *Add N*, *Write
+  it*, *Mark watched* and a hole's *Save*. Two tokens beside jade
+  ([index.css](../../apps/web/src/index.css)) move it in lightness alone,
+  `--color-jade-hover` `#61AF98` (+0.06 in OKLab) and `--color-jade-press`
+  `#41907A` (−0.04), so each step is as large in the worst simulated view as
+  in normal vision, and the text on them clears 7.05:1 and 4.78:1. A button
+  takes them only while enabled, so a disabled one keeps its half-tone as it
+  keeps its arrow; *+ Add watched* moves its border with its fill. The rail's
+  jade *E* is the mark, not a control of this kind, and is left as it is.
+  Checked at 1440px with the states forced over CDP and with the pointer:
+  each control lifts, a press wins over the hover, a disabled *Write it* does
+  not move.
 
 ## Not scheduled
 
 Found in the same review and left out of the arc. Each is small enough to take
 on its own.
 
-- Jade buttons have no hover or pressed state
-  ([TopBar.tsx:97](../../apps/web/src/shell/TopBar.tsx#L97),
-  [CandidateRow.tsx:119](../../apps/web/src/add/CandidateRow.tsx#L119),
-  [Step.tsx:68](../../apps/web/src/add/Step.tsx#L68),
-  [login.tsx:47](../../apps/web/src/routes/login.tsx#L47)); every bordered
-  button has one.
 - An episode with no name takes its show's in the activity feed,
   `moment.name ?? titleName`
   ([Activity.tsx:129](../../apps/web/src/title/Activity.tsx#L129)) — `S17E48

@@ -116,7 +116,7 @@ export function CandidateRow({
             onClick={onAdd}
             disabled={disabled}
             aria-label={`Add ${candidate.name}`}
-            className="rounded bg-jade px-3 py-1 text-sm font-medium text-on-jade disabled:opacity-50"
+            className="rounded bg-jade px-3 py-1 text-sm font-medium text-on-jade enabled:hover:bg-jade-hover enabled:active:bg-jade-press disabled:opacity-50"
           >
             {pending === 'add' ? 'Adding…' : 'Add'}
           </button>

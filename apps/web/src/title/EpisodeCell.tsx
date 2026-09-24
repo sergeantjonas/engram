@@ -324,7 +324,7 @@ function GapForm({
         <button
           type="submit"
           disabled={busy}
-          className="rounded bg-jade px-3 py-1 text-on-jade disabled:opacity-50"
+          className="rounded bg-jade px-3 py-1 text-on-jade enabled:hover:bg-jade-hover enabled:active:bg-jade-press disabled:opacity-50"
         >
           Save
         </button>

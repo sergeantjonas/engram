@@ -44,7 +44,7 @@ function Login() {
       ) : null}
       <a
         href={loginUrl(next ?? '/')}
-        className="inline-block rounded bg-jade px-4 py-2 font-medium text-on-jade"
+        className="inline-block rounded bg-jade px-4 py-2 font-medium text-on-jade hover:bg-jade-hover active:bg-jade-press"
       >
         Continue with GitHub
       </a>

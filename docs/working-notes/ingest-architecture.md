@@ -235,12 +235,14 @@ had no header field at all, inferred from a report that none was visible
 under the trigger rather than from looking at the agent's own settings.
 Where a thing is in a UI and whether it exists are different questions.
 
-The webhook body is authored by hand in the notification agent, using Tautulli's
-parameter substitution. Fields worth requesting: `{media_type}`, `{show_name}`,
-`{episode_name}`, `{season_num}`, `{episode_num}`, `{year}`, `{themoviedb_id}`,
-`{thetvdb_id}`, `{imdb_id}`, `{guid}`, `{rating_key}`,
-`{grandparent_rating_key}`, `{duration_sec}`, `{view_offset}`,
-`{progress_percent}`, `{user_id}`, `{player}`, `{platform}`, `{unixtime}`.
+The webhook body is authored by hand in the notification agent, using
+Tautulli's parameter substitution. Fields worth requesting: `{media_type}`,
+`{title}`, `{show_name}`, `{episode_name}`, `{season_num}`, `{episode_num}`,
+`{year}`, `{themoviedb_id}`, `{thetvdb_id}`, `{imdb_id}`, `{guid}`,
+`{rating_key}`, `{grandparent_rating_key}`, `{duration_sec}`, `{view_offset}`,
+`{progress_percent}`, `{user_id}`, `{player}`, `{platform}`, `{unixtime}`, and
+for Now watching `{action}`, `{session_key}`, `{user_streams}` and
+`{remaining_duration_sec}` ([now-watching.md](now-watching.md)).
 
 **Measured 2026-09-21** against the live install, one real episode and one
 real film, and the answer is the good one: **every external id populates for

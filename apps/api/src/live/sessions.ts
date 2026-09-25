@@ -29,8 +29,6 @@ export interface LiveSession {
   /** Epoch milliseconds of the event this entry was last written from. */
   at: number;
   expiresAt: number;
-  /** Only ever an app.plex.tv link; anything else is dropped from the payload. */
-  plexUrl: string | null;
 }
 
 /** A session that has not ended, as one playback trigger reported it. */

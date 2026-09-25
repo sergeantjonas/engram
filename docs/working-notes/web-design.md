@@ -284,12 +284,10 @@ Built with one action. "Play in Plex" cannot exist on it: the band speaks from
 the record, which keeps no `ratingKey` on purpose, so there is nothing to
 build a deep link out of, and a button that opens nothing is worse than no
 button — the same reason the mockup's `Import` is missing from the chrome.
-Only a live session carries a link, which is why Now watching, below, has
-one. "Not now" moves to the next
-candidate rather than emptying the band, and only appears while there is one
-to move to. The sentence says "still to see" in place of "next is" when the
-only thing left sits behind where the run stopped, which the mockup's library
-never had to express.
+"Not now" moves to the next candidate rather than emptying the band, and only
+appears while there is one to move to. The sentence says "still to see" in
+place of "next is" when the only thing left sits behind where the run stopped,
+which the mockup's library never had to express.
 
 A strip since 2026-09-22 rather than one band cycled through: with several
 runs in rotation, "what now" is a choice between them. Compact cards in one
@@ -313,11 +311,9 @@ episode in mono, then a 3px bar of how far in with the time left. The bar is
 `--dim` over `--line`, not jade, which says seen, and the episode is not yet.
 *Paused* is a word before the bar and nothing else changes with it. The bar
 steps each time the band is asked again, every 30 seconds, rather than moving.
-The mockup's *Play in Plex* is built here, as the chrome's jade button at the
-card's size, opening app.plex.tv in a new tab: a live session carries the link
-and nothing has to be kept to use it. It is the owner's alone, as *Find in
-Plex* is, because to anyone else Plex's hosted client is a sign-in page. A title not on record yet — a first
-watch, stored by its stop — is named without a link.
+It carries no *Play in Plex*: a live session's link names the server, and the
+band is public. A title not on record yet — a first watch, stored by its stop
+— is named without a link.
 
 Titles wrap to two lines under the tile and are clamped there, with the full
 name on hover. Truncation was accepted as a layout problem rather than a font
@@ -371,8 +367,7 @@ Around it:
   in Plex's hosted client, which is what "play in Plex" can honestly be
   without a `ratingKey`, and a sign-in page to anyone else, so it is not shown
   to anyone else.
-  The § 01 rejection stands for what the record holds — there is still no
-  deep link from it; only a live session carries one. Reasoning in
+  The § 01 rejection stands — there is still no deep link. Reasoning in
   [web-depth.md](web-depth.md) arc 1 chunk 4.
 - A figure row — plays, episodes seen, rewatched, time watched (shows only; a
   floor when some of it carries no runtime, and the label says so), first
@@ -619,8 +614,7 @@ which is also where the fourth rail item below got its answer.
   have no small-screen design.
 - ~~**"Now watching".**~~ Answered 2026-09-25 in
   [now-watching.md](now-watching.md) and built the same day; see § 01. It
-  replaces Next up while a session is live, and is the one band that can
-  carry Play in Plex.
+  replaces Next up while a session is live.
 - ~~**The rail's fourth item.**~~ Answered 2026-09-22 by § 04 · Year. `YEAR`
   appeared in the mockup's nav with no screen behind it. `LIST`, the other one
   that looked unexplained, turned out not to be a screen at all: the mockup

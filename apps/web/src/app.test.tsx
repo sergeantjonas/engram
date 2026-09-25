@@ -832,7 +832,6 @@ describe('the wall', () => {
     state: 'playing',
     offsetMs: 48_000,
     durationMs: 3_938_000,
-    plexUrl: 'https://app.plex.tv/desktop#!/server/abc/details?key=%2Flibrary%2Fmetadata%2F717',
     ...over,
   });
   const owed = {
@@ -850,15 +849,15 @@ describe('the wall', () => {
     next: { season: 4, number: 3, name: null },
     continues: true,
   };
-  const playing = (sessions: unknown[], isOwner = false) =>
+  const playing = (sessions: unknown[]) =>
     stubApi((url) => {
       if (url.endsWith('/now-watching')) return json({ nowWatching: sessions });
       if (url.endsWith('/next-up')) return json({ nextUp: [owed] });
-      return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner });
+      return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: false });
     });
 
   it('draws what is playing in the place of what is owed', async () => {
-    playing([session()], true);
+    playing([session()]);
     await renderAt('/');
 
     const band = await screen.findByRole('region', { name: 'Now watching' });
@@ -869,36 +868,19 @@ describe('the wall', () => {
     expect(
       within(band).getByRole('link', { name: 'House of the Dragon' }).getAttribute('href'),
     ).toBe('/titles/title-1');
-    const plex = within(band).getByRole('link', { name: 'Play in Plex, House of the Dragon' });
-    expect(plex.getAttribute('href')).toBe(session().plexUrl);
-    expect(plex.getAttribute('target')).toBe('_blank');
-  });
-
-  // Plex's hosted client is a sign-in page to anyone else.
-  it('keeps Play in Plex with the owner', async () => {
-    playing([session()]);
-    await renderAt('/');
-
-    const band = await screen.findByRole('region', { name: 'Now watching' });
-    expect(within(band).getByRole('link', { name: 'House of the Dragon' })).toBeDefined();
-    expect(within(band).queryByRole('link', { name: /Play in Plex/ })).toBeNull();
   });
 
   it('says a pause in words, and names a first watch without a page to open', async () => {
-    playing(
-      [
-        session({
-          kind: 'movie',
-          titleId: null,
-          name: 'Heat',
-          episode: null,
-          state: 'paused',
-          durationMs: null,
-          plexUrl: null,
-        }),
-      ],
-      true,
-    );
+    playing([
+      session({
+        kind: 'movie',
+        titleId: null,
+        name: 'Heat',
+        episode: null,
+        state: 'paused',
+        durationMs: null,
+      }),
+    ]);
     await renderAt('/');
 
     const band = await screen.findByRole('region', { name: 'Now watching' });

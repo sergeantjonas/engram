@@ -367,8 +367,6 @@ export interface NowWatching {
   /** How far in as of the moment the API answered, which a playing session is already past. */
   offsetMs: number;
   durationMs: number | null;
-  /** The item on app.plex.tv. */
-  plexUrl: string | null;
 }
 
 /**

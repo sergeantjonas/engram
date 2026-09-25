@@ -96,7 +96,6 @@ describe('GET /now-watching', () => {
           state: 'playing',
           offsetMs: 48_000,
           durationMs: 3_938_000,
-          plexUrl: expect.stringMatching(/^https:\/\/app\.plex\.tv\//),
         },
       ],
     });
@@ -116,7 +115,8 @@ describe('GET /now-watching', () => {
     });
   });
 
-  it('says nothing about the viewer or the player', async () => {
+  // A link to the item names the server, and the answer is public.
+  it('says nothing about the viewer, the player or the server', async () => {
     const { stub, send, read } = start();
     await send(trigger());
     stub.selects = [[stored]];
@@ -124,6 +124,7 @@ describe('GET /now-watching', () => {
     const body = JSON.stringify((await read()).body);
     expect(body).not.toContain(owner);
     expect(body).not.toContain('Firefox');
+    expect(body).not.toContain('app.plex.tv');
   });
 
   it('ends the session on its stop', async () => {

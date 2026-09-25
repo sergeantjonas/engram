@@ -320,7 +320,6 @@ describe('readLiveEvent', () => {
       session_key: '12',
       user_streams: '1',
       remaining_duration_sec: '3920',
-      plex_url: 'https://app.plex.tv/desktop#!/server/abc/details?key=%2Flibrary%2Fmetadata%2F1',
       ...over,
     });
 
@@ -338,7 +337,6 @@ describe('readLiveEvent', () => {
           titleKey: 'show:tvdb:371572',
           kind: 'show',
           episode: { season: 1, number: 1 },
-          plexUrl: expect.stringMatching(/^https:\/\/app\.plex\.tv\//),
         },
       },
     });
@@ -385,14 +383,6 @@ describe('readLiveEvent', () => {
       ok: true,
       event: { kind: 'server-down', at: 1_790_018_788_000 },
     });
-  });
-
-  // The band would put it in an `href`, so only Plex's own app gets through.
-  it('drops a link that does not go to app.plex.tv', () => {
-    const reading = readLiveEvent('play', live({ plex_url: 'javascript:alert(1)' }));
-    expect(reading.ok && reading.event.kind === 'update' && reading.event.session.plexUrl).toBe(
-      null,
-    );
   });
 
   it('refuses a trigger with no session to key it on', () => {

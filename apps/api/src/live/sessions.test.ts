@@ -31,7 +31,6 @@ const update = (
     offsetMs: 60_000,
     durationMs: 3_938_000,
     at: T,
-    plexUrl: null,
     ...over,
   },
   remainingSec: 3878,

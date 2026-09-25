@@ -22,7 +22,6 @@ export interface NowWatching {
   state: LiveState;
   offsetMs: number;
   durationMs: number | null;
-  plexUrl: string | null;
 }
 
 /**
@@ -60,7 +59,6 @@ export async function nowWatching(db: Database, live: LiveSessions): Promise<Now
       state: session.state,
       offsetMs: session.offsetMs,
       durationMs: session.durationMs,
-      plexUrl: session.plexUrl,
     };
   });
 }

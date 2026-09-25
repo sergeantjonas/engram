@@ -31,8 +31,11 @@ written down.
 - **2026-09-25 — It replaces Next up while a session is live**, and is absent
   when nothing plays. Answers [web-design.md](web-design.md) § Still open.
 - **2026-09-25 — Public.** `GET /now-watching` goes on the guard's open list.
-  The answer is the title, the episode, the progress and the Play in Plex
-  link; no player, device, address or other account leaves the API.
+  The answer is the title, the episode and the progress; no player, device,
+  address, server or other account leaves the API.
+- **2026-09-25 — No Play in Plex.** `{plex_url}` names the server's machine
+  identifier, and the answer is public; a link to what is already playing is
+  not worth publishing it for. The template does not ask for it.
 - **2026-09-25 — The SPA asks every 30 seconds while the tab is visible.** The
   poll ends at Engram; nothing upstream is asked on a timer.
 - **2026-09-25 — Plex's artwork never reaches the browser.** A session's
@@ -57,16 +60,16 @@ step 4 measures that.
 - **`{view_offset}`** in milliseconds, **`{remaining_duration_sec}`** in
   seconds (`duration_sec − progress_duration_sec`), and **`{unixtime}`** for
   when the notification fired.
-- **`{plex_url}`** is the item on app.plex.tv, which is what makes Play in
-  Plex possible without keeping a `ratingKey`.
 - **A server trigger carries no `{user_id}`.** `intdown` is built by
   `build_server_notify_params`, which has no session to take one from.
 
 The triggers to turn on: Playback Start, Stop, Pause, Resume and Error, the
 Intro and Credits markers, and Plex Server Down. The agent takes a body per
-trigger; each playback body is today's plus `action`, `session_key`,
-`user_streams`, `view_offset`, `remaining_duration_sec` and `plex_url`, and
-Server Down's is `action` and `unixtime` alone.
+trigger; each playback body is today's
+([ingest-architecture.md](ingest-architecture.md) § Tautulli specifics) plus
+`action`, `session_key`, `user_streams` and `remaining_duration_sec`, and
+Server Down's is `action` and `unixtime` alone, beside the `token` every body
+carries.
 
 ## The model
 
@@ -129,31 +132,28 @@ a template without `session_key` still records its play, and warns that it
 could not be read as a live event. `GET /now-watching` on the open list: each
 live entry resolved to a stored title through `titleKey()` for its id, name
 and poster, and answered with the payload's names alone while the title is not
-stored yet — the Stop is what creates it. `plex_url` is passed through only
-when it starts with `https://app.plex.tv/`. Unit tests for each rule in the
+stored yet — the Stop is what creates it. Unit tests for each rule in the
 model; route tests through `app.inject()`.
 
 ## Chunk 3 · The band
 
-Landed 2026-09-25. Web. A query with a 30-second `refetchInterval` that pauses while the tab is
-hidden. The wall draws Now watching in Next up's place while the answer holds
-a session, and Next up otherwise; it follows the kind filter, so a film shows
-under All and Movies and a show under All and Series. A card holds the poster
-or the generated cover, the name, the episode code in mono, a bar with the
-time left, *Paused* as a word rather than a colour, and *Play in Plex* when
-there is a link — one card per session, and more than one is rare. Its scrim
-and contrast are measured the way
-[visual-finish.md](visual-finish.md) chunk 4 measured Next up's. Checked in
-headless Chrome, with `/now-watching` answered from fixtures by the CDP
-harness. web-design.md's § Still open entry moves into § 01.
+Landed 2026-09-25. Web. A query with a 30-second `refetchInterval` that pauses
+while the tab is hidden. The wall draws Now watching in Next up's place while
+the answer holds a session, and Next up otherwise; it follows the kind filter,
+so a film shows under All and Movies and a show under All and Series. A card
+holds the poster or the generated cover, the name, the episode code in mono, a
+bar with the time left, and *Paused* as a word rather than a colour — one card
+per session, and more than one is rare. Its scrim and contrast are measured
+the way [visual-finish.md](visual-finish.md) chunk 4 measured Next up's.
+Checked in headless Chrome, with `/now-watching` answered from fixtures by the
+CDP harness. web-design.md's § Still open entry moves into § 01.
 
 As built, the card is Next up's — the same backdrop, scrim and thumbnail, in
 [Band.tsx](../../apps/web/src/wall/Band.tsx), which both bands draw — so the
 scrim's measurement carries; over four live backdrops at 1440 and 1920 the
-lowest text reading was `--dim` at 4.80:1, and *Play in Plex* is the chrome's
-jade button at 5.60:1. The poll was timed in the page: 0.2, 30.2 and 60.2
-seconds while visible, nothing through 40 hidden seconds, and a request the
-moment the tab came back.
+lowest text reading was `--dim` at 4.80:1. The poll was timed in the page:
+0.2, 30.2 and 60.2 seconds while visible, nothing through 40 hidden seconds,
+and a request the moment the tab came back.
 
 ## Step 4 · Turned on and measured
 

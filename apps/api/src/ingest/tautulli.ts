@@ -44,7 +44,6 @@ export interface TautulliPayload {
   session_key?: unknown;
   user_streams?: unknown;
   remaining_duration_sec?: unknown;
-  plex_url?: unknown;
 }
 
 export interface PlannedPlayTitle {
@@ -372,12 +371,6 @@ function count(value: unknown): number | null {
 }
 
 /**
- * The one place a link from the payload is allowed to go. The body is
- * authenticated, but it is still a string the band would put in an `href`.
- */
-const PLEX_APP_ORIGIN = 'https://app.plex.tv/';
-
-/**
  * One trigger, as a change to what is live.
  *
  * Pure, like the play's plan. A stop is read here as well as planned as a
@@ -424,7 +417,6 @@ export function readLiveEvent(action: TautulliAction, payload: TautulliPayload):
   const remainingSec =
     digits(payload.remaining_duration_sec) ??
     (durationSec !== null && offsetMs !== null ? durationSec - offsetMs / 1000 : null);
-  const plexUrl = text(payload.plex_url);
 
   return {
     ok: true,
@@ -441,7 +433,6 @@ export function readLiveEvent(action: TautulliAction, payload: TautulliPayload):
         offsetMs: offsetMs === null ? 0 : Math.max(offsetMs, 0),
         durationMs: durationSec === null || durationSec <= 0 ? null : durationSec * 1000,
         at,
-        plexUrl: plexUrl?.startsWith(PLEX_APP_ORIGIN) === true ? plexUrl : null,
       },
       remainingSec,
       othersLive,

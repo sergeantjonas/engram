@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { COMPLETION_THRESHOLD, planTautulliPlay, type TautulliPayload } from './tautulli.js';
+import {
+  COMPLETION_THRESHOLD,
+  planTautulliPlay,
+  readAction,
+  type TautulliPayload,
+} from './tautulli.js';
 
 /**
  * A payload with fields knocked out, the way Tautulli actually sends them.
@@ -280,5 +285,30 @@ describe('planTautulliPlay', () => {
   it('refuses an episode with no show name to store it under', () => {
     const plan = planTautulliPlay(episode({ show_name: '' }));
     expect(plan).toEqual({ ok: false, reason: 'no title name' });
+  });
+});
+
+describe('readAction', () => {
+  it('reads a body with no action as a stop', () => {
+    expect(readAction(episode())).toEqual({ known: true, action: 'stop' });
+  });
+
+  // A stop is the one reading that writes a row, so an action that arrived
+  // and cannot be read must not default to it.
+  it('reads an action it cannot make out as unknown, never as a stop', () => {
+    expect(readAction(episode({ action: '' }))).toEqual({ known: false, action: '(unreadable)' });
+    expect(readAction(episode({ action: 1 }))).toEqual({ known: false, action: '(unreadable)' });
+  });
+
+  it('names a trigger the way Tautulli spells it', () => {
+    expect(readAction(episode({ action: 'play' }))).toEqual({ known: true, action: 'play' });
+    expect(readAction({ action: 'intdown' })).toEqual({ known: true, action: 'intdown' });
+  });
+
+  it('reports a trigger it does not know by name', () => {
+    expect(readAction(episode({ action: 'concurrent' }))).toEqual({
+      known: false,
+      action: 'concurrent',
+    });
   });
 });

@@ -298,7 +298,8 @@ the viewer wants of a title. The SPA calls all four.
    amended 2026-09-23) are deployed too, checked against the live bundle
    2026-09-24.
 7. **"Now watching"** — scoped 2026-09-25 in
-   [now-watching.md](now-watching.md), nothing built. The band that replaces
+   [now-watching.md](now-watching.md); chunk 1 landed the same day, not
+   deployed. The band that replaces
    Next up while a session is live, fed by Tautulli's webhook rather than by
    polling Plex: `/status/sessions` answers only to the owner's account token,
    which administers the whole server and the plex.tv account, and the push

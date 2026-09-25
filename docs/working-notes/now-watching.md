@@ -1,8 +1,8 @@
 # Now watching
 
-**Status:** Plan — scoped 2026-09-25, nothing built. Three chunks, one commit
-each, in order, then a step that is the owner's, in Tautulli, once chunks 1
-and 2 are deployed. No migration.
+**Status:** In progress — scoped 2026-09-25; chunk 1 landed the same day, not
+deployed. Three chunks, one commit each, in order, then a step that is the
+owner's, in Tautulli, once chunks 1 and 2 are deployed. No migration.
 
 The wall's band says what to watch next from the record, and while something
 is playing it says the wrong thing: "you stopped after S17E48 four days ago"
@@ -48,8 +48,8 @@ step 4 measures that.
 - **22 triggers, none on a timer.** Every playback trigger fills the same
   session fields, so each one is a fresh reading of where the session is.
 - **`{action}`** is the trigger's name without `on_`: `play`, `stop`,
-  `pause`, `resume`, `error`, `intro`, `credits`, `watched`, `buffer`,
-  `change`, and `intdown` for the server becoming unreachable.
+  `pause`, `resume`, `error`, `intro`, `commercial`, `credits`, `watched`,
+  `buffer`, `change`, and `intdown` for the server becoming unreachable.
 - **`{session_key}`** identifies the session. **`{user_streams}`** is how
   many sessions the same Tautulli user has live at that moment — excluding the
   stopping one on a `stop`, which Tautulli filters out to avoid racing its own
@@ -89,8 +89,9 @@ current entries, one event and nothing else, and returns the next entries:
   `remaining_duration_sec` plus five minutes, a paused one an hour after the
   pause. An expired entry is left out of the read rather than swept on a
   timer.
-- **A payload with no `action` is a `stop`.** Only Playback Stop is turned on
-  today, so the receiver can ship before the template changes — and has to:
+- **A payload with no `action` is a `stop`**; one whose `action` cannot be
+  read is unknown, never a stop. Only Playback Stop is turned on today, so
+  the receiver can ship before the template changes — and has to:
   a Start arriving at today's receiver is planned as a play that did not
   finish and written into a record that is append-only.
 
@@ -100,7 +101,7 @@ seconds rather than moving — one thing moves in this app, and it is not this.
 
 ## Chunk 1 · The receiver reads `action`
 
-API only. `action` is parsed with the rest of the payload in
+Landed 2026-09-25. API only. `action` is parsed with the rest of the payload in
 [tautulli.ts](../../apps/api/src/ingest/tautulli.ts). `stop`, or no action,
 takes today's path unchanged; every other known action is answered 204 and
 writes nothing; an unknown one is logged by name and answered 204. `intdown`

@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
-import { planTautulliPlay } from '../ingest/tautulli.js';
+import { planTautulliPlay, readAction } from '../ingest/tautulli.js';
 import { storeTautulliPlay } from '../ingest/tautulli-store.js';
 
 /**
@@ -21,7 +21,8 @@ function secretMatches(offered: string | undefined, want: string): boolean {
 /**
  * Tautulli's webhook: the freshness half of ingest.
  *
- * Authenticate, check whose play it is, plan, write, answer. Correctness is
+ * Authenticate, check whose play it is, read which trigger sent it, plan a
+ * stop, write, answer. Correctness is
  * the nightly library walk's job — this is idempotent on
  * `(source, source_event_id)` precisely so the two can overlap freely — which
  * is why nothing here refuses a body it cannot use. A play this drops is a
@@ -77,11 +78,21 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config, db: 
       return reply.code(401).send({ error: 'unauthorized' });
     }
 
+    const reading = readAction(fields);
+
+    // The one body answered before the viewer check. Tautulli builds a server
+    // trigger with no session to take a `{user_id}` from, so it can never pass
+    // the check, and it names nothing anybody watched.
+    if (reading.known && reading.action === 'intdown') {
+      request.log.info({ action: reading.action }, 'tautulli server event received');
+      return reply.code(204).send();
+    }
+
     // Whose play this is, before any of it is written down. The server is
     // shared, and a housemate's viewing must not end up in this record —
     // including in a log line, which is a record of what they watched just
-    // as much as a row would be. So the check sits above the logging, not
-    // beside the parsing that will come later.
+    // as much as a row would be. So the check sits above the logging — all of
+    // it but the userless server trigger's — not beside the parsing.
     //
     // Tautulli's ids, not Plex's: `{user_id}` is 7597797 for the same owner
     // the history endpoint calls account 1. An empty list allows nobody,
@@ -106,6 +117,21 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config, db: 
     // Never the token, whichever way it arrived. The point of keeping it out
     // of the query string is lost if the handler writes it to the log itself.
     const { token: _secret, ...rest } = fields;
+
+    // Answered 204 like everything else here: a trigger turned on before the
+    // receiver knew it is a template to fix, not a delivery to mark failed.
+    if (!reading.known) {
+      request.log.warn({ action: reading.action }, 'tautulli webhook ignored: unknown action');
+      return reply.code(204).send();
+    }
+
+    // Only a stop is a play. Every other trigger says where a session is, and
+    // planned as a play it would land in the record as a play of its own, in
+    // a table nothing is ever taken back out of.
+    if (reading.action !== 'stop') {
+      request.log.info({ action: reading.action }, 'tautulli playback event received');
+      return reply.code(204).send();
+    }
 
     const plan = planTautulliPlay(rest);
     if (!plan.ok) {

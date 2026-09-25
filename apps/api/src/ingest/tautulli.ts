@@ -19,6 +19,7 @@ import {
  * says which fields are asked for, never that they arrived.
  */
 export interface TautulliPayload {
+  action?: unknown;
   media_type?: unknown;
   title?: unknown;
   show_name?: unknown;
@@ -288,4 +289,49 @@ export function planTautulliPlay(payload: TautulliPayload): TautulliPlan {
     episode: { titleKey: key, season, number, name: text(payload.episode_name) },
     play: { ...common, sourceEventId: `${slot}@${occurrence}`, season, number },
   };
+}
+
+/**
+ * The triggers this receiver knows, as `{action}` spells them: the trigger's
+ * name without its `on_`, so Playback Start arrives as `play`. Every one but
+ * `intdown` is a playback trigger and carries the session's fields; `intdown`
+ * is the server becoming unreachable, and carries no session at all.
+ */
+export const TAUTULLI_ACTIONS = [
+  'play',
+  'stop',
+  'pause',
+  'resume',
+  'error',
+  'change',
+  'buffer',
+  'intro',
+  'commercial',
+  'credits',
+  'watched',
+  'intdown',
+] as const;
+
+export type TautulliAction = (typeof TAUTULLI_ACTIONS)[number];
+
+export type ActionReading =
+  | { known: true; action: TautulliAction }
+  | { known: false; action: string };
+
+function isTautulliAction(value: string): value is TautulliAction {
+  return (TAUTULLI_ACTIONS as readonly string[]).includes(value);
+}
+
+/**
+ * Which trigger a body came from.
+ *
+ * A body with no `{action}` at all is read as a stop, the only trigger such a
+ * body can safely mean. One whose `{action}` arrived and cannot be read is not:
+ * it is some other trigger, and a stop is the one reading that writes a row.
+ */
+export function readAction(payload: TautulliPayload): ActionReading {
+  if (payload.action === undefined) return { known: true, action: 'stop' };
+  const action = text(payload.action);
+  if (action === null) return { known: false, action: '(unreadable)' };
+  return isTautulliAction(action) ? { known: true, action } : { known: false, action };
 }

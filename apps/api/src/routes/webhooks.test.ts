@@ -300,6 +300,100 @@ describe('POST /webhooks/tautulli', () => {
     expect(stub.inserted).toEqual([]);
   });
 
+  it('writes nothing for a playback trigger that is not a stop', async () => {
+    const stub = storing();
+    const response = await post(good, play({ action: 'play' }), stub);
+    expect(response.statusCode).toBe(204);
+    expect(stub.inserted).toEqual([]);
+  });
+
+  it('records a stop that names itself as one', async () => {
+    const stub = storing();
+    await post(good, play({ action: 'stop' }), stub);
+    expect(stub.inserted.at(-1)?.values).toMatchObject({ source: 'tautulli' });
+  });
+
+  it('ignores an action it does not know, and names it', async () => {
+    const logged: unknown[] = [];
+    const stub = storing();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.warn = ((obj: unknown) => {
+        logged.push(obj);
+      }) as typeof request.log.warn;
+      done();
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/tautulli',
+      headers: { 'content-type': 'application/json', ...good },
+      payload: play({ action: 'concurrent' }),
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(logged).toEqual([{ action: 'concurrent' }]);
+    expect(stub.inserted).toEqual([]);
+  });
+
+  // A server trigger carries no `{user_id}`, so it would never pass the
+  // viewer check — and it names nothing anybody watched.
+  it('accepts the server going down, which names no viewer', async () => {
+    const logged: unknown[] = [];
+    const stub = sessionDb();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.info = ((obj: unknown) => {
+        logged.push(obj);
+      }) as typeof request.log.info;
+      done();
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/tautulli',
+      headers: { 'content-type': 'application/json', ...good },
+      payload: { action: 'intdown', unixtime: '1790018788' },
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(logged).toContainEqual({ action: 'intdown' });
+    expect(logged).not.toContainEqual(expect.objectContaining({ viewer: null }));
+    expect(stub.inserted).toEqual([]);
+  });
+
+  it('asks the server trigger for the secret like any other', async () => {
+    const response = await post({}, { action: 'intdown' });
+    expect(response.statusCode).toBe(401);
+  });
+
+  // The viewer check sits above every line that names a trigger, so a
+  // housemate pausing is not written down as one either — known or not.
+  it('says nothing about what a housemate did', async () => {
+    const logged: unknown[] = [];
+    const stub = sessionDb();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      const keep = ((obj: unknown) => {
+        logged.push(obj);
+      }) as typeof request.log.info;
+      request.log.info = keep;
+      request.log.warn = keep;
+      done();
+    });
+
+    for (const action of ['pause', 'concurrent']) {
+      await app.inject({
+        method: 'POST',
+        url: '/webhooks/tautulli',
+        headers: { 'content-type': 'application/json', ...good },
+        payload: play({ action, user_id: '49291007' }),
+      });
+    }
+
+    expect(logged).not.toContainEqual(expect.objectContaining({ action: expect.anything() }));
+  });
+
   it('is not reachable without the secret even though the guard opens it', async () => {
     // The guard lets this route past the session check by pattern, so the
     // handler's own check is the only thing left; a regression there would

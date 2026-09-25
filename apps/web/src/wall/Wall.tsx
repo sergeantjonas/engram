@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { TitleSummary } from '../api/titles.ts';
+import { useState } from 'react';
+import { nowWatchingQuery, type TitleSummary } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { ACTIVE_CHIP, ACTIVE_SEG, CHIP, COUNT, SEG } from './chips.ts';
 import {
@@ -15,6 +17,7 @@ import {
 } from './facets.ts';
 import { rememberKind } from './kindMemory.ts';
 import { NextUp } from './NextUp.tsx';
+import { NowWatching } from './NowWatching.tsx';
 import { TitleCard } from './TitleCard.tsx';
 
 /** The wall's URL state. `excluded` is `true` or absent: `false` is the default and never written. */
@@ -45,6 +48,11 @@ const EMPTY: Record<Facet, string> = {
 
 export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallSearch }) {
   const isOwner = useIsOwner();
+  // Next up's passes are held here rather than in the URL or on the server:
+  // "not now" means not in this sitting, and a title still owed should come
+  // back the next time the wall is opened. Here rather than in the band, so
+  // they outlast it giving way to Now watching or to Movies.
+  const [passed, setPassed] = useState<ReadonlySet<string>>(new Set());
   // One clock for the whole render, so two chips counted a millisecond apart
   // cannot disagree about what is drifting.
   const now = new Date();
@@ -63,6 +71,11 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
   // something the viewer cannot see.
   const kind = search.kind;
   const ofKind = kind ? matching.filter((title) => title.kind === kind) : matching;
+
+  // The band follows the kind as the wall does: a film playing is not shown
+  // under Series.
+  const live = useQuery(nowWatchingQuery()).data?.nowWatching ?? [];
+  const playing = kind ? live.filter((session) => session.kind === kind) : live;
 
   const counts = countFacets(ofKind, now);
   const facet = search.facet;
@@ -87,9 +100,15 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
           is the one someone opening the app is usually asking. It draws
           nothing when there is nothing owed.
 
-          Gone under Movies, where every episode it could offer belongs to
+          While something plays, Now watching takes its place, since "you
+          stopped after" is false with the next episode on screen. Next up is
+          gone under Movies, where every episode it could offer belongs to
           something the viewer has just said they are not looking at. */}
-      {kind === 'movie' ? null : <NextUp />}
+      {playing.length > 0 ? (
+        <NowWatching sessions={playing} />
+      ) : kind === 'movie' ? null : (
+        <NextUp passed={passed} pass={(id) => setPassed((open) => new Set(open).add(id))} />
+      )}
 
       <nav aria-label="Filter the wall" className="flex flex-wrap items-center gap-1.5">
         {/* Links, not buttons: a filter is a place, and the back button should

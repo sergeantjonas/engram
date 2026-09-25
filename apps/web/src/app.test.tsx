@@ -821,6 +821,126 @@ describe('the wall', () => {
     expect(screen.queryByRole('region', { name: 'Next up' })).toBeNull();
   });
 
+  const session = (over: Record<string, unknown> = {}) => ({
+    id: '12',
+    kind: 'show',
+    titleId: 'title-1',
+    name: 'House of the Dragon',
+    posterPath: '/p.jpg',
+    backdropPath: '/b.jpg',
+    episode: { season: 1, number: 1, name: 'The Heirs of the Dragon' },
+    state: 'playing',
+    offsetMs: 48_000,
+    durationMs: 3_938_000,
+    plexUrl: 'https://app.plex.tv/desktop#!/server/abc/details?key=%2Flibrary%2Fmetadata%2F717',
+    ...over,
+  });
+  const owed = {
+    titleId: 'a1',
+    name: 'The Witcher',
+    posterPath: null,
+    backdropPath: null,
+    stoppedAfter: {
+      season: 4,
+      number: 2,
+      name: null,
+      watchedAt: null,
+      watchedPrecision: 'unknown',
+    },
+    next: { season: 4, number: 3, name: null },
+    continues: true,
+  };
+  const playing = (sessions: unknown[], isOwner = false) =>
+    stubApi((url) => {
+      if (url.endsWith('/now-watching')) return json({ nowWatching: sessions });
+      if (url.endsWith('/next-up')) return json({ nextUp: [owed] });
+      return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner });
+    });
+
+  it('draws what is playing in the place of what is owed', async () => {
+    playing([session()], true);
+    await renderAt('/');
+
+    const band = await screen.findByRole('region', { name: 'Now watching' });
+    expect(screen.queryByRole('region', { name: 'Next up' })).toBeNull();
+    expect(band.textContent).toContain('S1E1 The Heirs of the Dragon');
+    expect(band.textContent).toContain('1h 5m left');
+    expect(band.textContent).not.toContain('Paused');
+    expect(
+      within(band).getByRole('link', { name: 'House of the Dragon' }).getAttribute('href'),
+    ).toBe('/titles/title-1');
+    const plex = within(band).getByRole('link', { name: 'Play in Plex, House of the Dragon' });
+    expect(plex.getAttribute('href')).toBe(session().plexUrl);
+    expect(plex.getAttribute('target')).toBe('_blank');
+  });
+
+  // Plex's hosted client is a sign-in page to anyone else.
+  it('keeps Play in Plex with the owner', async () => {
+    playing([session()]);
+    await renderAt('/');
+
+    const band = await screen.findByRole('region', { name: 'Now watching' });
+    expect(within(band).getByRole('link', { name: 'House of the Dragon' })).toBeDefined();
+    expect(within(band).queryByRole('link', { name: /Play in Plex/ })).toBeNull();
+  });
+
+  it('says a pause in words, and names a first watch without a page to open', async () => {
+    playing(
+      [
+        session({
+          kind: 'movie',
+          titleId: null,
+          name: 'Heat',
+          episode: null,
+          state: 'paused',
+          durationMs: null,
+          plexUrl: null,
+        }),
+      ],
+      true,
+    );
+    await renderAt('/');
+
+    const band = await screen.findByRole('region', { name: 'Now watching' });
+    expect(band.textContent).toContain('Paused');
+    // With no runtime there is nothing to measure the pause against.
+    expect(band.textContent).not.toContain('left');
+    expect(within(band).queryByRole('link')).toBeNull();
+    expect(within(band).getByText('Heat')).toBeDefined();
+  });
+
+  it('shows a film under Movies and not under Series, where Next up stays', async () => {
+    playing([session({ kind: 'movie', name: 'Heat', episode: null })]);
+    await renderAt('/?kind=show');
+
+    await screen.findByRole('region', { name: 'Next up' });
+    expect(screen.queryByRole('region', { name: 'Now watching' })).toBeNull();
+
+    cleanup();
+    await renderAt('/?kind=movie');
+    await screen.findByRole('region', { name: 'Now watching' });
+  });
+
+  // Whatever takes the band's place meanwhile — Now watching, or Movies.
+  it('keeps what was passed over for the sitting while the band gives way', async () => {
+    stubApi((url) => {
+      if (url.endsWith('/next-up'))
+        return json({ nextUp: [owed, { ...owed, titleId: 'a2', name: 'Fallout' }] });
+      return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: true });
+    });
+    const router = await renderAt('/');
+
+    const strip = await screen.findByRole('region', { name: 'Next up' });
+    within(strip).getByRole('button', { name: 'Not now for The Witcher' }).click();
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'The Witcher' })).toBeNull());
+
+    await act(() => router.navigate({ to: '/', search: { kind: 'movie' } }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Next up' })).toBeNull());
+    await act(() => router.navigate({ to: '/', search: {} }));
+    await screen.findByRole('link', { name: 'Fallout' });
+    expect(screen.queryByRole('link', { name: 'The Witcher' })).toBeNull();
+  });
+
   it('asks for the excluded titles only when the URL says so', async () => {
     const calls = stubApi((url) =>
       url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: true }),

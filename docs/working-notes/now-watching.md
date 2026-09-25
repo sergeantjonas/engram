@@ -1,8 +1,8 @@
 # Now watching
 
-**Status:** In progress — scoped 2026-09-25; chunks 1 and 2 landed the same
-day, not deployed. Three chunks, one commit each, in order, then a step that is the
-owner's, in Tautulli, once chunks 1 and 2 are deployed. No migration.
+**Status:** In progress — scoped 2026-09-25; all three chunks landed the same
+day, not deployed. What is left is step 4, the owner's, in Tautulli, once they
+are. No migration.
 
 The wall's band says what to watch next from the record, and while something
 is playing it says the wrong thing: "you stopped after S17E48 four days ago"
@@ -135,7 +135,7 @@ model; route tests through `app.inject()`.
 
 ## Chunk 3 · The band
 
-Web. A query with a 30-second `refetchInterval` that pauses while the tab is
+Landed 2026-09-25. Web. A query with a 30-second `refetchInterval` that pauses while the tab is
 hidden. The wall draws Now watching in Next up's place while the answer holds
 a session, and Next up otherwise; it follows the kind filter, so a film shows
 under All and Movies and a show under All and Series. A card holds the poster
@@ -146,6 +146,14 @@ and contrast are measured the way
 [visual-finish.md](visual-finish.md) chunk 4 measured Next up's. Checked in
 headless Chrome, with `/now-watching` answered from fixtures by the CDP
 harness. web-design.md's § Still open entry moves into § 01.
+
+As built, the card is Next up's — the same backdrop, scrim and thumbnail, in
+[Band.tsx](../../apps/web/src/wall/Band.tsx), which both bands draw — so the
+scrim's measurement carries; over four live backdrops at 1440 and 1920 the
+lowest text reading was `--dim` at 4.80:1, and *Play in Plex* is the chrome's
+jade button at 5.60:1. The poll was timed in the page: 0.2, 30.2 and 60.2
+seconds while visible, nothing through 40 hidden seconds, and a request the
+moment the tab came back.
 
 ## Step 4 · Turned on and measured
 

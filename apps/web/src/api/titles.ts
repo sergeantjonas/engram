@@ -351,6 +351,38 @@ export function nextUpQuery() {
   });
 }
 
+/** One session playing on Plex, as `GET /now-watching` answers it. */
+export interface NowWatching {
+  /** Plex's key for the session, stable while it plays and no longer. */
+  id: string;
+  kind: 'show' | 'movie';
+  /** Null until the record holds the title; its first stop is what stores it. */
+  titleId: string | null;
+  name: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  /** Null for a film. */
+  episode: NextUpEpisode | null;
+  state: 'playing' | 'paused';
+  /** How far in as of the moment the API answered, which a playing session is already past. */
+  offsetMs: number;
+  durationMs: number | null;
+  /** The item on app.plex.tv. */
+  plexUrl: string | null;
+}
+
+/**
+ * Asked again every 30 seconds, and not while the tab is hidden, which is
+ * TanStack's default for an interval; coming back to the tab asks at once.
+ */
+export function nowWatchingQuery() {
+  return queryOptions({
+    queryKey: ['now-watching'],
+    queryFn: () => apiFetch<{ nowWatching: NowWatching[] }>('/now-watching'),
+    refetchInterval: 30_000,
+  });
+}
+
 /** A TMDB search hit, as `GET /search` answers it. Not stored until it is added. */
 export interface TmdbCandidate {
   kind: 'show' | 'movie';

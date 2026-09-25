@@ -298,7 +298,7 @@ the viewer wants of a title. The SPA calls all four.
    amended 2026-09-23) are deployed too, checked against the live bundle
    2026-09-24.
 7. **"Now watching"** — scoped 2026-09-25 in
-   [now-watching.md](now-watching.md); chunks 1 and 2 landed the same day,
+   [now-watching.md](now-watching.md); all three chunks landed the same day,
    not deployed. The band that replaces
    Next up while a session is live, fed by Tautulli's webhook rather than by
    polling Plex: `/status/sessions` answers only to the owner's account token,
@@ -307,8 +307,8 @@ the viewer wants of a title. The SPA calls all four.
    the first scoping left — the box never has to reach Plex, and the only
    poll is the SPA asking Engram every 30 seconds. Nothing is stored; the
    route is public. Three chunks — the receiver reading `action`, live
-   sessions in memory behind `GET /now-watching`, the band — and then the
-   owner turns the triggers on in Tautulli.
+   sessions in memory behind `GET /now-watching`, the band — and what is left
+   is the owner's: deploy, then turn the triggers on in Tautulli.
 8. ~~**Add search**~~ — done 2026-09-24, built and deployed. Scoped
    2026-09-23 in [add-search.md](add-search.md).
    `/add` searched by name only: one page of twenty mixed results from

@@ -1,20 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { useState } from 'react';
-import { backdropUrl, type NextUp as Candidate, nextUpQuery, posterUrl } from '../api/titles.ts';
-import { Cover } from '../shell/Cover.tsx';
+import { type NextUp as Candidate, nextUpQuery } from '../api/titles.ts';
 import { Tip } from '../shell/Tooltip.tsx';
 import { formatAgo } from '../title/format.ts';
+import { Band, BandCard, SLOT } from './Band.tsx';
 
 const at = (episode: { season: number; number: number }) => `S${episode.season}E${episode.number}`;
-
-/**
- * Which slots the strip's width has room for, by the strip's own width rather
- * than the window's, since the rail and the page's gutter take a share of it.
- * A slot is drawn at 300px or more, so the fourth waits for 1280px; the first
- * is always there, which is what a phone sees.
- */
-const SLOT = ['', 'hidden @2xl:block', 'hidden @5xl:block', 'hidden @7xl:block'] as const;
 
 /**
  * What to pick back up, in a strip above the chips.
@@ -31,12 +22,15 @@ const SLOT = ['', 'hidden @2xl:block', 'hidden @5xl:block', 'hidden @7xl:block']
  * outlive them, so there is nothing here to build a deep link out of. A button
  * that opens nothing is worse than no button.
  */
-export function NextUp() {
+export function NextUp({
+  passed,
+  pass,
+}: {
+  /** The titles passed over in this sitting. */
+  passed: ReadonlySet<string>;
+  pass: (titleId: string) => void;
+}) {
   const { data } = useQuery(nextUpQuery());
-  // Dismissals are held here rather than in the URL or on the server: "not
-  // now" means not in this sitting, and a title still owed should come back
-  // the next time the wall is opened.
-  const [passed, setPassed] = useState<ReadonlySet<string>>(new Set());
 
   const showing = (data?.nextUp ?? []).filter((candidate) => !passed.has(candidate.titleId));
   if (showing.length === 0) return null;
@@ -45,38 +39,25 @@ export function NextUp() {
   const passable = showing.length > 1;
 
   return (
-    <section aria-label="Next up" className="@container space-y-1.5">
-      {/* The region's name already says it to anything reading the page. */}
-      <p aria-hidden="true" className="font-mono text-[9px] tracking-[.08em] text-dim">
-        NEXT UP
-      </p>
-      {/* One card fills the row. */}
-      <ul className="flex gap-3">
-        {showing.slice(0, SLOT.length).map((candidate, slot) => (
-          // Keyed by slot, not by title: while a card is left to move in,
-          // passing one moves the next into its place, and the button under
-          // the pointer or the focus stays the same element rather than
-          // vanishing with the card it dismissed.
-          // biome-ignore lint/suspicious/noArrayIndexKey: the slot is the identity here
-          <li key={slot} className={`min-w-0 flex-1 ${SLOT[slot]}`}>
-            <Card
-              candidate={candidate}
-              onPass={
-                passable
-                  ? () => setPassed((open) => new Set(open).add(candidate.titleId))
-                  : undefined
-              }
-            />
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Band label="Next up">
+      {showing.slice(0, SLOT.length).map((candidate, slot) => (
+        // Keyed by slot, not by title: while a card is left to move in,
+        // passing one moves the next into its place, and the button under
+        // the pointer or the focus stays the same element rather than
+        // vanishing with the card it dismissed.
+        // biome-ignore lint/suspicious/noArrayIndexKey: the slot is the identity here
+        <li key={slot} className={`min-w-0 flex-1 ${SLOT[slot]}`}>
+          <Card
+            candidate={candidate}
+            onPass={passable ? () => pass(candidate.titleId) : undefined}
+          />
+        </li>
+      ))}
+    </Band>
   );
 }
 
 function Card({ candidate, onPass }: { candidate: Candidate; onPass?: (() => void) | undefined }) {
-  const backdrop = backdropUrl(candidate.backdropPath, 'w780');
-  const poster = posterUrl(candidate.posterPath);
   const ago = formatAgo(candidate.stoppedAfter.watchedAt, candidate.stoppedAfter.watchedPrecision);
 
   // Two sentences rather than one line of clauses. What to watch comes first,
@@ -86,70 +67,47 @@ function Card({ candidate, onPass }: { candidate: Candidate; onPass?: (() => voi
   const history = candidate.continues ? `${stopped}.` : `${stopped}, but this one is still unseen.`;
 
   return (
-    <div className="relative isolate h-full overflow-hidden rounded border border-line bg-surf">
-      {/* The artwork is keyed by title though the slot is not, so a card moving
-          in never sits beside the one it replaced while its own loads. */}
-      {backdrop ? (
-        // Half-strength under a scrim that holds at 80% from the middle on: a
-        // compact card runs its text to the right edge, where "Not now" sits,
-        // and every line has to clear 4.5:1 over whatever the still holds.
-        <div
-          key={candidate.titleId}
-          aria-hidden="true"
-          style={{ backgroundImage: `url(${backdrop})` }}
-          className="absolute inset-0 -z-10 bg-cover bg-[center_30%] opacity-50 after:absolute after:inset-0 after:bg-gradient-to-r after:from-bg after:via-bg/85 after:to-bg/80"
-        />
-      ) : null}
-
-      <div className="flex items-start gap-4 p-3">
-        {poster ? (
-          <img
-            key={candidate.titleId}
-            src={poster}
-            alt=""
-            className="h-[52px] w-[35px] shrink-0 rounded-sm object-cover"
-          />
-        ) : (
-          <Cover name={candidate.name} bare className="h-[52px] w-[35px] shrink-0 rounded-sm" />
-        )}
-
-        <div className="min-w-0 flex-1 space-y-0.5">
-          {/* The name, the episode and the reason each get a line, so a narrow
-              card truncates the episode's name before the show's. "Not now"
-              rides on the name's line for the same reason: a column of its own
-              would take its width from all three. */}
-          <p className="flex items-baseline gap-3">
-            <Tip label={candidate.name}>
-              <Link
-                to="/titles/$id"
-                params={{ id: candidate.titleId }}
-                className="truncate font-semibold text-tx hover:underline"
-              >
-                {candidate.name}
-              </Link>
-            </Tip>
-            {onPass ? (
-              <button
-                type="button"
-                onClick={onPass}
-                aria-label={`Not now for ${candidate.name}`}
-                // 24px tall to hit, pulled back by as much so the line holds.
-                className="-my-1 ml-auto shrink-0 py-1 text-xs text-dim underline-offset-4 hover:text-tx hover:underline"
-              >
-                Not now
-              </button>
-            ) : null}
-          </p>
-          <p className="truncate">
-            {/* Not jade, which says seen, on the one episode that is not. */}
-            <span className="font-mono text-xs text-tx">{at(candidate.next)}</span>
-            {candidate.next.name ? <span className="text-tx"> {candidate.next.name}</span> : null}
-          </p>
-          {/* Two lines rather than a truncation: "but this one is still unseen"
-              is the clause that stops the card reading as a plain carry-on. */}
-          <p className="line-clamp-2 text-xs text-dim">{history}</p>
-        </div>
-      </div>
-    </div>
+    // Keyed by title though the slot is not.
+    <BandCard
+      artKey={candidate.titleId}
+      name={candidate.name}
+      posterPath={candidate.posterPath}
+      backdropPath={candidate.backdropPath}
+    >
+      {/* The name, the episode and the reason each get a line, so a narrow
+          card truncates the episode's name before the show's. "Not now" rides
+          on the name's line for the same reason: a column of its own would
+          take its width from all three. */}
+      <p className="flex items-baseline gap-3">
+        <Tip label={candidate.name}>
+          <Link
+            to="/titles/$id"
+            params={{ id: candidate.titleId }}
+            className="truncate font-semibold text-tx hover:underline"
+          >
+            {candidate.name}
+          </Link>
+        </Tip>
+        {onPass ? (
+          <button
+            type="button"
+            onClick={onPass}
+            aria-label={`Not now for ${candidate.name}`}
+            // 24px tall to hit, pulled back by as much so the line holds.
+            className="-my-1 ml-auto shrink-0 py-1 text-xs text-dim underline-offset-4 hover:text-tx hover:underline"
+          >
+            Not now
+          </button>
+        ) : null}
+      </p>
+      <p className="truncate">
+        {/* Not jade, which says seen, on the one episode that is not. */}
+        <span className="font-mono text-xs text-tx">{at(candidate.next)}</span>
+        {candidate.next.name ? <span className="text-tx"> {candidate.next.name}</span> : null}
+      </p>
+      {/* Two lines rather than a truncation: "but this one is still unseen"
+          is the clause that stops the card reading as a plain carry-on. */}
+      <p className="line-clamp-2 text-xs text-dim">{history}</p>
+    </BandCard>
   );
 }

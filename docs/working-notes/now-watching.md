@@ -1,8 +1,8 @@
 # Now watching
 
-**Status:** In progress — scoped 2026-09-25; all three chunks landed the same
-day, not deployed. What is left is step 4, the owner's, in Tautulli, once they
-are. No migration.
+**Status:** Done 2026-09-25 — scoped, built, deployed and turned on the same
+day. Error, the Intro and Credits markers and Server Down have not fired yet,
+and are read from the API's log the first time they do. No migration.
 
 The wall's band says what to watch next from the record, and while something
 is playing it says the wrong thing: "you stopped after S17E48 four days ago"
@@ -165,6 +165,12 @@ above to Tautulli's webhook agent, then play something for a few minutes.
 One payload of each action is read from the API's log on the box, and
 anything that differs from the source reading goes into
 [ingest-architecture.md](ingest-architecture.md) § Tautulli specifics.
+
+Done 2026-09-25 for Start, Pause, Resume and Stop, with nothing that differs.
+The public answer followed each within one poll — playing, paused with its
+offset held, playing again, gone — and the stop recorded its play. The log
+names what was read rather than the payload, so the fields were measured by
+what they did.
 
 ## Not in this arc
 

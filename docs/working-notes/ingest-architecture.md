@@ -325,6 +325,16 @@ groups rows belonging to one continuous watch (paused Tuesday, finished
 Thursday) and is the natural dedupe key rather than `id`. `grouping=1` makes
 Tautulli collapse them server-side.
 
+**The playback triggers, measured 2026-09-25** against the live install, one
+episode started, paused, resumed and stopped a minute in: `{action}` arrived
+as `play`, `pause`, `resume` and `stop`, the source's own spelling, and every
+body read as a live event, so `{session_key}` and `{user_id}` are there on
+each. `{user_streams}` read as no other session live on all four, which is
+what the source says for one session: counted on anything but a stop. The
+stop 1.6% in was recorded, `completed` false, so it is on the record and in
+no feed of what was watched. Error, the Intro and Credits markers and Server
+Down had not fired yet; see [now-watching.md](now-watching.md).
+
 ## Legacy GUIDs carry the episode number
 
 A legacy agent guid is `com.plexapp.agents.thetvdb://81189/1/1?lang=en`, where

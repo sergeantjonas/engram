@@ -1,7 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
-import { nowWatchingQuery, type TitleSummary } from '../api/titles.ts';
+import type { TitleSummary } from '../api/titles.ts';
 import { useIsOwner } from '../auth/useIsOwner.ts';
 import { ACTIVE_CHIP, ACTIVE_SEG, CHIP, COUNT, SEG } from './chips.ts';
 import {
@@ -17,7 +16,7 @@ import {
 } from './facets.ts';
 import { rememberKind } from './kindMemory.ts';
 import { NextUp } from './NextUp.tsx';
-import { NowWatching } from './NowWatching.tsx';
+import { NowWatching, useNowWatching } from './NowWatching.tsx';
 import { TitleCard } from './TitleCard.tsx';
 
 /** The wall's URL state. `excluded` is `true` or absent: `false` is the default and never written. */
@@ -74,7 +73,7 @@ export function Wall({ titles, search }: { titles: TitleSummary[]; search: WallS
 
   // The band follows the kind as the wall does: a film playing is not shown
   // under Series.
-  const live = useQuery(nowWatchingQuery()).data?.nowWatching ?? [];
+  const live = useNowWatching();
   const playing = kind ? live.filter((session) => session.kind === kind) : live;
 
   const counts = countFacets(ofKind, now);

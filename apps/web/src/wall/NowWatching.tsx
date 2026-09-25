@@ -1,8 +1,44 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { NowWatching as Session } from '../api/titles.ts';
+import { useEffect, useRef } from 'react';
+import { nextUpQuery, nowWatchingQuery, type NowWatching as Session } from '../api/titles.ts';
 import { Tip } from '../shell/Tooltip.tsx';
 import { formatRuntime } from '../title/format.ts';
 import { Band, BandCard, SLOT } from './Band.tsx';
+
+const NONE: readonly Session[] = [];
+
+/** One session at one item: the same key playing the next episode is a new one. */
+const playingAt = (session: Session) =>
+  `${session.id} ${session.name} ${session.episode?.season} ${session.episode?.number}`;
+
+/**
+ * What is playing, with the wall's record asked for again as each session
+ * ends. Its stop is what records the play, so the tiles and Next up are stale
+ * from then on, and nothing else would ask before the next navigation or
+ * focus. A poll that fails keeps the last answer, so it never reads as an end.
+ */
+export function useNowWatching(): readonly Session[] {
+  const queryClient = useQueryClient();
+  const sessions = useQuery(nowWatchingQuery()).data?.nowWatching;
+  const live = useRef<ReadonlySet<string>>(new Set());
+
+  useEffect(() => {
+    if (sessions === undefined) return;
+    const now = new Set(sessions.map(playingAt));
+    const ended = [...live.current].some((at) => !now.has(at));
+    live.current = now;
+    if (ended) {
+      // Next up mounts in the band's place as this runs and is already asking;
+      // that fetch is left to finish rather than started again.
+      const once = { cancelRefetch: false };
+      void queryClient.invalidateQueries({ queryKey: ['titles'] }, once);
+      void queryClient.invalidateQueries({ queryKey: nextUpQuery().queryKey }, once);
+    }
+  }, [sessions, queryClient]);
+
+  return sessions ?? NONE;
+}
 
 /**
  * What is playing on Plex, drawn in Next up's place while it plays: Next up

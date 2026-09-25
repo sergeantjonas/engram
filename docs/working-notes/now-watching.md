@@ -153,7 +153,10 @@ As built, the card is Next up's — the same backdrop, scrim and thumbnail, in
 scrim's measurement carries; over four live backdrops at 1440 and 1920 the
 lowest text reading was `--dim` at 4.80:1. The poll was timed in the page:
 0.2, 30.2 and 60.2 seconds while visible, nothing through 40 hidden seconds,
-and a request the moment the tab came back.
+and a request the moment the tab came back. When a session ends — or its key
+moves on to the next episode — the wall asks for its titles and Next up
+again, since the stop is what records the play and nothing else would ask
+before the next navigation.
 
 ## Step 4 · Turned on and measured
 

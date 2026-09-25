@@ -849,9 +849,12 @@ describe('the wall', () => {
     next: { season: 4, number: 3, name: null },
     continues: true,
   };
-  const playing = (sessions: unknown[]) =>
+  /** One answer per poll, the last repeated. */
+  const playing = (...answers: unknown[][]) =>
     stubApi((url) => {
-      if (url.endsWith('/now-watching')) return json({ nowWatching: sessions });
+      if (url.endsWith('/now-watching')) {
+        return json({ nowWatching: answers.length > 1 ? answers.shift() : answers[0] });
+      }
       if (url.endsWith('/next-up')) return json({ nextUp: [owed] });
       return url.includes('/titles') ? json({ titles: [] }) : json({ isOwner: false });
     });
@@ -868,6 +871,37 @@ describe('the wall', () => {
     expect(
       within(band).getByRole('link', { name: 'House of the Dragon' }).getAttribute('href'),
     ).toBe('/titles/title-1');
+  });
+
+  // Its stop is what records the play, so the tiles are stale from then on.
+  it('asks for the wall again when a session ends, and not while it plays', async () => {
+    const next = { season: 1, number: 2, name: 'The Rogue Prince' };
+    const calls = playing(
+      [session()],
+      [session({ offsetMs: 1_000_000 })],
+      // Plex handing the same key to the next episode.
+      [session({ offsetMs: 1_000_000, episode: next })],
+      [],
+    );
+    const router = await renderAt('/');
+    await screen.findByRole('region', { name: 'Now watching' });
+    const asked = () => calls.filter((call) => call.url.endsWith('/titles')).length;
+    const poll = () =>
+      act(() => router.options.context.queryClient.refetchQueries({ queryKey: ['now-watching'] }));
+
+    const before = asked();
+    await poll();
+    // Drawn, so the answer has been seen and anything it set off has begun.
+    await screen.findByText('49m');
+    expect(asked()).toBe(before);
+
+    await poll();
+    await screen.findByText('S1E2');
+    await waitFor(() => expect(asked()).toBe(before + 1));
+
+    await poll();
+    await screen.findByRole('region', { name: 'Next up' });
+    await waitFor(() => expect(asked()).toBe(before + 2));
   });
 
   it('says a pause in words, and names a first watch without a page to open', async () => {

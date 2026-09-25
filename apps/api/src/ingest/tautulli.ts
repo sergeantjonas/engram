@@ -5,6 +5,7 @@ import {
   titleKey,
   type WatchPrecision,
 } from '@engram/shared';
+import type { LiveEvent, LiveSession } from '../live/sessions.js';
 
 /**
  * A Tautulli webhook body, already authenticated and with `token` stripped.
@@ -40,6 +41,10 @@ export interface TautulliPayload {
   player?: unknown;
   platform?: unknown;
   unixtime?: unknown;
+  session_key?: unknown;
+  user_streams?: unknown;
+  remaining_duration_sec?: unknown;
+  plex_url?: unknown;
 }
 
 export interface PlannedPlayTitle {
@@ -176,17 +181,12 @@ function progressOf(
   };
 }
 
-/**
- * Turns one Tautulli Playback Stop into the rows it implies.
- *
- * Pure: no database, no network, no clock.
- *
- * Every play it can parse is planned, including one that stopped seconds in.
- * A partial play is a fact like any other, `watch_state.seen` is `bool_or` over
- * `completed` so it marks nothing watched, and the offset it carries is the
- * thing the nightly library walk can never report.
- */
-export function planTautulliPlay(payload: TautulliPayload): TautulliPlan {
+type Identity =
+  | { ok: true; kind: TitleKind; ids: ExternalIds; key: string; name: string }
+  | { ok: false; reason: string };
+
+/** Which title a playback trigger is about, keyed the way the record keys it. */
+function identify(payload: TautulliPayload): Identity {
   const mediaType = text(payload.media_type);
   const kind = mediaType === null ? undefined : KIND_BY_MEDIA_TYPE[mediaType];
   // Music and clips share this webhook and have no place in this record.
@@ -207,6 +207,43 @@ export function planTautulliPlay(payload: TautulliPayload): TautulliPlan {
   const name =
     kind === 'show' ? text(payload.show_name) : (text(payload.title) ?? text(payload.episode_name));
   if (name === null) return { ok: false, reason: 'no title name' };
+
+  return { ok: true, kind, ids, key, name };
+}
+
+/**
+ * An episode's place in its show. Gated on the kind, never on whether these
+ * arrived: on a film they are the string "0" rather than empty, and a parser
+ * testing for presence mints a phantom S0E0 for every movie.
+ */
+function placeOf(payload: TautulliPayload): { season: number; number: number } | null {
+  const season = digits(payload.season_num);
+  const number = digits(payload.episode_num);
+  if (
+    season === null ||
+    number === null ||
+    !Number.isInteger(season) ||
+    !Number.isInteger(number)
+  ) {
+    return null;
+  }
+  return { season, number };
+}
+
+/**
+ * Turns one Tautulli Playback Stop into the rows it implies.
+ *
+ * Pure: no database, no network, no clock.
+ *
+ * Every play it can parse is planned, including one that stopped seconds in.
+ * A partial play is a fact like any other, `watch_state.seen` is `bool_or` over
+ * `completed` so it marks nothing watched, and the offset it carries is the
+ * thing the nightly library walk can never report.
+ */
+export function planTautulliPlay(payload: TautulliPayload): TautulliPlan {
+  const identity = identify(payload);
+  if (!identity.ok) return identity;
+  const { kind, ids, key, name } = identity;
 
   // Refused rather than dated from the clock, because the instant is half of
   // the event id: without it every redelivery of one stop would mint a new id
@@ -265,19 +302,9 @@ export function planTautulliPlay(payload: TautulliPayload): TautulliPlan {
     };
   }
 
-  // Gated on `media_type`, never on whether these arrived: on a film they are
-  // the string "0" rather than empty, and a parser testing for presence mints
-  // a phantom S0E0 for every movie.
-  const season = digits(payload.season_num);
-  const number = digits(payload.episode_num);
-  if (
-    season === null ||
-    number === null ||
-    !Number.isInteger(season) ||
-    !Number.isInteger(number)
-  ) {
-    return { ok: false, reason: 'episode has no season or number' };
-  }
+  const place = placeOf(payload);
+  if (place === null) return { ok: false, reason: 'episode has no season or number' };
+  const { season, number } = place;
 
   const slot = episodeKey({ title: { kind, ids }, season, episode: number });
   // Unreachable while the title keyed, and cheaper to satisfy than to explain.
@@ -334,4 +361,90 @@ export function readAction(payload: TautulliPayload): ActionReading {
   const action = text(payload.action);
   if (action === null) return { known: false, action: '(unreadable)' };
   return isTautulliAction(action) ? { known: true, action } : { known: false, action };
+}
+
+export type LiveReading = { ok: true; event: LiveEvent } | { ok: false; reason: string };
+
+/** A count Tautulli reports, which is only a count if it is a whole number. */
+function count(value: unknown): number | null {
+  const parsed = digits(value);
+  return parsed !== null && Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+/**
+ * The one place a link from the payload is allowed to go. The body is
+ * authenticated, but it is still a string the band would put in an `href`.
+ */
+const PLEX_APP_ORIGIN = 'https://app.plex.tv/';
+
+/**
+ * One trigger, as a change to what is live.
+ *
+ * Pure, like the play's plan. A stop is read here as well as planned as a
+ * play: this says the session ended, the plan says what it added to the
+ * record.
+ */
+export function readLiveEvent(action: TautulliAction, payload: TautulliPayload): LiveReading {
+  const unixtime = digits(payload.unixtime);
+  if (unixtime === null || unixtime <= 0) return { ok: false, reason: 'no unixtime' };
+  const at = unixtime * 1000;
+
+  if (action === 'intdown') return { ok: true, event: { kind: 'server-down', at } };
+
+  const sessionKey = text(payload.session_key);
+  if (sessionKey === null) return { ok: false, reason: 'no session key' };
+  const viewer = text(payload.user_id);
+  if (viewer === null) return { ok: false, reason: 'no viewer' };
+
+  // `{user_streams}` counts the viewer's live sessions, and leaves the
+  // session out only on a stop: Tautulli filters it from the count for
+  // `on_stop` alone, to avoid racing its own database. Every other trigger,
+  // an error included, counts it.
+  const streams = count(payload.user_streams);
+  const othersLive =
+    streams === null ? null : action === 'stop' ? streams : Math.max(streams - 1, 0);
+
+  if (action === 'stop' || action === 'error') {
+    return { ok: true, event: { kind: 'end', sessionKey, viewer, at, othersLive } };
+  }
+
+  const identity = identify(payload);
+  if (!identity.ok) return identity;
+
+  let episode: LiveSession['episode'] = null;
+  if (identity.kind === 'show') {
+    const place = placeOf(payload);
+    if (place === null) return { ok: false, reason: 'episode has no season or number' };
+    episode = { ...place, name: text(payload.episode_name) };
+  }
+
+  // Milliseconds beside seconds again, as in the play's progress.
+  const durationSec = digits(payload.duration_sec);
+  const offsetMs = digits(payload.view_offset);
+  const remainingSec =
+    digits(payload.remaining_duration_sec) ??
+    (durationSec !== null && offsetMs !== null ? durationSec - offsetMs / 1000 : null);
+  const plexUrl = text(payload.plex_url);
+
+  return {
+    ok: true,
+    event: {
+      kind: 'update',
+      action,
+      session: {
+        sessionKey,
+        viewer,
+        titleKey: identity.key,
+        kind: identity.kind,
+        name: identity.name,
+        episode,
+        offsetMs: offsetMs === null ? 0 : Math.max(offsetMs, 0),
+        durationMs: durationSec === null || durationSec <= 0 ? null : durationSec * 1000,
+        at,
+        plexUrl: plexUrl?.startsWith(PLEX_APP_ORIGIN) === true ? plexUrl : null,
+      },
+      remainingSec,
+      othersLive,
+    },
+  };
 }

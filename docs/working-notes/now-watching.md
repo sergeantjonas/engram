@@ -1,7 +1,7 @@
 # Now watching
 
-**Status:** In progress — scoped 2026-09-25; chunk 1 landed the same day, not
-deployed. Three chunks, one commit each, in order, then a step that is the
+**Status:** In progress — scoped 2026-09-25; chunks 1 and 2 landed the same
+day, not deployed. Three chunks, one commit each, in order, then a step that is the
 owner's, in Tautulli, once chunks 1 and 2 are deployed. No migration.
 
 The wall's band says what to watch next from the record, and while something
@@ -53,7 +53,7 @@ step 4 measures that.
 - **`{session_key}`** identifies the session. **`{user_streams}`** is how
   many sessions the same Tautulli user has live at that moment — excluding the
   stopping one on a `stop`, which Tautulli filters out to avoid racing its own
-  database.
+  database, and on nothing else: an `error` counts its own session.
 - **`{view_offset}`** in milliseconds, **`{remaining_duration_sec}`** in
   seconds (`duration_sec − progress_duration_sec`), and **`{unixtime}`** for
   when the notification fired.
@@ -75,20 +75,27 @@ payload gives them, the season and episode, `playing` or `paused`, the offset
 and the instant it was true at, and an expiry. A pure function takes the
 current entries, one event and nothing else, and returns the next entries:
 
-- **`stop` and `error` remove the session; `intdown` removes every one.**
+- **`stop` and `error` remove the session; `intdown` removes every one.** The
+  record of which sessions ended survives `intdown`.
 - **Every other playback action writes the entry.** `pause` leaves it paused,
   `play` and `resume` playing; a marker or anything else keeps the state it
   found, and a session first seen through one is playing.
 - **An event older than the entry is dropped**, by `unixtime`, so a late
-  redelivery cannot rewind the band.
-- **`user_streams` bounds the entries.** A `stop` answering `0` leaves nothing
-  live. Any other event answering `n` keeps the entry it wrote and the `n − 1`
-  others seen most recently, and drops the rest, so a Stop that never arrived
-  is corrected by the next thing the owner plays.
+  redelivery cannot rewind the band. An ended session's key is remembered, with
+  the later of its stops, for the same reason — a pause delivered after its
+  own stop must not bring it back. A key Plex hands out again is told apart by
+  its later instant, so the hour it is kept for only bounds the memory.
+- **`user_streams` bounds the entries.** Read as how many of the viewer's
+  other sessions are live — the count itself on a `stop`, one fewer on
+  anything else — it keeps that many of theirs seen most recently and drops
+  the rest, so a Stop that never arrived is corrected by the next thing the
+  owner plays. Per viewer, because Tautulli counts per viewer and the
+  allowlist is a list. A count describes its own instant, so a session heard
+  from after the event is never dropped by it.
 - **Entries expire.** A playing one at its instant plus
-  `remaining_duration_sec` plus five minutes, a paused one an hour after the
-  pause. An expired entry is left out of the read rather than swept on a
-  timer.
+  `remaining_duration_sec` plus five minutes, a paused one — or one whose
+  runtime is unknown — an hour after it was last heard from. An expired entry
+  is left out of the read and swept by the next event, never on a timer.
 - **A payload with no `action` is a `stop`**; one whose `action` cannot be
   read is unknown, never a stop. Only Playback Stop is turned on today, so
   the receiver can ship before the template changes — and has to:
@@ -111,10 +118,15 @@ can be turned on without harm, before chunk 2 exists.
 
 ## Chunk 2 · Live sessions and `GET /now-watching`
 
-API only. The model above as a pure function in `apps/api/src/live/`, with the
-clock passed in; its entries held by an object `buildApp` creates, so each
-test app starts empty; the receiver hands it every owner event, `stop`
-included, after the record's write. `GET /now-watching` on the open list: each
+Landed 2026-09-25. API only. The model above as a pure function in
+[live/sessions.ts](../../apps/api/src/live/sessions.ts), with the clock passed
+in; its entries held by an object `buildApp` creates, so each test app starts
+empty; the receiver hands it every owner event, `stop` included, ahead of the
+record's write, so a write that fails cannot leave the session showing.
+`readLiveEvent` in [tautulli.ts](../../apps/api/src/ingest/tautulli.ts) reads
+the payload and shares the title's identity with the play's plan. A stop from
+a template without `session_key` still records its play, and warns that it
+could not be read as a live event. `GET /now-watching` on the open list: each
 live entry resolved to a stored title through `titleKey()` for its id, name
 and poster, and answered with the payload's names alone while the title is not
 stored yet — the Stop is what creates it. `plex_url` is passed through only

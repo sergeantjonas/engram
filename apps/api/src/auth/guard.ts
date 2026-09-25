@@ -59,6 +59,9 @@ const OPEN_ROUTES = new Set([
   // Every title's dated plays at once, which discloses nothing the feeds above
   // do not.
   'GET /history',
+  // What is playing right now, which the owner chose to show: the title, the
+  // episode and how far in, and nothing about the device or the viewer.
+  'GET /now-watching',
   // Tautulli has no cookie jar, so its own shared secret is what
   // authenticates it — checked in the handler, not here. Open by method and
   // pattern together, so nothing else about /webhooks is opened with it.

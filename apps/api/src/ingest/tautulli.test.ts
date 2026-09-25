@@ -3,6 +3,7 @@ import {
   COMPLETION_THRESHOLD,
   planTautulliPlay,
   readAction,
+  readLiveEvent,
   type TautulliPayload,
 } from './tautulli.js';
 
@@ -309,6 +310,95 @@ describe('readAction', () => {
     expect(readAction(episode({ action: 'concurrent' }))).toEqual({
       known: false,
       action: 'concurrent',
+    });
+  });
+});
+
+describe('readLiveEvent', () => {
+  const live = (over: Record<string, unknown> = {}): TautulliPayload =>
+    episode({
+      session_key: '12',
+      user_streams: '1',
+      remaining_duration_sec: '3920',
+      plex_url: 'https://app.plex.tv/desktop#!/server/abc/details?key=%2Flibrary%2Fmetadata%2F1',
+      ...over,
+    });
+
+  it('reads a playback trigger as where the session is', () => {
+    const reading = readLiveEvent('play', live());
+    expect(reading).toMatchObject({
+      ok: true,
+      event: {
+        kind: 'update',
+        action: 'play',
+        remainingSec: 3920,
+        othersLive: 0,
+        session: {
+          sessionKey: '12',
+          titleKey: 'show:tvdb:371572',
+          kind: 'show',
+          episode: { season: 1, number: 1 },
+          plexUrl: expect.stringMatching(/^https:\/\/app\.plex\.tv\//),
+        },
+      },
+    });
+  });
+
+  it('reads a stop and an error both as the session ending', () => {
+    for (const action of ['stop', 'error'] as const) {
+      expect(readLiveEvent(action, live())).toMatchObject({
+        ok: true,
+        event: { kind: 'end', sessionKey: '12' },
+      });
+    }
+  });
+
+  // Tautulli leaves the stopping session out of its count on a stop, and on
+  // nothing else.
+  it('counts the other sessions the way each trigger reports them', () => {
+    const others = (action: 'play' | 'stop' | 'error') => {
+      const reading = readLiveEvent(action, live({ user_streams: '2' }));
+      return reading.ok && reading.event.kind !== 'server-down' ? reading.event.othersLive : null;
+    };
+    expect(others('play')).toBe(1);
+    expect(others('error')).toBe(1);
+    expect(others('stop')).toBe(2);
+  });
+
+  it('reads a film as no episode, whatever its season and number say', () => {
+    const reading = readLiveEvent('play', film({ session_key: '12' }));
+    expect(reading).toMatchObject({
+      ok: true,
+      event: { session: { kind: 'movie', titleKey: 'movie:tmdb:1311031', episode: null } },
+    });
+  });
+
+  it('works out the runtime left when the payload does not say', () => {
+    const reading = readLiveEvent('play', live({ remaining_duration_sec: '' }));
+    expect(reading.ok && reading.event.kind === 'update' && reading.event.remainingSec).toBe(
+      3938 - 18,
+    );
+  });
+
+  it('reads the server going down from a body that names no session', () => {
+    expect(readLiveEvent('intdown', { action: 'intdown', unixtime: '1790018788' })).toEqual({
+      ok: true,
+      event: { kind: 'server-down', at: 1_790_018_788_000 },
+    });
+  });
+
+  // The band would put it in an `href`, so only Plex's own app gets through.
+  it('drops a link that does not go to app.plex.tv', () => {
+    const reading = readLiveEvent('play', live({ plex_url: 'javascript:alert(1)' }));
+    expect(reading.ok && reading.event.kind === 'update' && reading.event.session.plexUrl).toBe(
+      null,
+    );
+  });
+
+  it('refuses a trigger with no session to key it on', () => {
+    expect(readLiveEvent('play', live({ session_key: '' }))).toEqual({
+      ok: false,
+      reason: 'no session key',
     });
   });
 });

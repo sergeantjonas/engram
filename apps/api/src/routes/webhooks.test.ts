@@ -189,9 +189,9 @@ describe('POST /webhooks/tautulli', () => {
     });
 
     expect(response.statusCode).toBe(204);
-    expect(logged).toEqual([
+    expect(logged).toContainEqual(
       expect.objectContaining({ reason: 'no tvdb id', keys: expect.any(Array) }),
-    ]);
+    );
     // Field names, never values: a body this could not read is still a
     // record of what somebody watched.
     expect(JSON.stringify(logged)).not.toContain('Something Private');
@@ -357,7 +357,7 @@ describe('POST /webhooks/tautulli', () => {
     });
 
     expect(response.statusCode).toBe(204);
-    expect(logged).toContainEqual({ action: 'intdown' });
+    expect(logged).toContainEqual({ action: 'intdown', read: true });
     expect(logged).not.toContainEqual(expect.objectContaining({ viewer: null }));
     expect(stub.inserted).toEqual([]);
   });

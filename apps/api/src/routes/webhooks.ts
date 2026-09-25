@@ -2,8 +2,9 @@ import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
-import { planTautulliPlay, readAction } from '../ingest/tautulli.js';
+import { planTautulliPlay, readAction, readLiveEvent } from '../ingest/tautulli.js';
 import { storeTautulliPlay } from '../ingest/tautulli-store.js';
+import type { LiveSessions } from '../live/sessions.js';
 
 /**
  * Constant time, and length-guarded because `timingSafeEqual` throws on a
@@ -21,14 +22,19 @@ function secretMatches(offered: string | undefined, want: string): boolean {
 /**
  * Tautulli's webhook: the freshness half of ingest.
  *
- * Authenticate, check whose play it is, read which trigger sent it, plan a
- * stop, write, answer. Correctness is
+ * Authenticate, check whose play it is, read which trigger sent it, move
+ * what is live, plan a stop, write, answer. Correctness is
  * the nightly library walk's job — this is idempotent on
  * `(source, source_event_id)` precisely so the two can overlap freely — which
  * is why nothing here refuses a body it cannot use. A play this drops is a
  * play the walk still finds.
  */
-export function registerWebhookRoutes(app: FastifyInstance, config: Config, db: Database): void {
+export function registerWebhookRoutes(
+  app: FastifyInstance,
+  config: Config,
+  db: Database,
+  live: LiveSessions,
+): void {
   app.post('/webhooks/tautulli', async (request, reply) => {
     const body = request.body;
     const fields =
@@ -84,7 +90,12 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config, db: 
     // trigger with no session to take a `{user_id}` from, so it can never pass
     // the check, and it names nothing anybody watched.
     if (reading.known && reading.action === 'intdown') {
-      request.log.info({ action: reading.action }, 'tautulli server event received');
+      const down = readLiveEvent(reading.action, fields);
+      if (down.ok) live.apply(down.event);
+      request.log.info(
+        { action: reading.action, read: down.ok ? true : down.reason },
+        'tautulli server event received',
+      );
       return reply.code(204).send();
     }
 
@@ -125,11 +136,35 @@ export function registerWebhookRoutes(app: FastifyInstance, config: Config, db: 
       return reply.code(204).send();
     }
 
+    // Every trigger moves what is live, a stop included, and ahead of the
+    // record's write, so a write that fails cannot leave the session showing.
+    const moved = readLiveEvent(reading.action, rest);
+    if (moved.ok) {
+      live.apply(moved.event);
+    } else {
+      // Field names and never values, as for a play that could not be planned.
+      request.log.warn(
+        { action: reading.action, reason: moved.reason, keys: Object.keys(rest) },
+        'tautulli live event not read',
+      );
+    }
+
     // Only a stop is a play. Every other trigger says where a session is, and
     // planned as a play it would land in the record as a play of its own, in
     // a table nothing is ever taken back out of.
     if (reading.action !== 'stop') {
-      request.log.info({ action: reading.action }, 'tautulli playback event received');
+      const update = moved.ok && moved.event.kind === 'update' ? moved.event : null;
+      request.log.info(
+        {
+          action: reading.action,
+          title: update?.session.titleKey ?? null,
+          season: update?.session.episode?.season ?? null,
+          episode: update?.session.episode?.number ?? null,
+          othersLive: update?.othersLive ?? null,
+          live: live.now().length,
+        },
+        'tautulli playback event received',
+      );
       return reply.code(204).send();
     }
 

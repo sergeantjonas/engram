@@ -4,9 +4,11 @@ import { registerOwnerGuard } from './auth/guard.js';
 import type { Config } from './config.js';
 import type { Database } from './db/client.js';
 import type { GithubClient } from './github/client.js';
+import { createLiveSessions, type LiveSessions } from './live/sessions.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerEpisodeRoutes } from './routes/episodes.js';
 import { registerExportRoutes } from './routes/export.js';
+import { registerNowWatchingRoutes } from './routes/now-watching.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerTitleRoutes } from './routes/titles.js';
 import { registerWatchEventRoutes } from './routes/watch-events.js';
@@ -23,6 +25,11 @@ export interface AppDeps {
   tmdb: TmdbClient | null;
   /** Never null: its credentials are required configuration, checked at boot. */
   github: GithubClient;
+  /**
+   * What is playing. Held in memory for the life of the app, so each app
+   * starts with nothing live; a test that needs the clock passes its own.
+   */
+  live?: LiveSessions;
 }
 
 /**
@@ -30,7 +37,13 @@ export interface AppDeps {
  * singletons, so a test can hand it a stub and drive routes through
  * `app.inject()` without a database, a network or an open port.
  */
-export function buildApp({ config, db, tmdb, github }: AppDeps): FastifyInstance {
+export function buildApp({
+  config,
+  db,
+  tmdb,
+  github,
+  live = createLiveSessions(),
+}: AppDeps): FastifyInstance {
   const app = Fastify({
     logger: {
       level: config.LOG_LEVEL,
@@ -89,10 +102,11 @@ export function buildApp({ config, db, tmdb, github }: AppDeps): FastifyInstance
   registerAuthRoutes(app, db, config, github);
   registerEpisodeRoutes(app, db);
   registerExportRoutes(app, db);
+  registerNowWatchingRoutes(app, db, live);
   registerSearchRoutes(app, db, tmdb);
   registerTitleRoutes(app, db, tmdb);
   registerWatchEventRoutes(app, db);
-  registerWebhookRoutes(app, config, db);
+  registerWebhookRoutes(app, config, db, live);
 
   return app;
 }

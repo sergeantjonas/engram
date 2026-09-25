@@ -5,12 +5,18 @@ on:
     branches: [main]
   pull_request:
 
-# A second push to main while the first is still publishing would race two
-# builds onto the same moving tag. Cancelling the older one is safe: every
-# deploy pins a sha, so only `main` is contested and only the newest is wanted.
+# Runs on main queue rather than cancel. A run cancelled between its two
+# pushes leaves the api and web `main` tags naming different commits, and
+# `main` is what compose.prod.yaml falls back to. Only one run waits per group
+# and a newer push replaces it, so the newest commit still wins. A pull
+# request has nothing to publish, so its older run is cancelled.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Read-only unless a job asks for more; `images` is the only one that does.
+permissions:
+  contents: read
 
 env:
   REGISTRY: ghcr.io
@@ -20,12 +26,19 @@ env:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # A hung run would otherwise hold main's queue for the six-hour default.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Nothing here pushes with git, and every later step runs dependency
+          # code that could otherwise read the token out of .git/config.
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          # volta's pin, so CI runs the Node the code is developed on.
+          node-version-file: package.json
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # The same command the owner runs before committing: typecheck both
@@ -55,11 +68,14 @@ jobs:
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v4
         with:
@@ -92,9 +108,10 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=main
 
-      # Built and smoked before either is pushed, so a commit's sha- tag can
-      # never name an API with no web image beside it. The second build of
-      # each is a cache hit and costs almost nothing.
+      # Built and smoked before either is pushed, so a failing smoke publishes
+      # neither. The pushes are still two steps, which is why deploy.sh checks
+      # both sha- manifests rather than trusting this. The second build of each
+      # is a cache hit and costs almost nothing.
       - name: build api
         uses: docker/build-push-action@v6
         with:
@@ -120,18 +137,46 @@ jobs:
           cache-from: type=gha,scope=engram-web
           cache-to: type=gha,scope=engram-web,mode=max
 
-      # The entrypoint has to be overridden: the real one runs migrations
-      # first, against a database this job does not have, and would fail for
-      # a reason that has nothing to do with the image being sound.
+      # The real entrypoint against a throwaway Postgres of the version the box
+      # runs: every migration applied from empty by the migrator the image
+      # carries, then config parsed and the server listening. A migration that
+      # will not apply to an empty database, or a boot-path import the build
+      # dropped, fails here rather than as a crash-loop there. One that only
+      # breaks on existing rows still reaches the box; that is the backup's job.
       - name: smoke api
         run: |
-          docker run --rm --entrypoint node engram-api:smoke \
-            -e "import('./dist/app.js').then(m => { if (typeof m.buildApp !== 'function') throw new Error('buildApp missing'); })"
-          # The migration runner reads SQL from /app/drizzle, and nothing else
-          # here exercises it — the entrypoint is overridden above, so a
-          # missing directory would first be discovered on a production boot.
-          docker run --rm --entrypoint sh engram-api:smoke \
-            -c 'test -f /app/drizzle/meta/_journal.json'
+          set -euo pipefail
+          docker network create api-smoke >/dev/null
+          trap 'docker logs api-smoke || true; docker rm -f api-smoke pg-smoke >/dev/null || true; docker network rm api-smoke >/dev/null || true' EXIT
+
+          docker run -d --name pg-smoke --network api-smoke \
+            -e POSTGRES_USER=engram -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=engram \
+            postgres:18-alpine >/dev/null
+          # Over TCP: the image initialises behind a socket-only server first,
+          # and a socket check passes against that before the real one is up.
+          pg=
+          for _ in $(seq 1 30); do
+            if docker exec pg-smoke pg_isready -q -h 127.0.0.1 -U engram; then pg=1; break; fi
+            sleep 1
+          done
+          test -n "$pg" || { docker logs pg-smoke || true; echo "postgres never became ready" >&2; exit 1; }
+
+          docker run -d --name api-smoke --network api-smoke \
+            -e DATABASE_URL=postgres://engram:smoke@pg-smoke:5432/engram \
+            -e WEB_ORIGIN=https://engram.invalid \
+            -e GITHUB_OAUTH_CLIENT_ID=smoke -e GITHUB_OAUTH_CLIENT_SECRET=smoke \
+            -e OWNER_GITHUB_USER_ID=1 \
+            -e WEBHOOK_SECRET="$(openssl rand -hex 16)" \
+            -e OAUTH_STATE_SECRET="$(openssl rand -hex 32)" \
+            engram-api:smoke >/dev/null
+
+          # `/ready`, not `/health`: it is the one that queries Postgres.
+          ready=
+          for _ in $(seq 1 30); do
+            if docker exec api-smoke node -e "fetch('http://127.0.0.1:2012/ready').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))" 2>/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          test -n "$ready" || { echo "api never became ready" >&2; exit 1; }
 
       - name: smoke web
         run: |

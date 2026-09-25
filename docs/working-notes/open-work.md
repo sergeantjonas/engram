@@ -297,33 +297,17 @@ the viewer wants of a title. The SPA calls all four.
    Wall names no longer cut at a colon ([web-design.md](web-design.md),
    amended 2026-09-23) are deployed too, checked against the live bundle
    2026-09-24.
-7. **"Now watching"** — not started. The only part settled is which API
-   answers it: Plex's `/status/sessions`, verified 2026-09-21 against the live
-   server, which returns every current session with its user, player, platform
-   and view offset. Tautulli is not involved and would only add a dependency
-   for something the server already says — reasoning in
-   [ingest-architecture.md](ingest-architecture.md) § Webhooks are an
-   optimization.
-
-   Three things make it unlike anything built so far. **It stores nothing**: a
-   live session is true for ten minutes and has no place in an append-only
-   record, so this is the first route with no table behind it and the first
-   screen state that cannot be rebuilt. **It needs a Plex token on the box**,
-   which production does not have — `PLEX_TOKEN` is a tools-only variable and
-   the deploy's documented environment omits it deliberately — and the token
-   has to stay server-side, so the SPA polls Engram and Engram polls Plex.
-   **The server is shared**, so the response is filtered by viewer again, and
-   this time on `PLEX_ACCOUNT_IDS`: `/status/sessions` speaks Plex's own
-   namespace, where the owner is `1`, not Tautulli's `7597797`. That is the
-   third source with its own account namespace and the third chance to use the
-   wrong one.
-
-   Two unknowns to settle before scoping. Whether the netcup box can reach the
-   Plex server at all: the tools find it through plex.tv discovery rather than
-   a configured URL, and that has only ever run from the laptop. And the poll
-   interval, which is the whole cost of the feature — nothing else in the app
-   asks a question on a timer. Surface, and the band it competes with, in
-   [web-design.md](web-design.md) § Still open.
+7. **"Now watching"** — scoped 2026-09-25 in
+   [now-watching.md](now-watching.md), nothing built. The band that replaces
+   Next up while a session is live, fed by Tautulli's webhook rather than by
+   polling Plex: `/status/sessions` answers only to the owner's account token,
+   which administers the whole server and the plex.tv account, and the push
+   needs no secret the box does not already hold. That settles both unknowns
+   the first scoping left — the box never has to reach Plex, and the only
+   poll is the SPA asking Engram every 30 seconds. Nothing is stored; the
+   route is public. Three chunks — the receiver reading `action`, live
+   sessions in memory behind `GET /now-watching`, the band — and then the
+   owner turns the triggers on in Tautulli.
 8. ~~**Add search**~~ — done 2026-09-24, built and deployed. Scoped
    2026-09-23 in [add-search.md](add-search.md).
    `/add` searched by name only: one page of twenty mixed results from

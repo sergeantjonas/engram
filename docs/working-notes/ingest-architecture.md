@@ -162,11 +162,15 @@ give, none of which are about being authoritative:
 It also needs no key from us: Tautulli posts to Engram and `WEBHOOK_SECRET`
 authenticates it, so nothing of ours travels over 8181 at all.
 
-**"Now watching" needs neither.** Plex answers `/status/sessions` directly
-with the account token Engram already holds — current sessions with user,
-player, platform and view offset. Verified 2026-09-21. Reaching for Tautulli
-to display live playback would add a dependency for something the server
-already says.
+**"Now watching" comes from Tautulli after all.** Plex answers
+`/status/sessions` directly — current sessions with user, player, platform
+and view offset, verified 2026-09-21 — which first read as a reason to leave
+Tautulli out of it. Reversed 2026-09-25: it answers only to a token on the
+box, and the only token that reads it is the owner's account token, which
+administers the whole server and the plex.tv account. Tautulli's webhook
+already reaches Engram under `WEBHOOK_SECRET`, so turning on its other
+playback triggers costs no secret at all. Reasoning and the model in
+[now-watching.md](now-watching.md).
 
 ## Whose history this is
 

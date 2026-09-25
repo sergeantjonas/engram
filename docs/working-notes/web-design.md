@@ -598,7 +598,10 @@ which is also where the fourth rail item below got its answer.
 - **Responsive behaviour.** Everything was judged at desktop width. The wall's
   `auto-fill` carries itself down; the title page's figure row and the rail
   have no small-screen design.
-- **"Now watching".** Nothing in the mockup, and the first surface that would
+- ~~**"Now watching".**~~ Answered 2026-09-25 in
+  [now-watching.md](now-watching.md): it replaces Next up while a session is
+  live, and the Play in Plex link comes from Tautulli's `{plex_url}`. Built
+  it moves into § 01. Nothing in the mockup, and the first surface that would
   show something the record does not contain — a live Plex session is true for
   ten minutes and is never written down. It competes with Next up for the one
   band above the chips, and while something is playing the two say opposite

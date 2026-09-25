@@ -51,4 +51,8 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
   type that drifted from the note, two layout offsets, and the cover and
   backfill step the mockup drew — and the nine chunks that close it. Read
   before changing how anything in `apps/web` looks.
+- `now-watching.md` — plan. The band that replaces Next up while something
+  plays, fed by Tautulli's playback triggers and held in memory, and why no
+  Plex token goes on the box for it. Read before touching the Tautulli
+  receiver or the wall's band.
 - `integration-ideas.md` — idea pool. Nothing here is committed to.

@@ -339,7 +339,7 @@ the viewer wants of a title. The SPA calls all four.
    a result or a selection, a pasted IMDb or TMDB link answered with the
    title it names, and a collection opened with its films ticked. Chunk 7,
    search as the owner types, landed 2026-09-24.
-9. **Visual finish** — built 2026-09-24, all nine chunks, not deployed. Scoped
+9. ~~**Visual finish**~~ — done 2026-09-25, all nine chunks built and deployed. Scoped
    the same day in [visual-finish.md](visual-finish.md). A review of the running app against
    [web-design.md](web-design.md) and its mockup, at four widths and measured
    rather than judged by eye: the palette, the wall, the grid and the tint

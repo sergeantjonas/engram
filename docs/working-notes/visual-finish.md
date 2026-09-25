@@ -1,7 +1,7 @@
 # Visual finish
 
-**Status:** Built 2026-09-24 — all nine chunks landed, and five findings left
-out of them taken up since (§ Taken up after); not deployed. Scoped the
+**Status:** Done 2026-09-25 — all nine chunks landed, and five findings left
+out of them taken up since (§ Taken up after); built and deployed. Scoped the
 same day from a review of the running app against
 [web-design.md](web-design.md) and the mockup it was approved from. One commit
 per chunk. No chunk carries a migration or touches the API.

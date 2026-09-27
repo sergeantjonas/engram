@@ -56,6 +56,8 @@ export interface SessionDb {
    * test here while removing far more than it was asked to.
    */
   deletedWhere: unknown[];
+  /** Every `update`, in order, with what it set and the condition it carried. */
+  updated: { set: Record<string, unknown>; where: unknown }[];
   extended: Date[];
 }
 
@@ -83,6 +85,7 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
   const state: SessionDb = {
     deleted: 0,
     deletedWhere: [],
+    updated: [],
     extended: [],
     rows: [],
     executions: [],
@@ -109,16 +112,18 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
           // Awaitable on its own and chainable to `.returning()`, the way
           // drizzle's builder is: a route that wants the row back must not
           // need a different stub from one that does not.
+          // The queued rows are taken by `returning()` rather than here, so an
+          // upsert that never asks for them does not eat the set a later
+          // query queued.
           onConflictDoUpdate: (config: { set?: unknown }) => {
             state.inserted.push({ values, onConflict: 'update', set: config?.set });
-            const answer = state.returns.shift() ?? [];
-            return Object.assign(Promise.resolve(answer), { returning: async () => answer });
+            return Object.assign(Promise.resolve([]), {
+              returning: async () => state.returns.shift() ?? [],
+            });
           },
           // Chainable to `.returning()` like the upsert, because that is how
           // a caller learns whether the row was new: an insert that conflicted
-          // returns nothing. The queued rows are taken by `returning()` rather
-          // than here, so an insert that never asks for them does not eat the
-          // set a later query queued.
+          // returns nothing.
           onConflictDoNothing: () => {
             state.inserted.push({ values, onConflict: 'nothing' });
             return Object.assign(Promise.resolve([]), {
@@ -142,9 +147,15 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
         },
       }),
       update: () => ({
-        set: (values: { expiresAt: Date }) => ({
-          where: async () => {
-            state.extended.push(values.expiresAt);
+        // Chainable to `.returning()` for the same reason as the delete: the
+        // library sweep counts the titles it marked gone.
+        set: (values: Record<string, unknown>) => ({
+          where: (condition: unknown) => {
+            state.updated.push({ set: values, where: condition });
+            if (values.expiresAt instanceof Date) state.extended.push(values.expiresAt);
+            return Object.assign(Promise.resolve([]), {
+              returning: async () => state.returns.shift() ?? [],
+            });
           },
         }),
       }),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  checkComplete,
   type PlexLeaf,
   type PlexLibraryItem,
   type PlexLibrarySection,
@@ -293,5 +294,27 @@ describe('planLibrary', () => {
 
     expect(plan.titles).toEqual([]);
     expect(plan.presence).toEqual([]);
+  });
+});
+
+describe('checkComplete', () => {
+  // A dropped item was still read, so it counts towards the whole library
+  // even though nothing is written for it.
+  it('accepts a plan that places or drops every item the dump counted', () => {
+    const plan = planLibrary([shows(show()), films(film({ Guid: [] }))]);
+    expect(plan.dropped).toHaveLength(1);
+    expect(checkComplete(2, plan)).toEqual({ ok: true });
+  });
+
+  it('refuses a plan short of what the dump counted, and says by how much', () => {
+    const plan = planLibrary([shows(show())]);
+    expect(checkComplete(2, plan)).toEqual({
+      ok: false,
+      reason: 'dump does not add up: it counted 2 item(s), the plan accounts for 1',
+    });
+  });
+
+  it('takes a dump that never counted itself at its word', () => {
+    expect(checkComplete(undefined, planLibrary([shows(show())]))).toEqual({ ok: true });
   });
 });

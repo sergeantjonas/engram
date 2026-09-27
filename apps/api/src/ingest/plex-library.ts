@@ -252,3 +252,25 @@ export function planLibrary(sections: PlexLibrarySection[]): LibraryPlan {
     incomplete,
   };
 }
+
+/**
+ * Whether a plan accounts for every item its dump counted.
+ *
+ * The writer reads absence as removal, so it is only safe over a dump that is
+ * the whole library. The dump counts its own items as it writes them; a plan
+ * that does not account for exactly that many is working from a file that is
+ * not what was walked, and writing it could mark whatever is missing as gone
+ * from disk. A dump that never counted itself has nothing to be checked
+ * against and is taken at its word.
+ */
+export function checkComplete(
+  counted: number | undefined,
+  plan: LibraryPlan,
+): { ok: true } | { ok: false; reason: string } {
+  const placed = plan.presence.length + plan.dropped.length;
+  if (counted === undefined || counted === placed) return { ok: true };
+  return {
+    ok: false,
+    reason: `dump does not add up: it counted ${counted} item(s), the plan accounts for ${placed}`,
+  };
+}

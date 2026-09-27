@@ -159,6 +159,15 @@ the viewer wants of a title. The SPA calls all four.
       Radarr are not overwritten later. It has never fired — the first walk
       found nothing missing — so it is unproven against real removals.
 
+      Scoped 2026-09-27: the walk runs on the Bytesized slot, which already
+      holds the Plex token, and pushes to Engram — the token never goes on
+      netcup. Reasoning in [ingest-architecture.md](ingest-architecture.md)
+      § Where the walk runs. In order: the writer moved out of the CLI so a
+      route can call it; `POST /ingest/plex-library` on its own
+      `INGEST_SECRET`; the dump walking a given Plex URL and posting what it
+      walked; a walker image; a backfill timer on netcup; the container
+      installed on the slot and its first nightly run.
+
    Idempotency is not copied from the history importer. Settled 2026-09-21:
    `onConflictDoNothing` is right for a history row, which never changes, and
    wrong for this source, where a rescan of the same episode is the same claim

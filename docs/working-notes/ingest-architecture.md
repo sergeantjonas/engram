@@ -2,8 +2,8 @@
 
 **Status:** Design — agreed 2026-09-16, extended 2026-09-21 with the library
 walk, the claim-grain rule, owner-only ingest and the measured Tautulli
-payload. Owner-only ingest and the whole Tautulli path are built rather than
-planned. Read before chunk 4.
+payload, and 2026-09-27 with where the nightly walk runs. Owner-only ingest
+and the whole Tautulli path are built rather than planned. Read before chunk 4.
 
 ## Sources
 
@@ -171,6 +171,41 @@ administers the whole server and the plex.tv account. Tautulli's webhook
 already reaches Engram under `WEBHOOK_SECRET`, so turning on its other
 playback triggers costs no secret at all. Reasoning and the model in
 [now-watching.md](now-watching.md).
+
+## Where the walk runs
+
+On Bytesized, beside Plex. Decided 2026-09-27. The walk needs the same
+owner's account token that "Now watching" refused to put on netcup, and it is
+refused here for the same reason: netcup faces the
+internet and hosts a second tenant, and a compromise of either would hand
+over the whole server and the plex.tv account. There is no narrower token to
+issue instead — the server-scoped `accessToken` for an owned server is that
+same string, and another account's token sees its own watched state, not the
+owner's.
+
+So the walk goes to the one machine that already holds the token. It reaches
+Plex on loopback — `http://127.0.0.1:6066/identity` answers 200 from the
+slot's shell, measured 2026-09-27 — so nothing of it crosses the network in
+the clear, and it pushes the dump to Engram over HTTPS. The slot gives each
+user a rootless Docker daemon. Bytesized's terms reserve anything not
+installed by default for staff authorization, which was asked for and given
+on 2026-09-27 for exactly this: one small nightly container reading the
+owner's own library.
+
+- **The push authenticates on `INGEST_SECRET`, not `WEBHOOK_SECRET`.** Both
+  live on the same slot, but they can be rotated apart. Either one, lost,
+  forges history rows and reads nothing. An SSH key into netcup would have
+  been less to build and would be a shell on netcup if lost.
+- **The route writes and does not fetch.** `POST /ingest/plex-library` runs
+  the same planner and writer as `import:library`, including its refusal of a
+  dump that does not account for every item it counted. The TMDB backfills
+  that fill a new title's grid and art stay on netcup, on a timer after the
+  walk.
+- **Weighed and not taken:** the owner's laptop, which already holds the
+  token and runs only when awake.
+
+Still to measure before the container is installed: whether a rootless
+container reaches the host's loopback, and what on the slot can schedule it.
 
 ## Whose history this is
 

@@ -145,11 +145,12 @@ certificate:
 - The first real payloads can be read off this box's own logs, which is what
   the capture was waiting for — no tunnel and no third party, decided
   2026-09-21.
-- The nightly reconcile has somewhere to run — a timer on the box, alongside
-  the backup, rather than a script someone remembers to invoke. That
-  reconcile is the Plex library walk, not a Tautulli pull; the walk moves from
-  a one-time backfill to that timer, which is what keeps it a reconciliation
-  rather than an import.
+- The nightly reconcile has somewhere to push to. That reconcile is the Plex
+  library walk, not a Tautulli pull, and it runs on the Bytesized slot rather
+  than on this box, because the Plex token it needs is not allowed here —
+  see [ingest-architecture.md](ingest-architecture.md) § Where the walk runs.
+  What this box gains is the route it posts to and a timer, alongside the
+  backup, for the TMDB backfills a new title needs.
 
 Owner-only ingest filtering landed 2026-09-21 and is a precondition met
 rather than one outstanding — the server is shared, and a webhook fires for

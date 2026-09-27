@@ -183,11 +183,10 @@ issue instead — the server-scoped `accessToken` for an owned server is that
 same string, and another account's token sees its own watched state, not the
 owner's.
 
-So the walk goes to the one machine that already holds the token. It reaches
-Plex on loopback — `http://127.0.0.1:6066/identity` answers 200 from the
-slot's shell, measured 2026-09-27 — so nothing of it crosses the network in
-the clear, and it pushes the dump to Engram over HTTPS. The slot gives each
-user a rootless Docker daemon. Bytesized's terms reserve anything not
+So the walk goes to the one machine that already holds the token: Tautulli's
+config on the slot carries one, readable by the slot's own user, so a token
+file beside it exposes nothing new. The slot gives each user a rootless
+Docker daemon, and the walk runs in a container on it. Bytesized's terms reserve anything not
 installed by default for staff authorization, which was asked for and given
 on 2026-09-27 for exactly this: one small nightly container reading the
 owner's own library.
@@ -204,8 +203,20 @@ owner's own library.
 - **Weighed and not taken:** the owner's laptop, which already holds the
   token and runs only when awake.
 
-Still to measure before the container is installed: whether a rootless
-container reaches the host's loopback, and what on the slot can schedule it.
+Measured on the slot 2026-09-27, before any of it was built:
+
+- **A container cannot see the host's loopback.** Plex answers
+  `127.0.0.1:6066/identity` to the slot's shell and to no container, under
+  the default network or `--network host` — rootless Docker's host network is
+  its own namespace, not the host's. So the walk reaches Plex the way it does
+  from anywhere else: plex.tv lists the server's connections and the walk
+  takes the HTTPS one. A container reaches that address, over HTTP and HTTPS
+  alike.
+- **A systemd user timer schedules it.** The user has lingering on, so the
+  timer fires while nobody is logged in, and the slot's crontab is never
+  edited.
+- **The slot's own Node is 18**, older than this repository runs on — one
+  more reason the walk ships as an image rather than as scripts.
 
 ## Whose history this is
 

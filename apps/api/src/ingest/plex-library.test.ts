@@ -294,23 +294,35 @@ describe('planLibrary', () => {
 
     expect(plan.titles).toEqual([]);
     expect(plan.presence).toEqual([]);
+    // Still read: the dump counts every section's items, whatever they hold.
+    expect(plan.read).toBe(1);
   });
 });
 
 describe('checkComplete', () => {
   // A dropped item was still read, so it counts towards the whole library
   // even though nothing is written for it.
-  it('accepts a plan that places or drops every item the dump counted', () => {
+  it('accepts a dump whose sections hold every item it counted, dropped ones included', () => {
     const plan = planLibrary([shows(show()), films(film({ Guid: [] }))]);
     expect(plan.dropped).toHaveLength(1);
     expect(checkComplete(2, plan)).toEqual({ ok: true });
   });
 
-  it('refuses a plan short of what the dump counted, and says by how much', () => {
-    const plan = planLibrary([shows(show())]);
+  // The dump counts both copies; presence holds one title.
+  it('accepts a film held in two sections as the two items the dump counted', () => {
+    const plan = planLibrary([films(film()), films(film({ ratingKey: '901' }))]);
+    expect(plan.presence).toHaveLength(1);
+    expect(checkComplete(2, plan)).toEqual({ ok: true });
+  });
+
+  // A dropped episode is not an item, so it cannot stand in for one the body
+  // lost — which would otherwise pass, and sweep that title as gone.
+  it('refuses a short body even when an episode was dropped', () => {
+    const plan = planLibrary([shows(show({ episodes: [leaf({ index: undefined })] }))]);
+    expect(plan.dropped).toHaveLength(1);
     expect(checkComplete(2, plan)).toEqual({
       ok: false,
-      reason: 'dump does not add up: it counted 2 item(s), the plan accounts for 1',
+      reason: 'dump does not add up: it counted 2 item(s), its sections hold 1',
     });
   });
 

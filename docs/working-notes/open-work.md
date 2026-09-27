@@ -164,13 +164,15 @@ the viewer wants of a title. The SPA calls all four.
       netcup. Reasoning in [ingest-architecture.md](ingest-architecture.md)
       § Where the walk runs. In order: ~~the writer moved out of the CLI so a
       route can call it~~ (landed 2026-09-27 as `storeLibrary`, with the
-      truncation check as the pure `checkComplete`); that check counting
-      what the dump counts — it compares items read against titles placed,
-      so a film in two sections is refused and a dropped episode can hide a
-      missing item; `POST /ingest/plex-library` on its own `INGEST_SECRET`;
-      the dump posting what it walked; a walker image; a backfill timer on
-      netcup; the container installed on the slot under a systemd user
-      timer, and its first nightly run.
+      truncation check as the pure `checkComplete`); ~~that check counting
+      what the dump counts~~ (landed 2026-09-27: it held items read against
+      titles placed, so a film in two sections was refused and a dropped
+      episode could hide a missing item; the plan now carries `read`, and
+      the live dump reads 81 of 81); `POST /ingest/plex-library` on its
+      own `INGEST_SECRET`; the dump posting what it walked, and refusing a
+      section Plex lists without a `totalSize` to page against; a walker
+      image; a backfill timer on netcup; the container installed on the
+      slot under a systemd user timer, and its first nightly run.
 
    Idempotency is not copied from the history importer. Settled 2026-09-21:
    `onConflictDoNothing` is right for a history row, which never changes, and

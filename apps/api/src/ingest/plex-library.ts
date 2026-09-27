@@ -100,6 +100,13 @@ export interface LibraryPlan {
   dropped: DroppedItem[];
   /** Shows placed, but with fewer watched episodes than they claim. */
   incomplete: IncompleteShow[];
+  /**
+   * Every item in every section, duplicates included — what the dump's own
+   * count counts, and so the figure `checkComplete` holds it to. Neither
+   * `presence` nor `dropped` is: one merges a film held in two sections, the
+   * other carries episodes as well as items.
+   */
+  read: number;
 }
 
 const KIND_BY_SECTION: Record<string, TitleKind | undefined> = { show: 'show', movie: 'movie' };
@@ -150,7 +157,9 @@ export function planLibrary(sections: PlexLibrarySection[]): LibraryPlan {
     });
   };
 
+  let read = 0;
   for (const section of sections) {
+    read += section.items.length;
     const kind = KIND_BY_SECTION[section.type];
     // Photos and music share the endpoint and have no place in this record.
     if (kind === undefined) continue;
@@ -250,27 +259,29 @@ export function planLibrary(sections: PlexLibrarySection[]): LibraryPlan {
     presence: [...presence],
     dropped,
     incomplete,
+    read,
   };
 }
 
 /**
- * Whether a plan accounts for every item its dump counted.
+ * Whether a plan was made from every item its dump counted.
  *
  * The writer reads absence as removal, so it is only safe over a dump that is
- * the whole library. The dump counts its own items as it writes them; a plan
- * that does not account for exactly that many is working from a file that is
- * not what was walked, and writing it could mark whatever is missing as gone
- * from disk. A dump that never counted itself has nothing to be checked
- * against and is taken at its word.
+ * the whole library. A short walk is refused before this whenever Plex
+ * reports a `totalSize` — the dump throws rather than write a section paged
+ * out short of it — but the file or body can still lose items after the dump
+ * counted them, and
+ * writing what is left would mark whatever is missing as gone from disk. A
+ * dump that never counted itself has nothing to be checked against and is
+ * taken at its word.
  */
 export function checkComplete(
   counted: number | undefined,
   plan: LibraryPlan,
 ): { ok: true } | { ok: false; reason: string } {
-  const placed = plan.presence.length + plan.dropped.length;
-  if (counted === undefined || counted === placed) return { ok: true };
+  if (counted === undefined || counted === plan.read) return { ok: true };
   return {
     ok: false,
-    reason: `dump does not add up: it counted ${counted} item(s), the plan accounts for ${placed}`,
+    reason: `dump does not add up: it counted ${counted} item(s), its sections hold ${plan.read}`,
   };
 }

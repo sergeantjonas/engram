@@ -30,6 +30,7 @@ const plan = (over: Partial<LibraryPlan> = {}): LibraryPlan => ({
   presence: [KEY],
   dropped: [],
   incomplete: [],
+  read: 1,
   ...over,
 });
 

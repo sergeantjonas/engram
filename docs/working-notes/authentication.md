@@ -2,7 +2,8 @@
 
 **Status:** Shipped — the whole build order landed 2026-09-17/18, and the
 read/write split on 2026-09-19; the open-routes list gained the title's
-activity page on 2026-09-22. Read before changing any auth code; the
+activity page on 2026-09-22, and the library walk's ingest route on
+2026-09-27. Read before changing any auth code; the
 reasoning here is why it is shaped the way it is.
 
 Engram has exactly one human user, and exactly one of them may write. The
@@ -69,6 +70,13 @@ The session cookie authenticates a browser. Webhook routes keep
 `WEBHOOK_SECRET`: Tautulli and Sonarr are machines with no browser, no
 redirect to follow and no cookie jar. Neither mechanism should be made to cover
 the other's caller.
+
+The nightly library walk is a machine too, and has a secret of its own:
+`POST /ingest/plex-library` takes `INGEST_SECRET` as a bearer header, checked
+before the body is read, and refuses a walk of any server but
+`PLEX_SERVER_ID`. Separate from `WEBHOOK_SECRET` though both live on the same
+slot, so that either can be rotated alone — see
+[ingest-architecture.md](ingest-architecture.md) § Where the walk runs.
 
 `/health` and `/ready` stay unauthenticated — a reverse proxy has to reach them
 to decide whether to route here at all.

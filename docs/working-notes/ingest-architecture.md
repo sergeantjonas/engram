@@ -2,8 +2,9 @@
 
 **Status:** Design — agreed 2026-09-16, extended 2026-09-21 with the library
 walk, the claim-grain rule, owner-only ingest and the measured Tautulli
-payload, and 2026-09-27 with where the nightly walk runs. Owner-only ingest
-and the whole Tautulli path are built rather than planned. Read before chunk 4.
+payload, and 2026-09-27 with where the nightly walk runs. Owner-only ingest,
+the whole Tautulli path and the walk's ingest route are built rather than
+planned. Read before chunk 4.
 
 ## Sources
 
@@ -197,7 +198,10 @@ owner's own library.
   been less to build and would be a shell on netcup if lost.
 - **The route writes and does not fetch.** `POST /ingest/plex-library` runs
   the same planner and writer as `import:library`, including its refusal of a
-  dump that does not account for every item it counted. The TMDB backfills
+  dump that does not account for every item it counted. It also refuses a
+  walk of any server but `PLEX_SERVER_ID`: the token reaches every server
+  shared with the account, and a walk of one of those would fill the wall
+  with somebody else's library and sweep this one as gone. The TMDB backfills
   that fill a new title's grid and art stay on netcup, on a timer after the
   walk.
 - **Weighed and not taken:** the owner's laptop, which already holds the

@@ -29,6 +29,24 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...base, WEBHOOK_SECRET: 'short' })).toThrow(/at least 16/);
   });
 
+  // Compose passes an empty string for a variable it defaults, and the API has
+  // to boot on a box that has not set up the library walk yet.
+  it('reads an empty ingest secret and server as unset', () => {
+    const config = loadConfig({ ...base, INGEST_SECRET: '', PLEX_SERVER_ID: '' });
+    expect(config.INGEST_SECRET).toBeUndefined();
+    expect(config.PLEX_SERVER_ID).toBeUndefined();
+  });
+
+  it('refuses an ingest secret short enough to guess', () => {
+    expect(() => loadConfig({ ...base, INGEST_SECRET: 'short' })).toThrow(/at least 16/);
+  });
+
+  it('refuses a server that is not named by its machineIdentifier', () => {
+    expect(() => loadConfig({ ...base, PLEX_SERVER_ID: 'it is a secret to everyone' })).toThrow(
+      /machineIdentifier/,
+    );
+  });
+
   // The whole arc is unbuildable without these, and a 500 on the first login
   // attempt is a worse way to find that out than a process that will not start.
   it('refuses to start without the credentials the login flow needs', () => {

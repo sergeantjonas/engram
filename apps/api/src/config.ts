@@ -91,6 +91,36 @@ const schema = z.object({
     ),
 
   /**
+   * What the nightly library walk presents to `POST /ingest/plex-library`.
+   *
+   * Its own secret rather than `WEBHOOK_SECRET`, though both live on the
+   * Bytesized slot, so that either can be rotated without the other. Optional
+   * the way the TMDB key is: unset, the API boots and that one route answers
+   * 503. Empty counts as unset, because empty is what Compose passes for a
+   * variable it was told to default.
+   */
+  INGEST_SECRET: z.preprocess(
+    (raw) => (raw === '' ? undefined : raw),
+    z.string().min(16, 'INGEST_SECRET must be at least 16 characters').optional(),
+  ),
+
+  /**
+   * The one Plex server whose walk may be written, by its `machineIdentifier`.
+   *
+   * A walk marks whatever it did not see as gone, and a token reaches every
+   * server shared with its account, so a walk of somebody else's server would
+   * fill the wall with their library and sweep this one away. Optional and
+   * empty-as-unset like the secret above, and the route needs both.
+   */
+  PLEX_SERVER_ID: z.preprocess(
+    (raw) => (raw === '' ? undefined : raw),
+    z
+      .string()
+      .regex(/^[0-9a-f]{40}$/, "PLEX_SERVER_ID must be the server's 40-character machineIdentifier")
+      .optional(),
+  ),
+
+  /**
    * Signs the OAuth `state` and nothing else. The floor is what
    * `openssl rand -hex 32` produces, so a passphrase short enough to guess
    * cannot be substituted for it.

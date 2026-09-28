@@ -89,6 +89,10 @@ services:
       # webhook pointed at it. Tautulli's own ids, not Plex's — for the same
       # owner Plex says 1 and Tautulli says 7597797.
       TAUTULLI_USER_IDS: ${TAUTULLI_USER_IDS:-}
+      # Optional until the walk on the Bytesized slot posts here: without
+      # both, the API boots and only POST /ingest/plex-library answers 503.
+      INGEST_SECRET: ${INGEST_SECRET:-}
+      PLEX_SERVER_ID: ${PLEX_SERVER_ID:-}
     ports:
       - '127.0.0.1:${API_PORT:-2012}:2012'
     deploy:

@@ -1,23 +1,10 @@
-import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
+import { secretMatches } from '../auth/secret.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
 import { planTautulliPlay, readAction, readLiveEvent } from '../ingest/tautulli.js';
 import { storeTautulliPlay } from '../ingest/tautulli-store.js';
 import type { LiveSessions } from '../live/sessions.js';
-
-/**
- * Constant time, and length-guarded because `timingSafeEqual` throws on a
- * mismatch rather than returning false — the same trap the OAuth state
- * verifier hit, where a UTF-16 string length was compared against a byte
- * length and the check passed for the wrong reason.
- */
-function secretMatches(offered: string | undefined, want: string): boolean {
-  if (offered === undefined) return false;
-  const a = Buffer.from(offered, 'utf8');
-  const b = Buffer.from(want, 'utf8');
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 /**
  * Tautulli's webhook: the freshness half of ingest.

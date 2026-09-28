@@ -8,6 +8,7 @@ import { createLiveSessions, type LiveSessions } from './live/sessions.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerEpisodeRoutes } from './routes/episodes.js';
 import { registerExportRoutes } from './routes/export.js';
+import { registerIngestRoutes } from './routes/ingest.js';
 import { registerNowWatchingRoutes } from './routes/now-watching.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerTitleRoutes } from './routes/titles.js';
@@ -102,6 +103,7 @@ export function buildApp({
   registerAuthRoutes(app, db, config, github);
   registerEpisodeRoutes(app, db);
   registerExportRoutes(app, db);
+  registerIngestRoutes(app, config, db);
   registerNowWatchingRoutes(app, db, live);
   registerSearchRoutes(app, db, tmdb);
   registerTitleRoutes(app, db, tmdb);

@@ -10,6 +10,8 @@ export const testConfig: Config = {
   PLEX_ACCOUNT_IDS: ['1'],
   TAUTULLI_USER_IDS: ['7597797'],
   WEBHOOK_SECRET: 'x'.repeat(16),
+  INGEST_SECRET: 'i'.repeat(16),
+  PLEX_SERVER_ID: 'a'.repeat(40),
   PORT: 0,
   HOST: '127.0.0.1',
   LOG_LEVEL: 'fatal',

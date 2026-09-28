@@ -169,17 +169,21 @@ the viewer wants of a title. The SPA calls all four.
       titles placed, so a film in two sections was refused and a dropped
       episode could hide a missing item; the plan now carries `read`, and
       the live dump reads 81 of 81); ~~`POST /ingest/plex-library` on its
-      own `INGEST_SECRET`~~ (landed 2026-09-27, pinned to `PLEX_SERVER_ID`
+      own `INGEST_SECRET`~~ (landed 2026-09-28, pinned to `PLEX_SERVER_ID`
       as well, because a token reaches every server shared with it and a
       walk of another would sweep this library as gone; both optional, so
       the API boots without them and the route answers 503. The API vhost
       gains a location raising nginx's 1m body ceiling on that path alone —
       to be written into the installed file in place when this deploys,
-      since certbot owns it and a copy would drop TLS); the dump
-      posting what it walked, and refusing a
-      section Plex lists without a `totalSize` to page against; a walker
-      image; a backfill timer on netcup; the container installed on the
-      slot under a systemd user timer, and its first nightly run.
+      since certbot owns it and a copy would drop TLS); ~~the dump
+      posting what it walked, and refusing a section Plex lists without a
+      `totalSize` to page against~~ (landed 2026-09-28: `ENGRAM_INGEST_URL`
+      turns `dump:library` into the walker, pinned to `PLEX_SERVER_ID` and
+      never trying a plaintext connection, since its probe carries the
+      token; a real walk posted to a local listener arrived whole, 81 of
+      81, and Plex reports the total on every listing); a walker image; a
+      backfill timer on netcup; the container installed on the slot under a
+      systemd user timer, and its first nightly run.
 
    Idempotency is not copied from the history importer. Settled 2026-09-21:
    `onConflictDoNothing` is right for a history row, which never changes, and

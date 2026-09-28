@@ -42,14 +42,21 @@ function connectionScore(conn) {
   return insecure + (conn.relay ? 2 : 0) + (conn.local ? 1 : 0);
 }
 
-export async function pickConnection(server, accountToken) {
+// `plaintext: false` drops the http candidates before any is tried, not after:
+// the probe below carries the token too. The unattended walk takes it, since
+// nobody is watching the log to notice it fell back.
+export async function pickConnection(
+  server,
+  accountToken,
+  { plaintext = true, get = getJson } = {},
+) {
   const token = server.accessToken ?? accountToken;
-  const ranked = [...(server.connections ?? [])].sort(
-    (a, b) => connectionScore(a) - connectionScore(b),
-  );
+  const ranked = [...(server.connections ?? [])]
+    .filter((conn) => plaintext || String(conn.uri ?? '').startsWith('https:'))
+    .sort((a, b) => connectionScore(a) - connectionScore(b));
   for (const conn of ranked) {
     try {
-      await getJson(`${conn.uri}/identity`, token, 6000);
+      await get(`${conn.uri}/identity`, token, 6000);
       return { uri: conn.uri, token, relay: !!conn.relay, local: !!conn.local };
     } catch {
       // try the next candidate
@@ -67,7 +74,14 @@ const itemId = (r) => r.ratingKey ?? r.key;
 //
 // `get` is injectable so the pagination edge cases can be tested without a server.
 async function fetchAllPages(buildUrl, token, options = {}) {
-  const { get = getJson, pageSize = 500, maxPages = 1000, onProgress, idOf = itemId } = options;
+  const {
+    get = getJson,
+    pageSize = 500,
+    maxPages = 1000,
+    onProgress,
+    idOf = itemId,
+    requireTotal = false,
+  } = options;
   const rows = [];
   const seen = new Set();
   let start = 0;
@@ -87,6 +101,9 @@ async function fetchAllPages(buildUrl, token, options = {}) {
 
     if (total === null) {
       total = typeof container.totalSize === 'number' ? container.totalSize : null;
+      if (total === null && requireTotal) {
+        throw new Error('server reported no totalSize — a short listing would read as a whole one');
+      }
       onProgress?.({ phase: 'total', total });
     }
 
@@ -141,13 +158,18 @@ export async function fetchSections(uri, token, options = {}) {
 // imdb / tmdb / tvdb ids, so there is no second call per title the way history
 // rows need. Sorted by id rather than by title so paging cannot reshuffle
 // under a rename.
+//
+// The total is required here, not merely checked when present: the import
+// reads an item missing from this listing as gone from disk, so a listing
+// that cannot be proved whole must not be written at all. Plex reported one
+// on every section of this server, measured 2026-09-28.
 export async function fetchSectionItems(uri, token, sectionKey, options = {}) {
   return fetchAllPages(
     (start, size) =>
       `${uri}/library/sections/${sectionKey}/all` +
       `?includeGuids=1&sort=id:asc&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${size}`,
     token,
-    options,
+    { ...options, requireTotal: true },
   );
 }
 

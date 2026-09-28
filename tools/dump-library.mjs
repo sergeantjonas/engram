@@ -8,9 +8,14 @@
 // server the log reaches 2025-10-24 and the library reaches 2019-06-11.
 //
 //   PLEX_TOKEN=xxxxx node tools/dump-library.mjs [--server "Name"]
+//
+// With ENGRAM_INGEST_URL, INGEST_SECRET and PLEX_SERVER_ID set, the walk of
+// that one server is posted to Engram instead of written to tools/out/. That
+// is the nightly run on the Bytesized slot.
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { ingestTarget, postWalk } from './ingest-client.mjs';
 import {
   discoverServers,
   fetchSectionItems,
@@ -37,6 +42,20 @@ const wantServer = (() => {
 })();
 
 const OUT_DIR = join(import.meta.dirname, 'out');
+
+const target = ingestTarget(process.env);
+if (target && !target.ok) {
+  console.error(`${target.reason}.`);
+  process.exit(1);
+}
+if (target && wantServer) {
+  console.error('--server names a server by name; a posted walk is of PLEX_SERVER_ID alone.');
+  process.exit(1);
+}
+
+// Redrawn in place in a terminal. In the slot's journal every redraw would be
+// a line of its own, one per watched show.
+const progress = process.stdout.isTTY ? (line) => process.stdout.write(`\r${line}`) : () => {};
 
 const watched = (item) => (item.viewCount ?? 0) > 0 || (item.viewedLeafCount ?? 0) > 0;
 
@@ -94,7 +113,7 @@ function summarise(sections) {
 
 async function walkSection(conn, section) {
   const items = await fetchSectionItems(conn.uri, conn.token, section.key);
-  process.stdout.write(`\r  ${section.title}: ${items.length} item(s)`);
+  progress(`  ${section.title}: ${items.length} item(s)`);
 
   // Only the shows with something watched need their episodes: the rest
   // contribute presence, which the section listing already carries.
@@ -106,11 +125,12 @@ async function walkSection(conn, section) {
     // library_presence is keyed to the title rather than the episode.
     show.episodes = leaves.filter((ep) => (ep.viewCount ?? 0) > 0);
     done++;
-    process.stdout.write(
-      `\r  ${section.title}: ${items.length} item(s), episodes for ${done}/${shows.length} watched show(s)`,
+    progress(
+      `  ${section.title}: ${items.length} item(s), episodes for ${done}/${shows.length} watched show(s)`,
     );
   }
-  process.stdout.write('\n');
+  if (process.stdout.isTTY) process.stdout.write('\n');
+  else console.log(`  ${section.title}: ${items.length} item(s), ${shows.length} watched show(s)`);
 
   return { key: section.key, type: section.type, title: section.title, items };
 }
@@ -122,11 +142,21 @@ if (servers.length === 0) {
 }
 
 console.log(`Found ${servers.length} server(s): ${servers.map((s) => s.name).join(', ')}\n`);
-await mkdir(OUT_DIR, { recursive: true });
+if (!target) await mkdir(OUT_DIR, { recursive: true });
 
-const targets = wantServer ? servers.filter((s) => s.name === wantServer) : servers;
+// By identifier when posting: a name can be shared or changed, and the API
+// refuses any walk but its own server's anyway.
+const targets = target
+  ? servers.filter((s) => s.clientIdentifier === target.server)
+  : wantServer
+    ? servers.filter((s) => s.name === wantServer)
+    : servers;
 if (targets.length === 0) {
-  console.error(`No server named "${wantServer}".`);
+  console.error(
+    target
+      ? 'No server on this account has that PLEX_SERVER_ID.'
+      : `No server named "${wantServer}".`,
+  );
   process.exit(1);
 }
 
@@ -135,7 +165,7 @@ let failures = 0;
 
 for (const server of targets) {
   console.log(`${server.name}:`);
-  const conn = await pickConnection(server, TOKEN);
+  const conn = await pickConnection(server, TOKEN, { plaintext: !target });
   if (!conn) {
     console.error(
       `  unreachable on all ${server.connections?.length ?? 0} connection(s) — server may be down\n`,
@@ -161,25 +191,31 @@ for (const server of targets) {
     }
 
     const summary = summarise(sections);
-    const slug = server.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    const file = join(OUT_DIR, `plex-library-${slug}-${stamp}.json`);
+    const dump = {
+      server: server.name,
+      machineIdentifier: server.clientIdentifier,
+      dumpedAt: new Date().toISOString(),
+      summary,
+      sections,
+    };
 
-    await writeFile(
-      file,
-      JSON.stringify(
-        {
-          server: server.name,
-          machineIdentifier: server.clientIdentifier,
-          dumpedAt: new Date().toISOString(),
-          summary,
-          sections,
-        },
-        null,
-        2,
-      ),
-    );
-
-    console.log(`  wrote ${file}`);
+    if (target) {
+      const stored = await postWalk(target, dump);
+      const { dropped = [], incomplete = [], ...counts } = stored ?? {};
+      console.log(`  posted to ${new URL(target.url).host}: ${JSON.stringify(counts)}`);
+      // Written, but short: the same two reports import:library makes, and
+      // they fail the run so the timer's status says so.
+      for (const row of incomplete) {
+        console.error(`  incomplete: ${row.found} of ${row.expected} — ${row.name}`);
+      }
+      for (const row of dropped) console.error(`  dropped: ${row.reason} — ${row.name}`);
+      if (dropped.length > 0 || incomplete.length > 0) process.exitCode = 1;
+    } else {
+      const slug = server.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      const file = join(OUT_DIR, `plex-library-${slug}-${stamp}.json`);
+      await writeFile(file, JSON.stringify(dump, null, 2));
+      console.log(`  wrote ${file}`);
+    }
     console.log(`  ${JSON.stringify(summary, null, 2).replace(/\n/g, '\n  ')}\n`);
   } catch (err) {
     console.error(`  failed: ${err.message}\n`);

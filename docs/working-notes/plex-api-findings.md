@@ -1,6 +1,6 @@
 # Plex API findings
 
-**Status:** Reference — empirical, verified against a live server 2026-09-16, extended 2026-09-21. Read before writing any ingest code.
+**Status:** Reference — empirical, verified against a live server 2026-09-16, extended 2026-09-21 and 2026-09-28. Read before writing any ingest code.
 
 Everything here was measured against the real server, not inferred from docs.
 
@@ -134,6 +134,11 @@ Two traps found while measuring:
 - **`parseGuids` takes the metadata object, not the array.** `parseGuids(meta)`,
   never `parseGuids(meta.Guid)` — the latter returns `{}` silently rather than
   throwing ([packages/shared/src/guid.ts:63](../../packages/shared/src/guid.ts)).
+
+**Both listings report `totalSize` when paged**, measured 2026-09-28 on the
+movie and show sections and on a show's `allLeaves`. That is what lets the
+walk refuse a section listed without one rather than take a short page as the
+end: the import reads an item missing from a section as gone from disk.
 
 **What the walk cannot recover.** One `lastViewedAt` per episode, so rewatches
 before the log's window collapse to their most recent date. `viewCount` survives

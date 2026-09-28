@@ -5,6 +5,7 @@ import {
   fetchSectionItems,
   fetchSections,
   fetchShowLeaves,
+  pickConnection,
 } from './plex-client.mjs';
 
 const rows = (n, offset = 0) =>
@@ -74,14 +75,14 @@ test('asks for history oldest first', async () => {
 const items = (n, offset = 0) =>
   Array.from({ length: n }, (_, i) => ({ ratingKey: String(offset + i), title: `t${offset + i}` }));
 
-function stubLibrary({ total, clamp = 500 }) {
+function stubLibrary({ total, clamp = 500, reportTotal = true }) {
   return async (url) => {
     const params = new URL(url).searchParams;
     const start = Number(params.get('X-Plex-Container-Start'));
     const size = Math.min(clamp, Number(params.get('X-Plex-Container-Size')));
     return {
       MediaContainer: {
-        totalSize: total,
+        ...(reportTotal ? { totalSize: total } : {}),
         Metadata: items(Math.max(0, Math.min(size, total - start)), start),
       },
     };
@@ -99,11 +100,49 @@ test('pages a section by ratingKey and asks for guids inline', async () => {
   assert.ok(asked.every((url) => new URL(url).searchParams.get('includeGuids') === '1'));
 });
 
+// The import reads an item missing from a section as gone from disk, so a
+// listing that cannot be proved whole is refused rather than taken at its end.
+test('refuses a section listed without a total', async () => {
+  await assert.rejects(
+    fetchSectionItems('http://x', 't', '1', {
+      get: stubLibrary({ total: 52, reportTotal: false }),
+    }),
+    /no totalSize/,
+  );
+});
+
 test('pages a show with more episodes than one page holds', async () => {
   const got = await fetchShowLeaves('http://x', 't', '748', {
     get: stubLibrary({ total: 424, clamp: 100 }),
   });
   assert.equal(got.length, 424);
+});
+
+// The probe carries the token, so an http candidate must never be tried at
+// all — refusing it after it answered would already be too late.
+test('never tries a plaintext connection when told not to', async () => {
+  const asked = [];
+  const get = async (url) => {
+    asked.push(url);
+    return {};
+  };
+  const server = {
+    connections: [
+      { uri: 'http://203.0.113.5:6066', local: false },
+      { uri: 'https://a-b-c.plex.direct:6066', local: false },
+    ],
+  };
+
+  const conn = await pickConnection(server, 't', { plaintext: false, get });
+  assert.equal(conn.uri, 'https://a-b-c.plex.direct:6066');
+  assert.ok(asked.every((url) => url.startsWith('https:')));
+
+  const none = await pickConnection({ connections: [{ uri: 'http://203.0.113.5:6066' }] }, 't', {
+    plaintext: false,
+    get,
+  });
+  assert.equal(none, null);
+  assert.equal(asked.length, 1);
 });
 
 test('reads sections down to key, type and title', async () => {

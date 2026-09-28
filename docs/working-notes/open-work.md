@@ -181,9 +181,13 @@ the viewer wants of a title. The SPA calls all four.
       turns `dump:library` into the walker, pinned to `PLEX_SERVER_ID` and
       never trying a plaintext connection, since its probe carries the
       token; a real walk posted to a local listener arrived whole, 81 of
-      81, and Plex reports the total on every listing); a walker image; a
-      backfill timer on netcup; the container installed on the slot under a
-      systemd user timer, and its first nightly run.
+      81, and Plex reports the total on every listing); ~~a walker image~~
+      (landed 2026-09-28: `tools/Dockerfile`, published by CI as
+      `engram-walker` under `sha-` tags alone, with no `main` for the slot
+      to drift onto; it refuses to run with nowhere to post, and a real
+      walk from inside it reached Plex over HTTPS and posted 81 of 81 to a
+      local listener); a backfill timer on netcup; the container installed
+      on the slot under a systemd user timer, and its first nightly run.
 
    Idempotency is not copied from the history importer. Settled 2026-09-21:
    `onConflictDoNothing` is right for a history row, which never changes, and

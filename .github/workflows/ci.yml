@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
 
-# Runs on main queue rather than cancel. A run cancelled between its two
+# Runs on main queue rather than cancel. A run cancelled between its
 # pushes leaves the api and web `main` tags naming different commits, and
 # `main` is what compose.prod.yaml falls back to. Only one run waits per group
 # and a newer push replaces it, so the newest commit still wins. A pull
@@ -22,6 +22,7 @@ env:
   REGISTRY: ghcr.io
   API_IMAGE: ghcr.io/${{ github.repository_owner }}/engram-api
   WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/engram-web
+  WALKER_IMAGE: ghcr.io/${{ github.repository_owner }}/engram-walker
 
 jobs:
   check:
@@ -107,11 +108,19 @@ jobs:
           tags: |
             type=sha,prefix=sha-,format=short
             type=raw,value=main
+      # No `main` tag: the slot runs a pinned sha- tag, and a tag that moves
+      # on every push is one it could be pointed at instead.
+      - id: walker-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.WALKER_IMAGE }}
+          tags: |
+            type=sha,prefix=sha-,format=short
 
-      # Built and smoked before either is pushed, so a failing smoke publishes
-      # neither. The pushes are still two steps, which is why deploy.sh checks
-      # both sha- manifests rather than trusting this. The second build of each
-      # is a cache hit and costs almost nothing.
+      # Built and smoked before any is pushed, so a failing smoke publishes
+      # none. The pushes are still separate steps, which is why deploy.sh
+      # checks the sha- manifests rather than trusting this. The second
+      # build of each is a cache hit and costs almost nothing.
       - name: build api
         uses: docker/build-push-action@v6
         with:
@@ -136,6 +145,18 @@ jobs:
           build-args: VITE_API_ORIGIN=${{ vars.VITE_API_ORIGIN }}
           cache-from: type=gha,scope=engram-web
           cache-to: type=gha,scope=engram-web,mode=max
+
+      - name: build walker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: engram-walker:smoke
+          cache-from: type=gha,scope=engram-walker
+          cache-to: type=gha,scope=engram-walker,mode=max
 
       # The real entrypoint against a throwaway Postgres of the version the box
       # runs: every migration applied from empty by the migrator the image
@@ -197,6 +218,23 @@ jobs:
           # a server that has never heard of the route.
           curl -fsS http://127.0.0.1:2011/titles/deep-link >/dev/null
 
+      # Nothing here can reach Plex, so this proves what can break in the image
+      # rather than in the walk: it refuses to run with nowhere to post, and
+      # with a target it gets as far as asking for the token. ES modules link
+      # before any of them runs, so reaching that message means every import
+      # resolved — a missing @engram/shared fails before it.
+      - name: smoke walker
+        run: |
+          set -euo pipefail
+          if out=$(docker run --rm engram-walker:smoke 2>&1); then
+            echo "the walker ran with nowhere to post" >&2; exit 1
+          fi
+          grep -q 'ENGRAM_INGEST_URL' <<<"$out" || { echo "$out" >&2; exit 1; }
+
+          out=$(docker run --rm -e ENGRAM_INGEST_URL=https://engram.invalid/ingest/plex-library \
+            engram-walker:smoke 2>&1 || true)
+          grep -q 'PLEX_TOKEN is not set' <<<"$out" || { echo "$out" >&2; exit 1; }
+
       - name: push api
         uses: docker/build-push-action@v6
         with:
@@ -221,3 +259,15 @@ jobs:
           tags: ${{ steps.web-meta.outputs.tags }}
           labels: ${{ steps.web-meta.outputs.labels }}
           cache-from: type=gha,scope=engram-web
+
+      - name: push walker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.walker-meta.outputs.tags }}
+          labels: ${{ steps.walker-meta.outputs.labels }}
+          cache-from: type=gha,scope=engram-walker

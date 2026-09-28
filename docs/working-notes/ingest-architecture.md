@@ -2,9 +2,10 @@
 
 **Status:** Design — agreed 2026-09-16, extended 2026-09-21 with the library
 walk, the claim-grain rule, owner-only ingest and the measured Tautulli
-payload, and 2026-09-27 with where the nightly walk runs. Owner-only ingest,
-the whole Tautulli path and the walk's ingest route are built rather than
-planned. Read before chunk 4.
+payload, 2026-09-27 with where the nightly walk runs, and 2026-09-29 with
+what the slot's units had to work around. Owner-only ingest, the whole
+Tautulli path, the walk's ingest route and its image and units are built
+rather than planned; the units are not installed yet. Read before chunk 4.
 
 ## Sources
 
@@ -221,6 +222,23 @@ Measured on the slot 2026-09-27, before any of it was built:
   edited.
 - **The slot's own Node is 18**, older than this repository runs on — one
   more reason the walk ships as an image rather than as scripts.
+
+And on 2026-09-29, while writing the units:
+
+- **Only an interactive shell finds Docker.** The rootless daemon listens on
+  `~/.docker/run/docker.sock`, started by Bytesized's own setup rather than by
+  the user's systemd, and `.bashrc` exports `DOCKER_HOST` for interactive
+  shells alone. A unit or a non-interactive `ssh` has to name the socket.
+- **That same `.bashrc` hides the user manager.** It points `XDG_RUNTIME_DIR`
+  at the socket's directory, so `systemctl --user` from an interactive shell
+  cannot find its bus; prefix it with `XDG_RUNTIME_DIR=/run/user/$(id -u)`.
+  Over non-interactive `ssh` it works as it is.
+- **The user journal keeps nothing** ("No journal files were found"), so the
+  walk's output goes to `~/.local/state/engram/walker.log`, appended per run.
+- systemd is 249 and takes a timezone in `OnCalendar`, and the rootless
+  daemon (24.0.2) runs a container read-only, with every capability dropped
+  and `--init`. A real walk under those flags, run from the laptop, arrived
+  whole; the slot itself has only run another image with them so far.
 
 ## Whose history this is
 

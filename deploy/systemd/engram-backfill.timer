@@ -6,7 +6,7 @@ Description=Backfill Engram from TMDB after the nightly library walk
 # Nothing orders the two across machines: a walk that runs late is picked up
 # the next night, since both backfills go over every title on every run.
 # Clear of both tenants' dumps as well.
-OnCalendar=*-*-* 05:30:00
+OnCalendar=*-*-* 05:30:00 Europe/Brussels
 RandomizedDelaySec=15m
 Persistent=true
 

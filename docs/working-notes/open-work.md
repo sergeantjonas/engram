@@ -187,14 +187,19 @@ the viewer wants of a title. The SPA calls all four.
       to drift onto; it refuses to run with nowhere to post, and a real
       walk from inside it reached Plex over HTTPS and posted 81 of 81 to a
       local listener); ~~a backfill timer on netcup~~ (landed 2026-09-28 as
-      `engram-backfill.timer`, 05:30 box time, running both TMDB backfills
+      `engram-backfill.timer`, 05:30 Brussels, running both TMDB backfills
       through `compose exec` in the API container already up, so they run
       the deployed tag rather than the `main` a `compose run` would take;
       each runs whether or not the other fails, and metadata runs with
       `--refresh`, which is the nightly status refresh web-depth.md's arc 2
       put on this timer. Not yet installed on the box); the container
-      installed on the slot under a systemd user timer, the netcup side
-      installed with it, and the first nightly run.
+      installed on the slot under a systemd user timer (written 2026-09-29:
+      `deploy/walker/`'s user units at 04:30 Brussels, an hour ahead of the
+      backfill, installed by `scripts/deploy-walker.sh` over one SSH
+      connection, which checks the hand-written `walker.env` without reading
+      a value, pulls the pinned tag and nothing else, and walks once with
+      `--run`. Not yet installed); the netcup side installed with it, and
+      the first nightly run.
 
    Idempotency is not copied from the history importer. Settled 2026-09-21:
    `onConflictDoNothing` is right for a history row, which never changes, and

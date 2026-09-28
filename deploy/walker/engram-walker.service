@@ -1,0 +1,40 @@
+# A user unit on the Bytesized slot, not a system one on the VPS: the Plex
+# token lives there and never on the box the database is on. Installed by
+# scripts/deploy-walker.sh.
+#
+# The slot's .bashrc points XDG_RUNTIME_DIR at the Docker socket's directory,
+# so an interactive shell reaches this unit's manager only by naming the real
+# one: XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user status engram-walker
+[Unit]
+Description=Walk the Plex library and post it to Engram
+# Nothing to order against: the slot's rootless Docker daemon is started by
+# the host's own setup, not by this user's systemd. A night it is down fails
+# the run, which is what it should do.
+
+[Service]
+Type=oneshot
+# The socket interactive shells find through .bashrc, which a unit never reads.
+Environment=DOCKER_HOST=unix://%h/.docker/run/docker.sock
+# The one image this runs, written by the deploy script. `--pull=never` below
+# keeps the only fetch in the deploy: an image gone from the slot fails the
+# night rather than being pulled unattended at 04:30.
+EnvironmentFile=%h/.config/engram/walker.image
+
+# The user journal on the slot keeps nothing, so the output goes to a file
+# of its own, a dated line ahead of each run. About a kilobyte a night.
+StandardOutput=append:%h/.local/state/engram/walker.log
+StandardError=inherit
+UMask=0077
+ExecStartPre=/bin/date --iso-8601=seconds
+
+# `--init` because node as PID 1 ignores the SIGTERM a timeout or a stop
+# sends, and the container would outlive the unit that started it. The walk
+# writes nothing inside the container and needs no privilege at all.
+ExecStart=/usr/bin/docker run --rm --pull=never --init --name engram-walker \
+  --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+  --env-file %h/.config/engram/walker.env \
+  ${WALKER_IMAGE}
+# A walk takes about a minute. The name is what lets a run cut short be
+# cleared, so a container left behind cannot hold the next night's name.
+TimeoutStartSec=20min
+ExecStopPost=-/bin/sh -c 'docker rm -f engram-walker >/dev/null 2>&1'

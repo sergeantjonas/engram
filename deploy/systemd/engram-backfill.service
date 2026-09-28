@@ -1,0 +1,16 @@
+[Unit]
+Description=Backfill Engram's episode grids and title metadata from TMDB
+# Runs inside the API container through `docker compose exec`, so the daemon
+# has to be up before this is worth attempting.
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+
+# The deploy lands the script flat in this directory, next to the compose
+# file it resolves relative to itself.
+WorkingDirectory=/srv/engram
+ExecStart=/srv/engram/backfill.sh

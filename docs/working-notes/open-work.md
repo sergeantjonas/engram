@@ -281,7 +281,9 @@ the viewer wants of a title. The SPA calls all four.
    count matching the development database it came from. Nightly backup
    installed and its restore drilled against that real data. Account in
    [go-live.md](go-live.md), which also holds the one thing still open — no
-   copy of the dumps leaves the box.
+   copy of the dumps leaves the box. Scoped 2026-09-29 as an upload-only,
+   `age`-encrypted copy to Backblaze B2, one chunk per tenant; engram's is
+   unblocked.
 6. ~~**Web depth**~~ — done 2026-09-23, every arc built and deployed.
    Scoped 2026-09-21 in [web-depth.md](web-depth.md). The
    three screens are built and the system holds, but the app shows the record

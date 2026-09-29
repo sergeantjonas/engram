@@ -2,7 +2,8 @@
 
 **Status:** Done, 2026-09-21 — Engram is live at <https://engram.vyoh.gg>
 with the full record restored and a nightly backup running. Kept as the
-account of how it got there, and for the one gap still open at the bottom.
+account of how it got there, and for the one gap still open at the bottom,
+scoped 2026-09-29 as an off-box copy to Backblaze B2 and not yet built.
 The machine's own conventions are the `shared-vps` skill; this note holds
 only what is true of Engram.
 
@@ -128,7 +129,35 @@ database they came from, so they survive a bad migration, a wrong delete or a
 botched restore, and not the disk dying or the VPS going away. For a project
 whose whole argument is that the record should outlive the thing holding it,
 that is the last real gap. The owner intends an off-box copy when the next
-machine is set up; vyoh has the same gap and the same answer. The history is the product, so this lands with the first deploy, not after
+machine is set up; vyoh has the same gap and the same answer.
+
+Scoped 2026-09-29, not built. The copy goes to **Backblaze B2**, on the free
+tier, in the EU region. What decided it is what someone who has broken into
+the box could do to the copy. The box holds a key per tenant that can upload
+and do nothing else, so it cannot read or delete what it sent. Retention is
+the bucket's lifecycle rule rather than the box's to enforce. Each dump is
+encrypted with `age` before it leaves, and only the public key is on the box.
+The private key is kept by the owner, in a password manager and on paper,
+and never here. Losing it makes every off-box copy unreadable, which is the
+one real risk in this design. The size is measured rather than guessed: an
+engram dump is 780 KB and a vyoh one 172 MB, so thirty days of both is about
+5.2 GB against the 10 GB free.
+
+Weighed and not taken:
+- Google Drive and MEGA: the credential on the box could delete what it
+  uploaded, and the owner's own Drive was not to be exposed.
+- The Bytesized slot: not what a seedbox is for.
+- The owner's laptop pulling the dumps: it needs no new credential, but runs
+  only while the laptop is awake. It stays the fallback.
+
+The work is one chunk per tenant, each in its own repo:
+- the upload hooked after the nightly dump;
+- retention set on the bucket;
+- a restore drill run from the B2 copy, not the local one.
+
+vyoh's backup ran as root, so its dumps were unreadable to `deploy`. Moving
+it to `deploy` was handed to vyoh's own repo the same day, as the step before
+its half. The history is the product, so this lands with the first deploy, not after
 it. Drill the restore against the real dump from step 3 above — a drill on an
 empty schema proves only that the script runs, and the dump being drilled is
 the irreplaceable one.

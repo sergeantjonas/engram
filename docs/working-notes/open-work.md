@@ -280,12 +280,13 @@ the viewer wants of a title. The SPA calls all four.
    empty: 82 titles, 1109 events, 2467 episodes, reaching back to 2019, every
    count matching the development database it came from. Nightly backup
    installed and its restore drilled against that real data. Account in
-   [go-live.md](go-live.md), which also holds the one thing still open — no
-   copy of the dumps leaves the box. Scoped 2026-09-29 as an upload-only,
-   `age`-encrypted copy to Backblaze B2, one chunk per tenant. Engram's upload
-   (`ops/offsite.sh`) and its drill from the B2 copy (`scripts/offsite-drill.sh`)
-   were built the same day. Neither has run against B2 yet. What remains is
-   the two keys, the bucket's retention, the install, and the first drill.
+   [go-live.md](go-live.md). The last gap, that no copy left the box, closed
+   2026-09-29. Each nightly dump goes to Backblaze B2 `age`-encrypted, under
+   an upload-only key and a 30-day compliance lock (`ops/offsite.sh`). A drill
+   from the B2 copy (`scripts/offsite-drill.sh`) restored it the same evening,
+   every table matching. Still open: nothing reports a night that fails.
+   That is an arc of its own, and vyoh has the same gap. vyoh's half of the
+   off-box copy belongs to its own repo.
 6. ~~**Web depth**~~ — done 2026-09-23, every arc built and deployed.
    Scoped 2026-09-21 in [web-depth.md](web-depth.md). The
    three screens are built and the system holds, but the app shows the record
@@ -422,12 +423,13 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Decisions still open
 
-- **Object Lock on the B2 bucket, before its retention is set.** An upload-only
-  key can still hide what it sent, and a lifecycle rule then deletes it, so
-  the lifecycle rule alone does not stop an intruder on the box from emptying
-  the off-box copy. Governance-mode default retention closes that gap, and can
-  never be turned off once enabled. Reasoning in [go-live.md](go-live.md)
-  § Backups.
+- ~~**Object Lock on the B2 bucket, before its retention is set.**~~ Answered
+  2026-09-29: enabled, compliance mode, 30 days. An upload-only key can still
+  hide what it sent, and a lifecycle rule then deletes it, so without a lock
+  an intruder on the box could empty the off-box copy. Compliance rather than
+  governance, because it also holds against a taken-over Backblaze account,
+  and junk an intruder uploads costs only thirty days of storage. Reasoning in
+  [go-live.md](go-live.md) § Backups.
 - **Whether marking a season watched should step over a declared hole.** It
   does not today: `planWatchEvents` expands a season mark over every episode in
   it, so a season holding an episode the viewer declared `missing` — never had

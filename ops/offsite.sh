@@ -13,8 +13,8 @@
 #   OFFSITE_AGE_RECIPIENT           age1…, the public half; the private half
 #                                   is never on this box
 #
-# B2's native API over curl rather than a sync tool, because the key permits
-# exactly the three calls made here and a sync tool wants to list what is
+# B2's native API over curl rather than a sync tool: the three calls made here
+# need nothing past writeFiles, where a sync tool also wants to list what is
 # already there. B2 refuses an upload whose SHA-1 does not match the bytes that
 # arrived, so an upload that succeeds is a complete one.
 
@@ -23,8 +23,8 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/engram}"
 : "${B2_KEY_ID:?}" "${B2_APPLICATION_KEY:?}" "${OFFSITE_AGE_RECIPIENT:?}"
 
-# The key is restricted to this prefix, and refused below if it is not: a key
-# that can write anywhere in the bucket can hide the other tenant's copies too.
+# The key is made with this prefix and refused below without it, so a key
+# pasted in from the wrong entry fails loudly instead of writing somewhere else.
 PREFIX="engram/"
 
 for tool in age curl jq sha1sum base64; do
@@ -50,16 +50,19 @@ sha1="$(sha1sum "$sealed" | cut -d' ' -f1)"
 # A oneshot unit has no start timeout, so a hung transfer would hold the unit
 # open and the next night's dump would never start.
 b2() { curl -sS --fail-with-body --connect-timeout 30 --max-time 600 "$@"; }
+# What B2 said and nothing more: a transfer cut off partway through a good reply
+# leaves a live token in the body, and the body goes to the journal.
+b2_said() { jq -er 'select(.code) | "\(.status) \(.code): \(.message // "")"' <<< "$1" 2>/dev/null || echo "no answer B2 could have sent"; }
 
 # Credentials reach curl on stdin, not as arguments, which every user on the
 # box can read from the process list.
 send() {
-  local auth token api bucket target reply
+  local auth token api bucket target reply stored
 
   auth="$(printf 'Authorization: Basic %s\n' \
       "$(printf '%s:%s' "$B2_KEY_ID" "$B2_APPLICATION_KEY" | base64 | tr -d '\n')" \
     | b2 -H @- https://api.backblazeb2.com/b2api/v4/b2_authorize_account)" \
-    || { echo "authorize: $auth"; return 1; }
+    || { echo "authorize: $(b2_said "$auth")"; return 1; }
   jq -e . <<< "$auth" >/dev/null 2>&1 || { echo "authorize answered with something other than JSON"; return 1; }
 
   # Checked on every run rather than trusted from the day the key was made:
@@ -78,15 +81,16 @@ send() {
   # a 503 or a 401 and expects the client to ask for another.
   target="$(printf 'Authorization: %s\n' "$token" \
     | b2 -H @- "$api/b2api/v4/b2_get_upload_url?bucketId=$bucket")" \
-    || { echo "get upload url: $target"; return 1; }
+    || { echo "get upload url: $(b2_said "$target")"; return 1; }
 
   reply="$(printf 'Authorization: %s\nX-Bz-File-Name: %s\nContent-Type: application/octet-stream\nX-Bz-Content-Sha1: %s\n' \
       "$(jq -r .authorizationToken <<< "$target")" "$name" "$sha1" \
     | b2 -H @- --data-binary @"$sealed" "$(jq -r .uploadUrl <<< "$target")")" \
-    || { echo "upload: $reply"; return 1; }
+    || { echo "upload: $(b2_said "$reply")"; return 1; }
 
-  [ "$(jq -r .contentSha1 <<< "$reply")" = "$sha1" ] \
-    || { echo "upload answered without the SHA-1 that was sent: $reply"; return 1; }
+  stored="$(jq -r .contentSha1 <<< "$reply" 2>/dev/null)"
+  [ "$stored" = "$sha1" ] \
+    || { echo "upload answered with SHA-1 ${stored:-none}, not the $sha1 that was sent"; return 1; }
   echo "sent $name ($(du -h "$sealed" | cut -f1)) as $(jq -r .fileId <<< "$reply")"
 }
 

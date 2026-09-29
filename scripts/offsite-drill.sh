@@ -14,11 +14,8 @@
 #
 # It fetches the newest copy B2 holds, checks it against the SHA-1 B2 recorded,
 # decrypts it here, and restores it into a scratch database on the box through
-# restore-drill.sh, which compares every table that holds the record against
-# the live one. That comparison is exact only while nothing has written since
-# the dump, so drill straight after a fresh one:
-#
-#   ssh -t vyoh sudo systemctl start engram-backup.service && scripts/offsite-drill.sh
+# restore-drill.sh, which checks every table that holds the record against
+# what the copy itself holds.
 
 set -euo pipefail
 

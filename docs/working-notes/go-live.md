@@ -121,10 +121,21 @@ at the scheduled time still gets one.
 
 **The drill passed against the real record**, which is the only version of it
 worth running: `ops/restore-drill.sh` restores the newest dump into a scratch
-database, compares every table's row count against the live one, and drops
-the copy. All six matched — 82 titles, 2467 episodes, 1109 events, 81
+database, compares the row count of each table that holds the record, and
+drops the copy. All six matched — 82 titles, 2467 episodes, 1109 events, 81
 presence rows, 2 intents, 0 gaps. A drill against an empty schema proves the
 script runs and nothing else.
+
+It compared against the live record then, which held on the day it ran.
+Tautulli writes every play, and from 2026-09-29 the walk and the backfill
+write every night, so a dump a few hours old differs from live without being
+wrong. So the drill now compares the restore against the rows the dump's own
+`COPY` blocks carry, and prints live beside them. Live decides one thing: a
+dump holding no titles, or more than live, fails, because a restore matches
+a dump of an empty or wrong database just as faithfully, and nothing deletes
+a title. Re-run
+that day against the go-live dump itself, it restored to the six counts
+above while live stood at 113 titles, 3525 episodes and 1767 events.
 
 **Still open: nothing leaves the box.** The dumps sit on the same disk as the
 database they came from, so they survive a bad migration, a wrong delete or a
@@ -203,10 +214,8 @@ identity. The identity is the one thing that must never be on the box. The
 drill fetches the newest copy, checks it against the SHA-1 B2 recorded, and
 reports how many copies there are, how old the newest is, and the lock it
 carries. Then it decrypts the copy and restores it into a scratch database on
-the box through `restore-drill.sh`. That script compares against the live
-record, so the comparison is exact only when nothing has written since the
-dump. Drill straight after starting `engram-backup.service` by hand, not at
-some later hour of the day. Tested 2026-09-29 against the same fake, extended
+the box through `restore-drill.sh`, which checks each table against what the
+copy itself holds. Tested 2026-09-29 against the same fake, extended
 with listing and download, with `ssh` stood in by a local shell. It chose the
 newest copy and delivered the box's dump byte for byte. It reported a lock,
 no lock, and a key that cannot see locks, and it failed on a corrupted
@@ -221,7 +230,7 @@ anything more. The laptop's drill key holds `listFiles`, `readFiles` and
 `B2_APPLICATION_KEY` and `OFFSITE_AGE_RECIPIENT`.
 Deploy, copy the unit from `/srv/engram/deploy/systemd/`, `daemon-reload`, and
 start `engram-backup.service` once by hand. That run is the first real upload,
-and `scripts/offsite-drill.sh`, run straight after it, is the first real drill.
+and `scripts/offsite-drill.sh` after it is the first real drill.
 
 vyoh's backup ran as root, so its dumps were unreadable to `deploy`. Moving
 it to `deploy` was handed to vyoh's own repo the same day, as the step before

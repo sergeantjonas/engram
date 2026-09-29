@@ -2,8 +2,10 @@
 
 **Status:** Done, 2026-09-21 — Engram is live at <https://engram.vyoh.gg>
 with the full record restored and a nightly backup running. Kept as the
-account of how it got there, and for the one gap still open at the bottom,
-scoped 2026-09-29 as an off-box copy to Backblaze B2 and not yet built.
+account of how it got there, and for the one gap still open at the bottom:
+an off-box copy to Backblaze B2, whose upload is built as of 2026-09-29 and
+not yet installed, with the bucket's retention and a drill from B2 still to
+do.
 The machine's own conventions are the `shared-vps` skill; this note holds
 only what is true of Engram.
 
@@ -131,12 +133,14 @@ whose whole argument is that the record should outlive the thing holding it,
 that is the last real gap. The owner intends an off-box copy when the next
 machine is set up; vyoh has the same gap and the same answer.
 
-Scoped 2026-09-29, not built. The copy goes to **Backblaze B2**, on the free
+Scoped 2026-09-29. The copy goes to **Backblaze B2**, on the free
 tier, in the EU region. What decided it is what someone who has broken into
-the box could do to the copy. The box holds a key per tenant that can upload
-and do nothing else, so it cannot read or delete what it sent. Retention is
-the bucket's lifecycle rule rather than the box's to enforce. Each dump is
-encrypted with `age` before it leaves, and only the public key is on the box.
+the box could do to the copy. The box holds a key per tenant that can write
+and do nothing else, so it cannot read what it sent, and cannot delete it
+once the bucket holds it under a lock — see below for why a key alone does
+not settle the delete. Retention is the bucket's to enforce, not the box's.
+Each dump is encrypted with `age` before it leaves, and only the public key
+is on the box.
 The private key is kept by the owner, in a password manager and on paper,
 and never here. Losing it makes every off-box copy unreadable, which is the
 one real risk in this design. The size is measured rather than guessed: an
@@ -151,9 +155,54 @@ Weighed and not taken:
   only while the laptop is awake. It stays the fallback.
 
 The work is one chunk per tenant, each in its own repo:
-- the upload hooked after the nightly dump;
+- ~~the upload hooked after the nightly dump~~ — built 2026-09-29, not yet
+  installed;
 - retention set on the bucket;
 - a restore drill run from the B2 copy, not the local one.
+
+**The upload** is `ops/offsite.sh`, a second `ExecStart` in
+`engram-backup.service`, so it runs only after a dump succeeded and sends
+that one. It seals the dump with `age` and makes the three B2 calls an
+upload needs: authorize, ask for an upload URL, upload. It uses curl against
+B2's native API, not rclone or the b2 CLI. A sync tool lists the destination
+before it writes, which is a capability this key must not hold, and Debian's
+rclone is 1.60. B2 checks the SHA-1 sent with the upload against the bytes it
+received, so an upload that succeeds is complete. The script refuses a key
+holding anything but `writeFiles`, or one that reaches past a single bucket
+and the `engram/` prefix, and checks it on every run. Two things make that
+worth checking every night: a master key pasted in by mistake would void the
+design without a sound, and a key without the prefix could hide vyoh's copies.
+The key and the recipient live in `/etc/engram/offsite.env`, root-only. That
+keeps the key out of the tree a deploy writes to and away from other
+accounts, and from nothing else: `deploy` drives the rootful Docker daemon and
+owns the script systemd runs with the key, so whoever is `deploy` has the key.
+The key's reach and the bucket's lock are the whole defence. Tested 2026-09-29 against a fake of those three calls in a Debian 13
+container, including a busy 503, a wrong key and an over-broad key. It has
+not yet run against B2.
+
+**A key that can only write can still delete, given a lifecycle rule.** Found
+while building: `b2_hide_file` needs nothing beyond `writeFiles`. So the box's
+key can hide any copy it sent, or supersede one by uploading under the same
+name, and the box has thirty of those names in `/var/backups/engram`. A
+lifecycle rule that deletes hidden versions then does the deleting for it.
+What closes that is **Object Lock** with a default retention. B2 allows it on
+an existing bucket, and it can never be turned off again. A lifecycle rule
+cannot delete a version that is still under retention. Governance mode, not
+compliance: the box's key has no `bypassGovernance`, so it cannot lift a lock,
+while the owner's master key can clear anything an intruder uploaded, instead
+of paying to store it for thirty days. Still the owner's call, and it has to be
+made before retention is set. B2's docs do not say whether a bucket's default
+retention applies to an upload from a key without `writeFileRetentions`, so the
+drill reads the retention back rather than assuming it.
+
+To install, in order: `age` and `jq` on the box, both in Debian 13. The upload
+key: `writeFiles` alone, on the bucket, under `engram/`, made through
+`b2_create_key` with that exact list rather than trusting what one of the
+console's access types bundles, since the script refuses anything more.
+`/etc/engram/offsite.env`
+at 0600 holding `B2_KEY_ID`, `B2_APPLICATION_KEY` and `OFFSITE_AGE_RECIPIENT`.
+Deploy, copy the unit from `/srv/engram/deploy/systemd/`, `daemon-reload`, and
+start `engram-backup.service` once by hand. That run is the first real upload.
 
 vyoh's backup ran as root, so its dumps were unreadable to `deploy`. Moving
 it to `deploy` was handed to vyoh's own repo the same day, as the step before

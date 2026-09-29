@@ -282,8 +282,9 @@ the viewer wants of a title. The SPA calls all four.
    installed and its restore drilled against that real data. Account in
    [go-live.md](go-live.md), which also holds the one thing still open — no
    copy of the dumps leaves the box. Scoped 2026-09-29 as an upload-only,
-   `age`-encrypted copy to Backblaze B2, one chunk per tenant; engram's is
-   unblocked.
+   `age`-encrypted copy to Backblaze B2, one chunk per tenant. Engram's upload
+   was built the same day as `ops/offsite.sh` and is not yet installed. What
+   remains is the key, the bucket's retention, and a drill from the B2 copy.
 6. ~~**Web depth**~~ — done 2026-09-23, every arc built and deployed.
    Scoped 2026-09-21 in [web-depth.md](web-depth.md). The
    three screens are built and the system holds, but the app shows the record
@@ -420,6 +421,12 @@ the viewer wants of a title. The SPA calls all four.
 
 ## Decisions still open
 
+- **Object Lock on the B2 bucket, before its retention is set.** An upload-only
+  key can still hide what it sent, and a lifecycle rule then deletes it, so
+  the lifecycle rule alone does not stop an intruder on the box from emptying
+  the off-box copy. Governance-mode default retention closes that gap, and can
+  never be turned off once enabled. Reasoning in [go-live.md](go-live.md)
+  § Backups.
 - **Whether marking a season watched should step over a declared hole.** It
   does not today: `planWatchEvents` expands a season mark over every episode in
   it, so a season holding an episode the viewer declared `missing` — never had

@@ -1,5 +1,5 @@
 [Unit]
-Description=Dump the Engram database
+Description=Dump the Engram database and send a sealed copy off the box
 # The dump runs through `docker compose exec`, so the daemon has to be up
 # before this is worth attempting.
 After=docker.service
@@ -15,6 +15,17 @@ Group=deploy
 # bearing: a timer runs with no meaningful working directory of its own.
 WorkingDirectory=/srv/engram
 ExecStart=/srv/engram/backup.sh
+# The copy that leaves the box. A oneshot runs its ExecStart lines in order
+# and stops at the first that fails, so this sends the dump the line above
+# just wrote, or nothing.
+ExecStart=/srv/engram/offsite.sh
+
+# The upload key and the age recipient, root-only and outside the tree a
+# deploy writes to. That does not keep the key from deploy, which drives the
+# Docker daemon; what the key can do is what bounds it. Optional so that a
+# missing file costs the off-box copy and not the local dump: offsite.sh
+# fails on the unset values, and the unit with it.
+EnvironmentFile=-/etc/engram/offsite.env
 
 Environment=BACKUP_DIR=/var/backups/engram
 # Thirty dumps of a few hundred KB each. The history is the product, and the

@@ -96,10 +96,11 @@ is a `compose down -v` from a retry. What that changes:
   and a backfill that misbehaves is caught there.
 - **Nightly, once arc 2 lands.** Show status and next air date go stale, so
   `backfill:metadata` moves from "after a walk" to the reconcile timer
-  go-live.md plans for the library walk. Until that timer exists the
-  refresh is a manual run of the command above, and the header's "next airs"
-  must state the date it was fetched on if it can be more than a day old, or
-  not show at all.
+  go-live.md plans for the library walk. That timer is
+  `engram-backfill.timer`, installed 2026-09-29, which runs it with
+  `--refresh` at 05:30 every night. Only a night it fails leaves the
+  header's "next airs" more than a day old, and it must then state the date
+  it was fetched on, or not show at all.
 - **TMDB spend is production's key.** The rate that was fine against 12
   titles locally is 82 titles and 2467 episodes on the box, and arc 2 chunk 4
   adds one call per film. The backfills are sequential and take no pause

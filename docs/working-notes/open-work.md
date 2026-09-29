@@ -192,14 +192,16 @@ the viewer wants of a title. The SPA calls all four.
       the deployed tag rather than the `main` a `compose run` would take;
       each runs whether or not the other fails, and metadata runs with
       `--refresh`, which is the nightly status refresh web-depth.md's arc 2
-      put on this timer. Not yet installed on the box); the container
-      installed on the slot under a systemd user timer (written 2026-09-29:
-      `deploy/walker/`'s user units at 04:30 Brussels, an hour ahead of the
-      backfill, installed by `scripts/deploy-walker.sh` over one SSH
-      connection, which checks the hand-written `walker.env` without reading
-      a value, pulls the pinned tag and nothing else, and walks once with
-      `--run`. Not yet installed); the netcup side installed with it, and
-      the first nightly run.
+      put on this timer); ~~the container installed on the slot under a
+      systemd user timer, and the netcup side with it~~ (installed
+      2026-09-29 at `sha-36e9acb`: `deploy/walker/`'s user units at 04:30
+      Brussels, an hour ahead of the backfill, installed by
+      `scripts/deploy-walker.sh` over one SSH connection, which checks the
+      hand-written `walker.env` without reading a value, pulls the pinned
+      tag and nothing else, and walks once with `--run`. That first walk
+      from the slot posted 81 titles, 373 episodes and 375 events, 0 of
+      them fresh and 0 titles gone — the library as the first import left
+      it); the first nightly run, and the first backfill after it.
 
    Idempotency is not copied from the history importer. Settled 2026-09-21:
    `onConflictDoNothing` is right for a history row, which never changes, and

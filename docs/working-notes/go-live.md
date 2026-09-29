@@ -3,9 +3,9 @@
 **Status:** Done, 2026-09-21 — Engram is live at <https://engram.vyoh.gg>
 with the full record restored and a nightly backup running. Kept as the
 account of how it got there, and for the one gap still open at the bottom:
-an off-box copy to Backblaze B2, whose upload is built as of 2026-09-29 and
-not yet installed, with the bucket's retention and a drill from B2 still to
-do.
+an off-box copy to Backblaze B2. As of 2026-09-29 the upload and the drill
+from B2 are built, the upload is not yet installed, and the drill has not
+been run. The bucket's retention is still to be set.
 The machine's own conventions are the `shared-vps` skill; this note holds
 only what is true of Engram.
 
@@ -158,7 +158,8 @@ The work is one chunk per tenant, each in its own repo:
 - ~~the upload hooked after the nightly dump~~ — built 2026-09-29, not yet
   installed;
 - retention set on the bucket;
-- a restore drill run from the B2 copy, not the local one.
+- a restore drill run from the B2 copy, not the local one — built 2026-09-29
+  as `scripts/offsite-drill.sh`, not yet run.
 
 **The upload** is `ops/offsite.sh`, a second `ExecStart` in
 `engram-backup.service`, so it runs only after a dump succeeded and sends
@@ -195,14 +196,32 @@ made before retention is set. B2's docs do not say whether a bucket's default
 retention applies to an upload from a key without `writeFileRetentions`, so the
 drill reads the retention back rather than assuming it.
 
-To install, in order: `age` and `jq` on the box, both in Debian 13. The upload
-key: `writeFiles` alone, on the bucket, under `engram/`, made through
-`b2_create_key` with that exact list rather than trusting what one of the
-console's access types bundles, since the script refuses anything more.
-`/etc/engram/offsite.env`
-at 0600 holding `B2_KEY_ID`, `B2_APPLICATION_KEY` and `OFFSITE_AGE_RECIPIENT`.
+**The drill** runs from the laptop and starts from only what outlives the
+box: a second key, held on the laptop, with `listFiles`, `readFiles` and
+`readFileRetentions` on the bucket under `engram/`, and the owner's age
+identity. The identity is the one thing that must never be on the box. The
+drill fetches the newest copy, checks it against the SHA-1 B2 recorded, and
+reports how many copies there are, how old the newest is, and the lock it
+carries. Then it decrypts the copy and restores it into a scratch database on
+the box through `restore-drill.sh`. That script compares against the live
+record, so the comparison is exact only when nothing has written since the
+dump. Drill straight after starting `engram-backup.service` by hand, not at
+some later hour of the day. Tested 2026-09-29 against the same fake, extended
+with listing and download, with `ssh` stood in by a local shell. It chose the
+newest copy and delivered the box's dump byte for byte. It reported a lock,
+no lock, and a key that cannot see locks, and it failed on a corrupted
+download and on the wrong identity. It has not yet run against B2.
+
+To install, in order: `age` and `jq` on the box, both in Debian 13. Two keys,
+each made through `b2_create_key` with an exact list rather than whatever one
+of the console's access types bundles, and both on the bucket under
+`engram/`. The upload key holds `writeFiles` alone, since the script refuses
+anything more. The laptop's drill key holds `listFiles`, `readFiles` and
+`readFileRetentions`. `/etc/engram/offsite.env` at 0600 holding `B2_KEY_ID`,
+`B2_APPLICATION_KEY` and `OFFSITE_AGE_RECIPIENT`.
 Deploy, copy the unit from `/srv/engram/deploy/systemd/`, `daemon-reload`, and
-start `engram-backup.service` once by hand. That run is the first real upload.
+start `engram-backup.service` once by hand. That run is the first real upload,
+and `scripts/offsite-drill.sh`, run straight after it, is the first real drill.
 
 vyoh's backup ran as root, so its dumps were unreadable to `deploy`. Moving
 it to `deploy` was handed to vyoh's own repo the same day, as the step before

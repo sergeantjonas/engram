@@ -283,8 +283,9 @@ the viewer wants of a title. The SPA calls all four.
    [go-live.md](go-live.md), which also holds the one thing still open — no
    copy of the dumps leaves the box. Scoped 2026-09-29 as an upload-only,
    `age`-encrypted copy to Backblaze B2, one chunk per tenant. Engram's upload
-   was built the same day as `ops/offsite.sh` and is not yet installed. What
-   remains is the key, the bucket's retention, and a drill from the B2 copy.
+   (`ops/offsite.sh`) and its drill from the B2 copy (`scripts/offsite-drill.sh`)
+   were built the same day. Neither has run against B2 yet. What remains is
+   the two keys, the bucket's retention, the install, and the first drill.
 6. ~~**Web depth**~~ — done 2026-09-23, every arc built and deployed.
    Scoped 2026-09-21 in [web-depth.md](web-depth.md). The
    three screens are built and the system holds, but the app shows the record

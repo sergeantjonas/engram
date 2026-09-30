@@ -245,7 +245,9 @@ key they hold, by round-tripping a string through both.
 **The first drill passed against B2** the same evening. It found one copy,
 minutes old, under a compliance lock until 2026-10-29, which it decrypted and
 restored. All six tables matched the dump and the live record: 113 titles,
-3525 episodes, 1767 events, 81 presence rows, 3 intents and 0 gaps. Whether
+3525 episodes, 1767 events, 81 presence rows, 3 intents and 0 gaps. The first
+unattended night, 2026-09-30, sent its copy at 00:03, a second after the dump.
+Whether
 the lifecycle rule prunes cannot show until a copy is 31 days old. A drill
 after 2026-10-30 should report an oldest copy of no more than 31 days.
 

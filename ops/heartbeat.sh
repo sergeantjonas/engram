@@ -36,8 +36,10 @@ if [ "${SERVICE_RESULT:-}" != success ]; then
   trap 'rm -f "$body"' EXIT
   echo "result=${SERVICE_RESULT:-unknown} exit=${EXIT_CODE:-?}/${EXIT_STATUS:-?}" >"$body"
   if [ "$attach" = journal ] && [ -n "${INVOCATION_ID:-}" ]; then
+    # offsite.sh refuses a private age key before age can print it, and this
+    # redaction is the second line: that key opens every off-box copy.
     journalctl -q --no-pager -o cat -n 30 _SYSTEMD_INVOCATION_ID="$INVOCATION_ID" 2>&1 |
-      sed 's/\x1b\[[0-9;]*m//g' >>"$body"
+      sed -e 's/\x1b\[[0-9;]*m//g' -e 's/AGE-SECRET-KEY-1[0-9A-Za-z]*/AGE-SECRET-KEY-[redacted]/g' >>"$body"
   fi
 fi
 

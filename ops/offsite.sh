@@ -23,6 +23,12 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/engram}"
 : "${B2_KEY_ID:?}" "${B2_APPLICATION_KEY:?}" "${OFFSITE_AGE_RECIPIENT:?}"
 
+# Checked before age sees it, and never echoed: the private key pasted here by
+# mistake would otherwise be printed back in age's error, into the journal and
+# from there into the failure report heartbeat.sh sends off the box.
+[[ "$OFFSITE_AGE_RECIPIENT" =~ ^age1[0-9a-z]+$ ]] \
+  || { echo "OFFSITE_AGE_RECIPIENT is not an age public key (age1…); nothing was sealed" >&2; exit 1; }
+
 # The key is made with this prefix and refused below without it, so a key
 # pasted in from the wrong entry fails loudly instead of writing somewhere else.
 PREFIX="engram/"

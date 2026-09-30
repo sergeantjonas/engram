@@ -284,9 +284,11 @@ the viewer wants of a title. The SPA calls all four.
    2026-09-29. Each nightly dump goes to Backblaze B2 `age`-encrypted, under
    an upload-only key and a 30-day compliance lock (`ops/offsite.sh`). A drill
    from the B2 copy (`scripts/offsite-drill.sh`) restored it the same evening,
-   every table matching. Still open: nothing reports a night that fails.
-   That is an arc of its own, and vyoh has the same gap. vyoh's half of the
-   off-box copy belongs to its own repo.
+   every table matching; vyoh's half landed in its own repo the same day.
+   Check-ins to healthchecks.io from the backup, the backfill and the walk
+   (`ops/heartbeat.sh`), so that a failed night is reported, were built
+   2026-09-30 and are not yet installed ([go-live.md](go-live.md) § Knowing a
+   night failed).
 6. ~~**Web depth**~~ — done 2026-09-23, every arc built and deployed.
    Scoped 2026-09-21 in [web-depth.md](web-depth.md). The
    three screens are built and the system holds, but the app shows the record

@@ -14,3 +14,8 @@ Group=deploy
 # file it resolves relative to itself.
 WorkingDirectory=/srv/engram
 ExecStart=/srv/engram/backfill.sh
+
+# Tells healthchecks.io how the run ended, and nothing more: the run's lines
+# name titles, which stay here. See engram-backup.service.
+ExecStopPost=-/srv/engram/heartbeat.sh engram-backfill
+EnvironmentFile=-/etc/engram/heartbeat.env

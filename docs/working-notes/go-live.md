@@ -4,7 +4,9 @@
 with the full record restored and a nightly backup running. The last gap,
 an off-box copy, closed 2026-09-29: every nightly dump goes to Backblaze B2
 under a 30-day lock, and a drill from the B2 copy passed the same evening.
-Nothing yet says when a night fails. Kept as the account of how it got there.
+Reporting a failed night through healthchecks.io is built as of 2026-09-30
+and not yet installed (§ Knowing a night failed). Kept as the account of how
+it got there.
 The machine's own conventions are the `shared-vps` skill; this note holds
 only what is true of Engram.
 
@@ -251,12 +253,68 @@ Whether
 the lifecycle rule prunes cannot show until a copy is 31 days old. A drill
 after 2026-10-30 should report an oldest copy of no more than 31 days.
 
-vyoh's backup ran as root, so its dumps were unreadable to `deploy`. Moving
-it to `deploy` was handed to vyoh's own repo the same day, as the step before
-its half. The history is the product, so this lands with the first deploy, not after
-it. Drill the restore against the real dump from step 3 above — a drill on an
-empty schema proves only that the script runs, and the dump being drilled is
-the irreplaceable one.
+vyoh's backup ran as root, so its dumps were unreadable to `deploy`. Its own
+repo moved it to `deploy` the same day, then built and drilled its half; the
+account is in that repo's `hosting.md` § 6. The history is the product, so this
+lands with the first deploy, not after it. Drill the restore against the real
+dump from step 3 above — a drill on an empty schema proves only that the
+script runs, and the dump being drilled is the irreplaceable one.
+
+## Knowing a night failed
+
+Scoped and built 2026-09-30, not yet installed. Three jobs run each night
+with nobody watching: the backup and its upload, the TMDB backfill, and the
+library walk on the Bytesized slot. Each fails without a sound. A failed
+upload leaves the timer and the local dump looking exactly as they do on a
+good night, and the 30-day lock above only protects the off-box copies if a
+stopped backup is noticed within the month.
+
+Each job checks in with **healthchecks.io** from its unit's `ExecStopPost`,
+through `ops/heartbeat.sh`: a success, or a `/fail` saying how the run ended.
+What raises the alarm is a check going quiet past its schedule and
+grace, not the failure report. That is why an external service and not an
+`OnFailure=` mail on the box: silence also covers the timer that never fired,
+the host that is down and the network that is gone, none of which can report
+itself. For the same reason the script never changes a unit's result, and
+exits 0 whatever it met: a missing key or an unreachable service just means
+no check-in, which alerts. Anyone holding the ping key can fake a success,
+so it reaches curl on stdin and never in its arguments.
+
+One project per tenant, each with its own ping key, so neither tenant's key
+can speak for the other's checks. The checks are made by hand rather than on
+first check-in: a slug with a typo then fails to reach any check, and the
+check it was meant for goes quiet and alerts. Each schedule mirrors its timer
+in systemd's own `OnCalendar` form, Europe/Brussels:
+
+| Check (= unit) | Schedule | Grace | Runs on |
+|---|---|---|---|
+| `engram-backup` | `*-*-* 00:00:00` | 2 h, for the 45-minute random delay | the box |
+| `engram-walker` | `*-*-* 04:30:00` | 1 h | the slot |
+| `engram-backfill` | `*-*-* 05:30:00` | 1 h | the box |
+
+The key lives beside each host's other secrets. On the box that is
+`/etc/engram/heartbeat.env`, root-only and read through `EnvironmentFile=-`.
+On the slot it is `~/.config/engram/heartbeat.env` at 0600, which
+`scripts/deploy-walker.sh` warns about when it is missing rather than refusing,
+because a missing key is a failure the check already shows. The script reaches
+the slot the way the units do, from the deployed tag's commit, and a rollback
+to a tag older than it installs without it.
+
+A failure report says how the run ended: success or not, a timeout, the exit
+status. Only the backup attaches its run's journal lines, because they are
+file names, sizes and B2's errors. The backfill's lines name titles, and the
+walk's name the Plex server and a `plex.direct` address that encodes its IP.
+That is viewing data and a home address, which stay on their hosts and are
+read there when a check goes down. None of it would ever have carried a
+credential. Tested 2026-09-30 against a fake of the ping endpoint in a Debian
+13 container, for a success, a failure with its lines, a timeout, a missing
+key, a bad slug and an unreachable service. The review then ran the same unit
+shapes under systemd 257. The check-in fires after a failed second
+`ExecStart` and after a start timeout, and the walker's user unit resolves
+`%h` in both new lines.
+
+What this does not watch is whether a success is right. That is the drills'
+job. Nor is it uptime monitoring: the site being down is noticed by using it.
 
 ## Ingest after go-live
 

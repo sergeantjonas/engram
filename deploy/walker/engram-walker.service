@@ -38,3 +38,11 @@ ExecStart=/usr/bin/docker run --rm --pull=never --init --name engram-walker \
 # cleared, so a container left behind cannot hold the next night's name.
 TimeoutStartSec=20min
 ExecStopPost=-/bin/sh -c 'docker rm -f engram-walker >/dev/null 2>&1'
+
+# Tells healthchecks.io how the walk ended, and nothing more: the log names the
+# Plex server and the address it reached, which stay on this host. The check
+# alerts on silence and the script always exits 0, so the '-' covers only the
+# script itself being missing. The script comes from the tag's commit, the
+# ping key is written by hand like walker.env.
+ExecStopPost=-%h/.local/share/engram/heartbeat.sh engram-walker
+EnvironmentFile=-%h/.config/engram/heartbeat.env

@@ -27,6 +27,12 @@ ExecStart=/srv/engram/offsite.sh
 # fails on the unset values, and the unit with it.
 EnvironmentFile=-/etc/engram/offsite.env
 
+# Tells healthchecks.io how the run ended, dump and upload together, with this
+# run's journal lines on a failure. The check alerts on silence and the script
+# always exits 0, so the '-' covers only the script itself being missing.
+ExecStopPost=-/srv/engram/heartbeat.sh engram-backup journal
+EnvironmentFile=-/etc/engram/heartbeat.env
+
 Environment=BACKUP_DIR=/var/backups/engram
 # Thirty dumps of a few hundred KB each. The history is the product, and the
 # cost of keeping a month of it is nothing next to the cost of not.

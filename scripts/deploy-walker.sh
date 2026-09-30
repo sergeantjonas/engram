@@ -76,6 +76,15 @@ on_slot 'set -e
     echo "$f quotes a value; docker would keep the quotes" >&2; exit 1
   fi'
 
+# A warning, not a refusal: without the ping key the walk still runs, and its
+# check on healthchecks.io goes quiet and alerts, which is the failure showing.
+on_slot 'h="$HOME/.config/engram/heartbeat.env"
+  if [ ! -f "$h" ] || ! grep -q "^HC_PING_KEY=." "$h"; then
+    echo "warning: $h has no HC_PING_KEY, so the walk will report nothing and its check will alert" >&2
+  elif [ "$(stat -c %a "$h")" != 600 ]; then
+    echo "warning: $h should be mode 600" >&2
+  fi'
+
 # Read before it is replaced: the image this deploy takes over from is the
 # rollback target, and the one kept when older images are removed below.
 previous="$(on_slot 'sed -n "s/^WALKER_IMAGE=//p" "$HOME/.config/engram/walker.image" 2>/dev/null' || true)"
@@ -89,10 +98,15 @@ on_slot "$docker_env docker pull -q '$IMAGE:$TAG' >/dev/null" || {
 }
 
 echo "==> installing the units"
-on_slot 'mkdir -p "$HOME/.config/systemd/user" "$HOME/.local/state/engram"'
+on_slot 'mkdir -p "$HOME/.config/systemd/user" "$HOME/.local/state/engram" "$HOME/.local/share/engram"'
 for unit in engram-walker.service engram-walker.timer; do
   git show "$commit:deploy/walker/$unit" | on_slot "cat > \"\$HOME/.config/systemd/user/$unit\""
 done
+# A tag older than the heartbeat has units that never call it, so a rollback
+# to one installs without it rather than being refused.
+if git cat-file -e "$commit:ops/heartbeat.sh" 2>/dev/null; then
+  git show "$commit:ops/heartbeat.sh" | on_slot 'cat > "$HOME/.local/share/engram/heartbeat.sh" && chmod 755 "$HOME/.local/share/engram/heartbeat.sh"'
+fi
 on_slot "umask 077 && printf 'WALKER_IMAGE=%s\n' '$IMAGE:$TAG' > \"\$HOME/.config/engram/walker.image\""
 on_slot 'systemd-analyze --user verify "$HOME/.config/systemd/user/engram-walker.service" "$HOME/.config/systemd/user/engram-walker.timer"'
 on_slot 'systemctl --user daemon-reload && systemctl --user enable --now --quiet engram-walker.timer'

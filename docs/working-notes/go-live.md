@@ -4,9 +4,9 @@
 with the full record restored and a nightly backup running. The last gap,
 an off-box copy, closed 2026-09-29: every nightly dump goes to Backblaze B2
 under a 30-day lock, and a drill from the B2 copy passed the same evening.
-Reporting a failed night through healthchecks.io is built as of 2026-09-30
-and not yet installed (§ Knowing a night failed). Kept as the account of how
-it got there.
+A failed night is reported through healthchecks.io since 2026-09-30, and a
+drilled failure reached the owner's inbox (§ Knowing a night failed). Kept as
+the account of how it got there.
 The machine's own conventions are the `shared-vps` skill; this note holds
 only what is true of Engram.
 
@@ -262,7 +262,7 @@ script runs, and the dump being drilled is the irreplaceable one.
 
 ## Knowing a night failed
 
-Scoped and built 2026-09-30, not yet installed. Three jobs run each night
+Built and installed 2026-09-30. Three jobs run each night
 with nobody watching: the backup and its upload, the TMDB backfill, and the
 library walk on the Bytesized slot. Each fails without a sound. A failed
 upload leaves the timer and the local dump looking exactly as they do on a
@@ -312,6 +312,15 @@ key, a bad slug and an unreachable service. The review then ran the same unit
 shapes under systemd 257. The check-in fires after a failed second
 `ExecStart` and after a start timeout, and the walker's user unit resolves
 `%h` in both new lines.
+
+**Installed 2026-09-30 and drilled.** Each check got its first check-in from a
+real run: the walk from `scripts/deploy-walker.sh --run`, the other two from
+starting their units by hand once the updated units were in place. The drill
+of the alert itself went through the real script and the real key file. A
+failure sent for `engram-backfill` brought a DOWN email, and the success
+after it an UP email, both to the owner's inbox. The ping key on the box is
+`/etc/engram/heartbeat.env`, on the slot `~/.config/engram/heartbeat.env`,
+and the healthchecks.io project is engram's own.
 
 What this does not watch is whether a success is right. That is the drills'
 job. Nor is it uptime monitoring: the site being down is noticed by using it.

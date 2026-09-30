@@ -285,9 +285,9 @@ the viewer wants of a title. The SPA calls all four.
    an upload-only key and a 30-day compliance lock (`ops/offsite.sh`). A drill
    from the B2 copy (`scripts/offsite-drill.sh`) restored it the same evening,
    every table matching; vyoh's half landed in its own repo the same day.
-   Check-ins to healthchecks.io from the backup, the backfill and the walk
-   (`ops/heartbeat.sh`), so that a failed night is reported, were built
-   2026-09-30 and are not yet installed ([go-live.md](go-live.md) § Knowing a
+   From 2026-09-30 a failed night is reported: the backup, the backfill and
+   the walk check in with healthchecks.io (`ops/heartbeat.sh`), and a drilled
+   failure reached the owner's inbox ([go-live.md](go-live.md) § Knowing a
    night failed).
 6. ~~**Web depth**~~ — done 2026-09-23, every arc built and deployed.
    Scoped 2026-09-21 in [web-depth.md](web-depth.md). The

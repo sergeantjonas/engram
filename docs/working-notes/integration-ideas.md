@@ -41,6 +41,30 @@ Explicitly **not** a goal: replacing Plex, Sonarr or Radarr.
 - **Return alerts that account for the viewer.** Sonarr knows a new season is
   coming; it does not know whether the last one was finished. "S03 airs in two
   weeks, you finished S02 in August" via ntfy or Discord.
+- **Episode alerts for followed shows.** A followed show — wanted or started,
+  not dropped or excluded — pings Discord at three moments: Sonarr grabbed the
+  episode, Sonarr imported it, and it aired some hours ago with neither. Sonarr's
+  own Discord connection covers the first two, but for everything a shared
+  Sonarr downloads, and it cannot say "S03E05 is on disk, you're one behind".
+  Those two ride the Sonarr receiver open-work.md already owes: `Grab` and
+  `Download` carry the `tvdbId` and the episodes, and `Download` feeds
+  `library_presence` as well. `isUpgrade` never pings. Whether a season pack
+  arrives as one event or one per file is to be measured on the live install;
+  if per file, the pings collapse per title over a short window.
+
+  The overdue alert is a scheduled check rather than an event, and it needs two
+  things Engram lacks. `episode.air_date` is a day with no time — TMDB gives
+  none — so "hours late" counts from the end of that day unless Sonarr's
+  `airDateUtc` is read, which puts a key administering the shared Sonarr on the
+  box. And `library_presence` is per title, while "this episode has no file"
+  is per episode. Whichever way that lands, the check trusts only presence a
+  reconcile backs, or a missed `Download` webhook reports as a late episode.
+
+  Deciding whether to ping belongs here; delivering it does not. Only Engram
+  knows what is followed, but the Discord webhook URL — a credential, whoever
+  holds it can post — and never pinging twice for one thing are wanted by other
+  projects too, a wishlist price drop on vyoh.gg being the first. The delivery
+  side is `notify-hub.md` in commonplace, the cross-project notes repo.
 
 ## Unglamorous but worth doing early
 

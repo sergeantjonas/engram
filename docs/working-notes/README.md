@@ -13,6 +13,8 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
 - **How does this ship?** → [go-live.md](go-live.md)
 - **What does the web app still owe?** → [web-depth.md](web-depth.md)
 - **Browse before scoping** → [integration-ideas.md](integration-ideas.md)
+- **Spans more than this repo?** → commonplace (`~/dev/commonplace`), the
+  notes no single project owns
 
 ## The notes
 

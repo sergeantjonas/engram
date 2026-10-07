@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. Extended 2026-09-19 with `episode_gap`, the viewer's own account of a hole, and 2026-10-07 with `library_event`, what Sonarr did to an episode's file. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. Extended 2026-09-19 with `episode_gap`, the viewer's own account of a hole, and 2026-10-07 with `library_event`, what Sonarr did to an episode's file, and `alert`, what is worth telling the owner about one. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -20,8 +20,8 @@ months, the fix is a re-derivation rather than a data loss.
 never deleted, because outliving the media is the entire point of the project.
 The delete rules encode that: `watch_event` and `library_event` restrict, so a
 title with history cannot be removed at all, while `episode`,
-`library_presence` and `intent` cascade — and the episode cascade is itself
-blocked by the event restricts.
+`library_presence`, `intent` and `alert` cascade — and the episode cascade is
+itself blocked by the event restricts.
 
 ## Tables
 
@@ -45,6 +45,14 @@ library_event     append-only: what Sonarr did to one episode's file
                   kind is grab | import | delete
                   UNIQUE (source, source_event_id), and the same composite
                   foreign key as watch_event
+
+alert             something worth telling the owner about an episode
+                  (id, key, kind, title_id, episode_id, behind, decided_at,
+                   delivered_at)
+                  kind is ready | stuck | overdue; key is <kind>@<episode
+                  key>, unique, so a second decision about the same thing is
+                  a conflict rather than a second message
+                  a decision, not a fact, so it cascades with its episode
 
 intent            do I want to watch it?
                   (title_id, want, started_at, dropped_at, excluded_at, note)

@@ -407,7 +407,8 @@ the viewer wants of a title. The SPA calls all four.
    preloaded.
 10. **Episode alerts** — scoped 2026-10-07 in
     [episode-alerts.md](episode-alerts.md); chunk 1, the Sonarr receiver,
-    built, deployed and connected the same day. A
+    built, deployed and connected the same day, and chunk 2's `alert` table
+    landed with it. A
     Discord ping when a recently aired episode of a followed show is ready,
     stuck after its
     grab, or overdue, and never for what the owner did themselves. Five

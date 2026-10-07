@@ -235,6 +235,49 @@ export const libraryEvents = pgTable(
   ],
 );
 
+export const alertKind = pgEnum('alert_kind', ['ready', 'stuck', 'overdue']);
+
+/**
+ * Something worth telling the owner about an episode, decided once.
+ *
+ * Written before anything sends it, so a delivery that fails delays an alert
+ * rather than losing it, and the key makes a second decision about the same
+ * thing a conflict instead of a second message. Unlike the event tables this
+ * holds decisions, not facts, so it cascades with its episode.
+ */
+export const alerts = pgTable(
+  'alert',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** `<kind>@<episode key>`: one of each kind per episode, ever. */
+    key: text('key').notNull().unique(),
+    kind: alertKind('kind').notNull(),
+    titleId: uuid('title_id')
+      .notNull()
+      .references(() => titles.id, { onDelete: 'cascade' }),
+    episodeId: uuid('episode_id').notNull(),
+    /**
+     * How many episodes the viewer still had before this one when it was
+     * decided, counted from the furthest one watched: 0 is "this is next".
+     * Null when nothing of the show had been watched, when this one sits
+     * behind the furthest watched, and for a special, which sits outside the
+     * run.
+     */
+    behind: integer('behind'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Null until something has sent it. */
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.titleId, t.episodeId],
+      foreignColumns: [episodes.titleId, episodes.id],
+      name: 'alert_episode_fk',
+    }).onDelete('cascade'),
+    check('alert_behind_nonnegative', sql`${t.behind} is null or ${t.behind} >= 0`),
+  ],
+);
+
 /** What the viewer wants, which is the thing Plex cannot express at all. */
 export const intent = pgTable('intent', {
   titleId: uuid('title_id')

@@ -3,7 +3,8 @@
 **Status:** Building — scoped 2026-10-07, and Sonarr's webhooks read from
 source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
 its first real grabs, imports and series add read against the source that
-evening; a delete and a series delete have not fired yet. Chunk 2 is next.
+evening; a delete and a series delete have not fired yet. Chunk 2 under
+way: the `alert` table landed 2026-10-07, the ready decision follows.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -113,10 +114,12 @@ Two tables, both generated from `schema.ts`.
   reasoning in [data-model.md](data-model.md) § Presence per episode is a log.
   The walk's reconcile is a nightly snapshot rather than an event, and its
   shape is chunk 3's to settle.
-- **`alert`** — one row per thing worth saying, unique on its key
-  (`ready:show:tvdb:392276:3:5`), with a delivered time that stays null until
-  chunk 5. A second decision about the same thing is a conflict, not a second
-  ping.
+- **`alert`** — landed 2026-10-07: one row per thing worth saying, unique on
+  its key (`ready@show:tvdb:392276/s03e0005`), with a delivered time that
+  stays null until chunk 5. A second decision about the same thing is a
+  conflict, not a second ping. `behind` holds where the viewer stood, on the
+  definition Next up already uses: the episodes still unwatched between the
+  furthest one watched and this one, holes before that point not counted.
 
 The decision is a pure `planAlerts` that takes the event, whether the show is
 followed and where the viewer stands, and returns rows, tested with plain

@@ -262,9 +262,10 @@ the viewer wants of a title. The SPA calls all four.
    changed — all 86 history rows are account 1 — which is the point: it is
    there for the webhooks below, which fire for every viewer on the server.
    Reasoning in [ingest-architecture.md](ingest-architecture.md).
-4. **Webhook receivers** — Tautulli done 2026-09-21; Sonarr built 2026-10-07
-   as chunk 1 of [episode-alerts.md](episode-alerts.md), not yet deployed or
-   connected, per [ingest-architecture.md](ingest-architecture.md). Tautulli
+4. **Webhook receivers** — Tautulli done 2026-09-21; Sonarr built, deployed
+   and connected 2026-10-07 as chunk 1 of
+   [episode-alerts.md](episode-alerts.md), per
+   [ingest-architecture.md](ingest-architecture.md). Tautulli
    authenticates on `WEBHOOK_SECRET`, filters on `TAUTULLI_USER_IDS` before it
    writes anything to a log, sits on the guard's open list as `POST
    /webhooks/tautulli` — the list is keyed on method and route pattern
@@ -406,7 +407,7 @@ the viewer wants of a title. The SPA calls all four.
    preloaded.
 10. **Episode alerts** — scoped 2026-10-07 in
     [episode-alerts.md](episode-alerts.md); chunk 1, the Sonarr receiver,
-    built the same day and waiting on a deploy and the Sonarr connection. A
+    built, deployed and connected the same day. A
     Discord ping when a recently aired episode of a followed show is ready,
     stuck after its
     grab, or overdue, and never for what the owner did themselves. Five

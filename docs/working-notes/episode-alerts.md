@@ -1,8 +1,9 @@
 # Episode alerts
 
 **Status:** Building — scoped 2026-10-07, and Sonarr's webhooks read from
-source the same day. Chunk 1 built 2026-10-07 and not yet deployed: the
-webhook still has to be added in Sonarr and its first deliveries read.
+source the same day. Chunk 1 built, deployed and connected 2026-10-07: four
+Test deliveries arrived authenticated and were ignored as tests. The first
+real grab and import are still to be read against the source.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -142,8 +143,8 @@ there; a grab touches no presence. Each event row keeps the body with its own
 episode alone, since a season pack names every episode, overview and all. A
 grab of a whole long series could pass the 1 MiB that nginx and Fastify allow
 by default; it would be refused once, which Sonarr survives, and the limit is
-raised on this path as on the walk's if it ever is. Deploying it and adding
-the webhook in Sonarr are what remain.
+raised on this path as on the walk's if it ever is. Deployed and connected
+the same day, with migration 0015 applied on the box.
 
 ## Chunk 2 · Alerts, and ready
 

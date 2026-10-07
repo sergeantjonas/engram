@@ -64,11 +64,13 @@ yet from a live delivery — the first real ones are read against this.
   download — never a disk rescan. *On Import Complete* sends one per release,
   with `episodeFiles`, `fileCount` and a `releaseType` of `SeasonPack` or
   other, and no `isUpgrade` at all. The receiver tells them apart by
-  `episodeFiles`. Chosen: *On Import* alone, with *On Upgrade* off, so an
-  upgrade is never sent; it matches *On Episode File Delete*, which is also
-  per file, and maps each file to its episodes exactly. A season pack is then
-  one event per file, and the burst collapses where every burst does, at
-  delivery.
+  `episodeFiles`. Chosen: *On Import*, not *On Import Complete*; it matches
+  *On Episode File Delete*, which is also per file, and maps each file to its
+  episodes exactly. A season pack is then one event per file, and the burst
+  collapses where every burst does, at delivery. *On File Upgrade* is on as
+  well, the owner's choice on 2026-10-07: a quality upgrade is kept as an
+  import, told apart by `isUpgrade` and `deletedFiles` in `raw`, and is never
+  an alert.
 - **No event carries an id or a timestamp.** Idempotency derives from what is
   there: a grab per `downloadId` and episode, an import or a delete per
   `episodeFile.id` and episode, each with its kind, so a file's import and
@@ -180,9 +182,10 @@ project sends.
 - ~~The Sonarr version~~ — `4.0.20.3012`, given 2026-10-07.
 - After chunk 1 deploys: a webhook under Settings → Connect, pointed at the
   same base URL Tautulli posts to, with an `x-engram-token` header carrying
-  the secret. Triggers on: *On Grab*, *On Import*, *On Series Add*, *On
-  Series Delete*, *On Episode File Delete*. Off: *On Import Complete*, *On
-  Upgrade*, *On Episode File Delete For Upgrade*, and the rest.
+  the secret, under the form's advanced settings; username and password left
+  empty. Triggers on: *On Grab*, *On File Import*, *On File Upgrade*, *On
+  Series Add*, *On Series Delete*, *On Episode File Delete*. Off: *On Import
+  Complete*, *On Episode File Delete For Upgrade*, and the rest.
 - Before chunk 5: a Discord webhook URL.
 
 ## Not in this arc

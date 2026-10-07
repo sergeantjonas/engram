@@ -410,8 +410,8 @@ the viewer wants of a title. The SPA calls all four.
     grab, or overdue, and never for what the owner did themselves. Five
     chunks: the Sonarr receiver (item 4's other half), the `alert` table and
     ready, the walk keeping every episode as the reconcile, an hourly stuck
-    and overdue check on the box, then Discord. No Sonarr API key. First step
-    is reading Sonarr's webhook payloads from its source.
+    and overdue check on the box, then Discord. No Sonarr API key. Sonarr's
+    payloads read from its source 2026-10-07; chunk 1 is next.
 
 ## Blocked
 

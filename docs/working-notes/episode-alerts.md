@@ -1,7 +1,7 @@
 # Episode alerts
 
-**Status:** Plan — scoped 2026-10-07, nothing built. First step: read what
-Sonarr's webhooks send, from its source for the installed version.
+**Status:** Plan — scoped 2026-10-07, nothing built. Sonarr's webhooks read
+from source the same day; chunk 1 is next.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -48,22 +48,46 @@ matters.
 
 ## What Sonarr sends
 
-Not yet read. Before chunk 1, from Sonarr's source at the installed version,
-then confirmed against the first real deliveries:
+Read 2026-10-07 from Sonarr's source at `v4.0.20.3012`, the installed version
+(`src/NzbDrone.Core/Notifications/Webhook/` and `NotificationService.cs`), not
+yet from a live delivery — the first real ones are read against this.
 
-- **What each event carries** — `Grab`, `Download`, `EpisodeFileDelete`,
-  `SeriesAdd`, `SeriesDelete`: the series ids, the episodes, and whether each
-  episode carries its `airDateUtc`. If `Download` does, the ready alert's
-  recency test has an exact time for free.
-- **What makes a delivery unique**, for idempotency on
-  `(source, source_event_id)` the way every other ingest is.
-- **A season pack** — one event per file, or one per release. Per file means
-  ready alerts collapse per title over a short window.
-- **Whether a grab says it was automatic.** If not, a manual search for last
-  night's episode still pings when it lands; rare enough to accept.
-- **How it authenticates.** The receiver already reads `x-engram-token`
-  ([webhooks.ts:37](../../apps/api/src/routes/webhooks.ts#L37)); if Sonarr's
-  form cannot send a header, basic auth carries the same secret.
+- **Every event names the series by `tvdbId`**, alongside `tmdbId` and
+  `imdbId`, so a show keys the way `titleKey` wants with no resolution pass.
+  Each episode carries its season, number, title, `airDate` and `airDateUtc`:
+  the ready alert's recency test has the exact air time for free. Overdue
+  still has only TMDB's day, because an episode nothing grabbed is in no
+  payload.
+- **Two triggers send `eventType: "Download"`.** *On Import* sends one per
+  episode file, with `episodeFile` and `isUpgrade`, and only for a new
+  download — never a disk rescan. *On Import Complete* sends one per release,
+  with `episodeFiles`, `fileCount` and a `releaseType` of `SeasonPack` or
+  other, and no `isUpgrade` at all. The receiver tells them apart by
+  `episodeFiles`. Chosen: *On Import* alone, with *On Upgrade* off, so an
+  upgrade is never sent; it matches *On Episode File Delete*, which is also
+  per file, and maps each file to its episodes exactly. A season pack is then
+  one event per file, and the burst collapses where every burst does, at
+  delivery.
+- **No event carries an id or a timestamp.** Idempotency derives from what is
+  there: a grab per `downloadId` and episode, an import or a delete per
+  `episodeFile.id` and episode. A grab is dated when it arrives, which is all
+  stuck needs.
+- **A grab does not say what caused it.** RSS, a search, an interactive
+  pick: Sonarr knows, and the payload has no field for it. A manual search
+  for last night's episode still pings when it lands; rare enough to accept.
+- **A delete says why** — `MissingFromDisk`, `Manual`, `Upgrade`,
+  `NoLinkedEpisodes` or `ManualOverride`. The upgrade case is sent only when
+  *On Episode File Delete For Upgrade* is on; it stays off.
+- **One attempt, then Sonarr stops asking.** A failed post is logged and not
+  retried, and a webhook still failing five minutes after its first failure
+  is paused, skipping every event until it recovers. So the receiver answers
+  2xx to anything it cannot plan, as Tautulli's does, and an outage on the
+  box loses what Sonarr sent during it. That makes chunk 3's reconcile a
+  requirement for overdue rather than a nicety.
+- **It authenticates with a header.** The webhook form takes custom headers
+  (under advanced settings) besides basic auth, so it sends the
+  `x-engram-token` the receiver already reads
+  ([webhooks.ts:37](../../apps/api/src/routes/webhooks.ts#L37)).
 
 ## The model
 
@@ -130,9 +154,12 @@ project sends.
 
 ## Needed from the owner
 
-- The Sonarr version (System → Status), before the source is read.
+- ~~The Sonarr version~~ — `4.0.20.3012`, given 2026-10-07.
 - After chunk 1 deploys: a webhook under Settings → Connect, pointed at the
-  same base URL Tautulli posts to, with the secret.
+  same base URL Tautulli posts to, with an `x-engram-token` header carrying
+  the secret. Triggers on: *On Grab*, *On Import*, *On Series Add*, *On
+  Series Delete*, *On Episode File Delete*. Off: *On Import Complete*, *On
+  Upgrade*, *On Episode File Delete For Upgrade*, and the rest.
 - Before chunk 5: a Discord webhook URL.
 
 ## Not in this arc
@@ -143,3 +170,7 @@ project sends.
   already answers.
 - **The hub.** commonplace's `notify-hub.md`, once a second sender exists.
 - **Alerts in the web app.** Discord is where they are read.
+- **Manual Interaction Required.** Sonarr sends it when a download needs a
+  hand to import, which happens without the owner and is often what stuck
+  is. A candidate fourth alert, or a stuck that fires at once instead of
+  hours later; found while reading the source, not yet decided.

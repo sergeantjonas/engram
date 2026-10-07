@@ -14,7 +14,13 @@ const series: PlannedSeries = {
 const event = (kind: PlannedLibraryEvent['kind'], number: number): PlannedLibraryEvent => ({
   sourceEventId: `show:tvdb:371980/s02e000${number}@${kind}@501`,
   kind,
-  episode: { season: 2, number, name: `Episode ${number}`, airDate: '2025-01-17' },
+  episode: {
+    season: 2,
+    number,
+    name: `Episode ${number}`,
+    airDate: '2025-01-17',
+    airedAt: '2025-01-17T02:00:00Z',
+  },
   raw: { eventType: 'Download' },
 });
 
@@ -32,6 +38,7 @@ describe('storeSonarrPlan', () => {
     const stored = await storeSonarrPlan(stub.db, {
       ok: true,
       action: 'file',
+      upgrade: false,
       kind: 'import',
       series,
       events: [event('import', 1), event('import', 2)],
@@ -64,6 +71,7 @@ describe('storeSonarrPlan', () => {
     const stored = await storeSonarrPlan(stub.db, {
       ok: true,
       action: 'file',
+      upgrade: false,
       kind: 'grab',
       series,
       events: [event('grab', 1)],
@@ -76,6 +84,7 @@ describe('storeSonarrPlan', () => {
     await storeSonarrPlan(stub.db, {
       ok: true,
       action: 'file',
+      upgrade: false,
       kind: 'grab',
       series,
       events: [event('grab', 1)],
@@ -140,6 +149,7 @@ describe('storeSonarrPlan', () => {
       storeSonarrPlan(stub.db, {
         ok: true,
         action: 'file',
+        upgrade: false,
         kind: 'import',
         series,
         events: [event('import', 1)],

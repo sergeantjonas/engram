@@ -29,13 +29,19 @@ const episodeShape = z.object({
   // Anything but a real date reads as none: Postgres would refuse it in
   // `episode.air_date`, and a refused write answers Sonarr with a 500.
   airDate: z.iso.date().nullish().catch(null),
+  airDateUtc: z.iso.datetime().nullish().catch(null),
 });
 
 const episodes = z.array(episodeShape).min(1);
 const episodeFile = z.object({ id: z.number().int().positive() });
 
 const grabBody = z.object({ series: seriesShape, episodes, downloadId: z.string().min(1) });
-const importBody = z.object({ series: seriesShape, episodes, episodeFile });
+const importBody = z.object({
+  series: seriesShape,
+  episodes,
+  episodeFile,
+  isUpgrade: z.boolean().nullish(),
+});
 const deleteBody = z.object({
   series: seriesShape,
   episodes,
@@ -60,6 +66,12 @@ export interface PlannedEpisode {
   name: string | null;
   /** As Sonarr has it, `YYYY-MM-DD`. Only ever fills a row the backfill has not. */
   airDate: string | null;
+  /**
+   * The instant it aired, as an ISO string. Sharper than `airDate`, which is
+   * the network's local day: an evening airing in the US is already the next
+   * day here.
+   */
+  airedAt: string | null;
 }
 
 export interface PlannedLibraryEvent {
@@ -80,6 +92,8 @@ export type SonarrPlan =
       kind: LibraryEventKind;
       series: PlannedSeries;
       events: PlannedLibraryEvent[];
+      /** A quality upgrade of a file already there. Only ever true on an import. */
+      upgrade: boolean;
     }
   | { ok: false; reason: string };
 
@@ -146,6 +160,7 @@ function eventsOf(
         number: ep.episodeNumber,
         name: ep.title ?? null,
         airDate: ep.airDate ?? null,
+        airedAt: ep.airDateUtc ?? null,
       },
       // The body with only this row's episode in it. A season pack names
       // every episode, overview and all, and kept whole on each row it would
@@ -178,7 +193,7 @@ export function planSonarrEvent(body: unknown): SonarrPlan {
       if (!keyed.ok) return keyed;
       const { series } = keyed;
       const events = eventsOf(series, 'grab', read.body.downloadId, read.body.episodes, fields);
-      return { ok: true, action: 'file', kind: 'grab', series, events };
+      return { ok: true, action: 'file', kind: 'grab', series, events, upgrade: false };
     }
 
     case 'Download': {
@@ -195,10 +210,11 @@ export function planSonarrEvent(body: unknown): SonarrPlan {
       if (!keyed.ok) return keyed;
       const { series } = keyed;
       // An upgrade is recorded like any import: a new file did arrive. Whether
-      // it is worth saying is for the alerts, which read `isUpgrade` off `raw`.
+      // it is worth saying is for the alerts, which never say it.
       const occurrence = String(read.body.episodeFile.id);
       const events = eventsOf(series, 'import', occurrence, read.body.episodes, fields);
-      return { ok: true, action: 'file', kind: 'import', series, events };
+      const upgrade = read.body.isUpgrade === true;
+      return { ok: true, action: 'file', kind: 'import', series, events, upgrade };
     }
 
     case 'EpisodeFileDelete': {
@@ -215,7 +231,7 @@ export function planSonarrEvent(body: unknown): SonarrPlan {
       const { series } = keyed;
       const occurrence = String(read.body.episodeFile.id);
       const events = eventsOf(series, 'delete', occurrence, read.body.episodes, fields);
-      return { ok: true, action: 'file', kind: 'delete', series, events };
+      return { ok: true, action: 'file', kind: 'delete', series, events, upgrade: false };
     }
 
     case 'SeriesAdd': {

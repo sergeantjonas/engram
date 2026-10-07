@@ -96,6 +96,15 @@ describe('planSonarrEvent', () => {
     expect(plan.ok && plan.action === 'file' && plan.events[0]?.episode.airDate).toBeNull();
   });
 
+  it('reads the instant an episode aired, and whether an import is an upgrade', () => {
+    const plan = planSonarrEvent({ ...imported, isUpgrade: true });
+    expect(plan).toMatchObject({
+      upgrade: true,
+      events: [{ episode: { airedAt: '2025-01-17T02:00:00Z' } }, {}],
+    });
+    expect(planSonarrEvent(imported)).toMatchObject({ upgrade: false });
+  });
+
   it('gives a redelivered body the same ids', () => {
     expect(planSonarrEvent(structuredClone(imported))).toEqual(planSonarrEvent(imported));
   });

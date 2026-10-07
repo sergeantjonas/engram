@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { type DecidedAlerts, decideReadyAlerts } from '../alerts/store.js';
 import { secretMatches } from '../auth/secret.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
@@ -232,6 +233,18 @@ export function registerWebhookRoutes(
 
     const stored = await storeSonarrPlan(db, plan);
 
+    // Whether an import is news, decided once its rows are in. A failure here
+    // is logged and swallowed: the import is already stored, and a 500 would
+    // count towards Sonarr pausing the webhook over something it did right.
+    let alerts: DecidedAlerts | null = null;
+    if (plan.action === 'file' && plan.kind === 'import' && stored.titleId !== null) {
+      try {
+        alerts = await decideReadyAlerts(db, stored.titleId, plan, new Date());
+      } catch (error) {
+        request.log.error({ err: error, title: plan.series.key }, 'ready alert not decided');
+      }
+    }
+
     // The key and the episode numbers, enough to follow a delivery to its
     // rows. `raw` on each row is the full payload, paths and all.
     request.log.info(
@@ -246,6 +259,8 @@ export function registerWebhookRoutes(
         known: stored.titleId !== null,
         written: stored.written,
         skipped: stored.skipped,
+        alerts: alerts?.written ?? null,
+        passed: alerts?.passed.map((p) => `s${p.season}e${p.number}: ${p.reason}`) ?? null,
       },
       'sonarr event recorded',
     );

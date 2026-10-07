@@ -3,8 +3,8 @@
 **Status:** Building — scoped 2026-10-07, and Sonarr's webhooks read from
 source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
 its first real grabs, imports and series add read against the source that
-evening; a delete and a series delete have not fired yet. Chunk 2 under
-way: the `alert` table landed 2026-10-07, the ready decision follows.
+evening; a delete and a series delete have not fired yet. Chunk 2 built
+2026-10-07 and not yet deployed: the `alert` table and the ready decision.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -121,9 +121,10 @@ Two tables, both generated from `schema.ts`.
   definition Next up already uses: the episodes still unwatched between the
   furthest one watched and this one, holes before that point not counted.
 
-The decision is a pure `planAlerts` that takes the event, whether the show is
-followed and where the viewer stands, and returns rows, tested with plain
-inputs like `planWatchEvents`.
+Each decision is a pure function — `planReadyAlert` for the first — that
+takes the event, whether the show is followed and the grid it stands on, and
+returns the alert or the reason there is none, tested with plain inputs like
+`planWatchEvents`.
 
 ## Chunk 1 · The Sonarr receiver
 
@@ -170,9 +171,26 @@ Read on the box that evening, against the source:
 
 ## Chunk 2 · Alerts, and ready
 
-The `alert` table and `planAlerts`, run on every import: followed, recently
-aired, not an upgrade. The row records where the viewer stands — "one behind"
+The `alert` table and the ready decision, run on every import: followed,
+recently aired, not an upgrade. The row records where the viewer stands — "one behind"
 — at the moment it was decided. Nothing sends it yet; it is read on the box.
+
+Built 2026-10-07 as `planReadyAlert` in
+[ready.ts](../../apps/api/src/alerts/ready.ts), with `decideReadyAlerts`
+beside it reading the follow state and the grid and writing what it decides.
+Recent is 14 days from Sonarr's own air instant, falling back to its air day:
+a week is how often most shows air, and twice that covers a release the
+overdue alert already flagged. An episode already watched gets nothing, and
+one behind the furthest watched gets an alert with no `behind`, since it is
+a hole being filled rather than what comes next. The
+route decides after the import's rows are stored and swallows a failure into
+the log, since a 500 would count towards Sonarr pausing the webhook; the
+record line names each episode that got no alert and why.
+
+A show added to Sonarr while it is airing still pings for last week's
+episode when Sonarr fetches it. That is the owner's doing and the recency
+test cannot tell it apart; Sonarr's add, which would, is not kept as an
+event.
 
 ## Chunk 3 · The walk keeps every episode
 

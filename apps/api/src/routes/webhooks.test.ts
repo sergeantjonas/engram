@@ -460,6 +460,43 @@ describe('POST /webhooks/sonarr', () => {
     );
   });
 
+  it('decides a ready alert for a fresh import, and none for a grab', async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const fresh = {
+      ...imported,
+      episodes: [{ ...imported.episodes[0], airDateUtc: yesterday }],
+    };
+    const primed = () => {
+      const stub = sessionDb();
+      stub.returns = [[{ id: 'title-1' }], [{ id: 'ev-1' }], [{ id: 'alert-1' }]];
+      stub.selects = [[{ id: 'episode-1' }]];
+      stub.executions = [
+        [{ kind: 'show', want: true, dropped: false, excluded: false, played: false }],
+        [{ id: 'episode-1', season: 2, number: 1, seen: false, skipped: false, air_date: null }],
+      ];
+      return stub;
+    };
+    const isAlert = (row: { values: unknown }) =>
+      String((row.values as { key?: unknown }).key ?? '').startsWith('ready@');
+
+    const onImport = primed();
+    await sonarr(good, fresh, onImport);
+    expect(onImport.inserted.filter(isAlert)).toEqual([
+      expect.objectContaining({
+        values: expect.objectContaining({
+          key: 'ready@show:tvdb:371980/s02e0001',
+          episodeId: 'episode-1',
+        }),
+      }),
+    ]);
+
+    const onGrab = primed();
+    const { episodeFile: _file, isUpgrade: _upgrade, ...grab } = fresh;
+    await sonarr(good, { ...grab, eventType: 'Grab', downloadId: 'SABnzbd_nzo_x' }, onGrab);
+    expect(onGrab.inserted.filter(isAlert)).toEqual([]);
+    expect(onGrab.executions).toHaveLength(2);
+  });
+
   it('refuses a missing or wrong secret, and takes none from the body', async () => {
     expect((await sonarr({}, imported)).statusCode).toBe(401);
     expect((await sonarr({ 'x-engram-token': 'wrong' }, imported)).statusCode).toBe(401);
@@ -486,5 +523,35 @@ describe('POST /webhooks/sonarr', () => {
     const response = await sonarr(good, { eventType: 'Test', series: imported.series }, stub);
     expect(response.statusCode).toBe(204);
     expect(stub.inserted).toEqual([]);
+  });
+
+  // The import is stored before the alert is decided, and a 500 would count
+  // towards Sonarr pausing the webhook over a delivery that was fine.
+  it('still answers 204 when deciding an alert fails', async () => {
+    const errors: unknown[] = [];
+    const stub = sessionDb();
+    stub.returns = [[{ id: 'title-1' }], [{ id: 'ev-1' }]];
+    stub.selects = [[{ id: 'episode-1' }]];
+    stub.db.execute = (async () => {
+      throw new Error('the database went away');
+    }) as unknown as typeof stub.db.execute;
+    await app?.close();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.error = ((obj: unknown) => {
+        errors.push(obj);
+      }) as typeof request.log.error;
+      done();
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/sonarr',
+      headers: { 'content-type': 'application/json', ...good },
+      payload: imported,
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(errors).toEqual([expect.objectContaining({ title: 'show:tvdb:371980' })]);
   });
 });

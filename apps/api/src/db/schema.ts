@@ -200,7 +200,7 @@ export const intent = pgTable('intent', {
   /**
    * Set when the viewer says a title is not theirs and never was.
    *
-   * A shared Sonarr and Radarr put things on disk nobody here will watch, and
+   * A Plex shared with other viewers holds things nobody here will watch, and
    * the default view hides whatever this names. `want` cannot carry it: false
    * is every row's starting value and already means "no opinion", so
    * overloading it would make an undecided title and a rejected one the same

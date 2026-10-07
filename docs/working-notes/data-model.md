@@ -95,7 +95,7 @@ touch `library_presence`.
 
 ## Titles that are not yours
 
-A shared Sonarr and Radarr put things on disk that the owner will never watch,
+A Plex shared with other viewers holds things the owner will never watch,
 and a library view that cannot be told so is a library view that degrades as the
 disk fills. That is an intent statement, so it belongs here rather than as a
 flag on `title`: presence says what is on disk, intent says who cares.

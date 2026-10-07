@@ -1066,7 +1066,7 @@ the viewer wants of a title. The SPA calls all four.
 
 - **2026-09-17** — Titles can be marked as not the owner's: `intent.excluded_at`
   is a nullable timestamp, and a non-null value hides the title from the default
-  view. A shared Sonarr and Radarr put things on disk nobody here will watch,
+  view. A Plex shared with other viewers holds things nobody here will watch,
   and `want = false` could not say so — it is every row's default and already
   means "no opinion". Verified against the live database: column present and
   nullable, a round trip carrying a reason in `note`, and `excluded_at is null`

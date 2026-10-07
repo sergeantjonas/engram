@@ -1,8 +1,8 @@
 # Episode alerts
 
 **Status:** Building — scoped 2026-10-07, and Sonarr's webhooks read from
-source the same day. Chunk 1 under way: `library_event` landed 2026-10-07; the
-plan, the store and the route follow.
+source the same day. Chunk 1 built 2026-10-07 and not yet deployed: the
+webhook still has to be added in Sonarr and its first deliveries read.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -96,8 +96,8 @@ yet from a live delivery — the first real ones are read against this.
   overdue.
 - **It authenticates with a header.** The webhook form takes custom headers
   (under advanced settings) besides basic auth, so it sends the
-  `x-engram-token` the receiver already reads
-  ([webhooks.ts:37](../../apps/api/src/routes/webhooks.ts#L37)).
+  `x-engram-token` the Tautulli route already read, and the Sonarr route
+  reads alone ([webhooks.ts:203](../../apps/api/src/routes/webhooks.ts#L203)).
 
 ## The model
 
@@ -130,6 +130,18 @@ refuses nothing: a body it cannot plan is logged and answered 204, and the
 walk recovers it. Closes the Sonarr half of open-work.md Next item 4. Then the
 webhook is added in Sonarr, and the first deliveries are read against the
 source.
+
+Built 2026-10-07: `library_event`, `planSonarrEvent` in
+[sonarr.ts](../../apps/api/src/ingest/sonarr.ts), `storeSonarrPlan` beside it,
+and the route in [webhooks.ts](../../apps/api/src/routes/webhooks.ts). A
+series delete marks the title gone only when it took its files, and only for
+a title the record already has, and only by updating a presence row that is
+there; a grab touches no presence. Each event row keeps the body with its own
+episode alone, since a season pack names every episode, overview and all. A
+grab of a whole long series could pass the 1 MiB that nginx and Fastify allow
+by default; it would be refused once, which Sonarr survives, and the limit is
+raised on this path as on the walk's if it ever is. Deploying it and adding
+the webhook in Sonarr are what remain.
 
 ## Chunk 2 · Alerts, and ready
 

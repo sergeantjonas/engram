@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { githubStub, testConfig } from '../app.fixture.js';
 import { buildApp } from '../app.js';
 import { sessionDb } from '../auth/session.fixture.js';
@@ -400,5 +400,91 @@ describe('POST /webhooks/tautulli', () => {
     // open a write path to anyone.
     const response = await post({}, {});
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('POST /webhooks/sonarr', () => {
+  const logged: unknown[] = [];
+  beforeEach(() => {
+    logged.length = 0;
+  });
+
+  // Closes the last app first, so a test that posts more than once leaves
+  // nothing open for afterEach to miss.
+  const sonarr = async (
+    headers: Record<string, string>,
+    payload: unknown,
+    stub: ReturnType<typeof sessionDb> = sessionDb(),
+  ) => {
+    await app?.close();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb: null, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.warn = ((obj: unknown) => {
+        logged.push(obj);
+      }) as typeof request.log.warn;
+      done();
+    });
+    return app.inject({
+      method: 'POST',
+      url: '/webhooks/sonarr',
+      headers: { 'content-type': 'application/json', ...headers },
+      payload: payload as object,
+    });
+  };
+
+  const imported = {
+    eventType: 'Download',
+    series: { title: 'Severance', tvdbId: 371980, tmdbId: 95396, imdbId: 'tt11280740', year: 2022 },
+    episodes: [
+      { seasonNumber: 2, episodeNumber: 1, title: 'Hello, Ms. Cobel', airDate: '2025-01-17' },
+    ],
+    episodeFile: { id: 501, path: '/home/owner/media/tv/Severance/S02E01.mkv' },
+    isUpgrade: false,
+  };
+
+  it('stores an import, with no session, on the secret in a header', async () => {
+    const stub = sessionDb();
+    stub.returns = [[{ id: 'title-1' }], [{ id: 'ev-1' }]];
+    stub.selects = [[{ id: 'episode-1' }]];
+    const response = await sonarr(good, imported, stub);
+
+    expect(response.statusCode).toBe(204);
+    expect(stub.inserted).toContainEqual(
+      expect.objectContaining({
+        values: expect.objectContaining({
+          source: 'sonarr',
+          sourceEventId: 'show:tvdb:371980/s02e0001@import@501',
+          episodeId: 'episode-1',
+        }),
+      }),
+    );
+  });
+
+  it('refuses a missing or wrong secret, and takes none from the body', async () => {
+    expect((await sonarr({}, imported)).statusCode).toBe(401);
+    expect((await sonarr({ 'x-engram-token': 'wrong' }, imported)).statusCode).toBe(401);
+    const inBody = await sonarr({}, { ...imported, token: testConfig.WEBHOOK_SECRET });
+    expect(inBody.statusCode).toBe(401);
+    expect(JSON.stringify(logged)).not.toContain(testConfig.WEBHOOK_SECRET);
+  });
+
+  it('accepts a body it cannot plan, and names fields rather than values', async () => {
+    const stub = sessionDb();
+    const response = await sonarr(
+      good,
+      { ...imported, series: { title: 'Something Private', tvdbId: 0 } },
+      stub,
+    );
+    expect(response.statusCode).toBe(204);
+    expect(stub.inserted).toEqual([]);
+    expect(logged).toContainEqual(expect.objectContaining({ reason: 'series has no tvdb id' }));
+    expect(JSON.stringify(logged)).not.toContain('Something Private');
+  });
+
+  it('writes nothing for the settings page test', async () => {
+    const stub = sessionDb();
+    const response = await sonarr(good, { eventType: 'Test', series: imported.series }, stub);
+    expect(response.statusCode).toBe(204);
+    expect(stub.inserted).toEqual([]);
   });
 });

@@ -66,6 +66,8 @@ const OPEN_ROUTES = new Set([
   // authenticates it — checked in the handler, not here. Open by method and
   // pattern together, so nothing else about /webhooks is opened with it.
   'POST /webhooks/tautulli',
+  // Sonarr, on the same secret and for the same reason.
+  'POST /webhooks/sonarr',
   // The nightly library walk, from the Bytesized slot. Its own secret,
   // checked by the route before the body is read.
   'POST /ingest/plex-library',

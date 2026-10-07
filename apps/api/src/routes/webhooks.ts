@@ -2,19 +2,21 @@ import type { FastifyInstance } from 'fastify';
 import { secretMatches } from '../auth/secret.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
+import { planSonarrEvent } from '../ingest/sonarr.js';
+import { storeSonarrPlan } from '../ingest/sonarr-store.js';
 import { planTautulliPlay, readAction, readLiveEvent } from '../ingest/tautulli.js';
 import { storeTautulliPlay } from '../ingest/tautulli-store.js';
 import type { LiveSessions } from '../live/sessions.js';
 
 /**
- * Tautulli's webhook: the freshness half of ingest.
+ * Tautulli's and Sonarr's webhooks: the freshness half of ingest.
  *
- * Authenticate, check whose play it is, read which trigger sent it, move
- * what is live, plan a stop, write, answer. Correctness is
- * the nightly library walk's job — this is idempotent on
- * `(source, source_event_id)` precisely so the two can overlap freely — which
- * is why nothing here refuses a body it cannot use. A play this drops is a
- * play the walk still finds.
+ * For Tautulli: authenticate, check whose play it is, read which trigger sent
+ * it, move what is live, plan a stop, write, answer. Sonarr's is the same
+ * without the viewer and the live sessions. Correctness is the nightly library
+ * walk's job — both are idempotent on `(source, source_event_id)` precisely so
+ * the two can overlap freely — which is why nothing here refuses a body it
+ * cannot use. What this drops, the walk still finds.
  */
 export function registerWebhookRoutes(
   app: FastifyInstance,
@@ -32,8 +34,7 @@ export function registerWebhookRoutes(
     // secret would be at rest in two files. A body is in neither, and is
     // stripped below before this handler logs anything itself.
     //
-    // The header is still accepted: Sonarr and Radarr can send one, and they
-    // are the next two through here.
+    // The header is accepted too, the one way Sonarr's route below takes it.
     const header = request.headers['x-engram-token'];
     const offered =
       typeof header === 'string'
@@ -188,6 +189,66 @@ export function registerWebhookRoutes(
     // 204 rather than a body: Tautulli logs a non-2xx as a failed
     // notification and retries nothing, so the only thing worth saying is
     // that it arrived.
+    return reply.code(204).send();
+  });
+
+  // Sonarr's webhook: what it grabbed, imported and deleted, per episode, and
+  // the series it was told to add or drop. Same shape as Tautulli's above,
+  // with one thing that makes refusing nothing matter more: Sonarr tries once,
+  // and a webhook still failing five minutes on is paused, skipping every
+  // event until it recovers. A body it cannot use must not be what pauses it.
+  app.post('/webhooks/sonarr', async (request, reply) => {
+    // A header only. Sonarr's form has one, and its body is built by Sonarr,
+    // so there is no template to put a token in.
+    const header = request.headers['x-engram-token'];
+    const offered = typeof header === 'string' ? header : undefined;
+
+    if (!secretMatches(offered, config.WEBHOOK_SECRET)) {
+      // Refused, unlike everything below: a wrong secret is a setting to fix,
+      // and Sonarr's own failure mark is the place it shows. Lengths, never
+      // values, as for Tautulli.
+      request.log.warn(
+        {
+          tokenSource: typeof header === 'string' ? 'header' : 'absent',
+          offeredLength: offered?.length ?? 0,
+          expectedLength: config.WEBHOOK_SECRET.length,
+        },
+        'sonarr webhook rejected',
+      );
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+
+    const plan = planSonarrEvent(request.body);
+    if (!plan.ok) {
+      // The reason names fields, never their values, and the walk recovers
+      // whatever this drops.
+      request.log.warn({ reason: plan.reason }, 'sonarr webhook not planned');
+      return reply.code(204).send();
+    }
+    if (plan.action === 'none') {
+      request.log.info({ eventType: plan.eventType, why: plan.why }, 'sonarr webhook ignored');
+      return reply.code(204).send();
+    }
+
+    const stored = await storeSonarrPlan(db, plan);
+
+    // The key and the episode numbers, enough to follow a delivery to its
+    // rows. `raw` on each row is the full payload, paths and all.
+    request.log.info(
+      {
+        action: plan.action,
+        kind: plan.action === 'file' ? plan.kind : null,
+        title: plan.series.key,
+        episodes:
+          plan.action === 'file'
+            ? plan.events.map((e) => `s${e.episode.season}e${e.episode.number}`)
+            : null,
+        known: stored.titleId !== null,
+        written: stored.written,
+        skipped: stored.skipped,
+      },
+      'sonarr event recorded',
+    );
     return reply.code(204).send();
   });
 }

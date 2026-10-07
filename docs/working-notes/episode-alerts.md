@@ -1,9 +1,9 @@
 # Episode alerts
 
 **Status:** Building — scoped 2026-10-07, and Sonarr's webhooks read from
-source the same day. Chunk 1 built, deployed and connected 2026-10-07: four
-Test deliveries arrived authenticated and were ignored as tests. The first
-real grab and import are still to be read against the source.
+source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
+its first real grabs, imports and series add read against the source that
+evening; a delete and a series delete have not fired yet. Chunk 2 is next.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -145,6 +145,25 @@ grab of a whole long series could pass the 1 MiB that nginx and Fastify allow
 by default; it would be refused once, which Sonarr survives, and the limit is
 raised on this path as on the walk's if it ever is. Deployed and connected
 the same day, with migration 0015 applied on the box.
+
+Read on the box that evening, against the source:
+
+- **A season searched for is grabbed episode by episode** when single
+  releases are what the indexers offer: Dexter: Resurrection S1 arrived as
+  eight grabs about seven seconds apart, each its own download. The
+  downloads go through SABnzbd, so a `downloadId` reads `SABnzbd_nzo_…`, not
+  a torrent hash.
+- **The first grab created the title** — Sonarr already held the series, so
+  no series add came first — with its tmdb and imdb ids filled in, and the
+  eight episodes with Sonarr's air dates.
+- **Each import followed its grab by about two minutes**, keyed on the file
+  (`@import@1142`), with `isUpgrade` false and a `releaseType` of
+  `singleEpisode`, and marked the title present under `source = 'sonarr'`.
+- **A series add for a show already on record changed nothing.** Lost,
+  stored since 2026-09-22 with 118 plays, matched on `show:tvdb:73739` and
+  kept everything it had.
+- Each row's `raw` held its own episode alone, with `airDateUtc`, and
+  exactly the top-level fields the source builds.
 
 ## Chunk 2 · Alerts, and ready
 

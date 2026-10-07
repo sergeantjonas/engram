@@ -1,7 +1,8 @@
 # Episode alerts
 
-**Status:** Plan — scoped 2026-10-07, nothing built. Sonarr's webhooks read
-from source the same day; chunk 1 is next.
+**Status:** Building — scoped 2026-10-07, and Sonarr's webhooks read from
+source the same day. Chunk 1 under way: `library_event` landed 2026-10-07; the
+plan, the store and the route follow.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -70,7 +71,8 @@ yet from a live delivery — the first real ones are read against this.
   delivery.
 - **No event carries an id or a timestamp.** Idempotency derives from what is
   there: a grab per `downloadId` and episode, an import or a delete per
-  `episodeFile.id` and episode. A grab is dated when it arrives, which is all
+  `episodeFile.id` and episode, each with its kind, so a file's import and
+  its delete stay two facts. A grab is dated when it arrives, which is all
   stuck needs.
 - **A grab does not say what caused it.** RSS, a search, an interactive
   pick: Sonarr knows, and the payload has no field for it. A manual search
@@ -84,6 +86,14 @@ yet from a live delivery — the first real ones are read against this.
   2xx to anything it cannot plan, as Tautulli's does, and an outage on the
   box loses what Sonarr sent during it. That makes chunk 3's reconcile a
   requirement for overdue rather than a nicety.
+- **Episodes are numbered the way TVDB numbers them.** Engram's grids come
+  from TMDB and Plex, and where the orderings differ — long anime most of
+  all — an event names a season and number the grid may not have. The
+  receiver creates the row, as the Tautulli store does for Plex's numbering,
+  and it is then one of the episodes [data-model.md](data-model.md) § Eight
+  episodes TMDB has never heard of describes. Chunk 4 has to tell such a row
+  from a TMDB episode that never arrived, or every misnumbered show reads as
+  overdue.
 - **It authenticates with a header.** The webhook form takes custom headers
   (under advanced settings) besides basic auth, so it sends the
   `x-engram-token` the receiver already reads
@@ -93,12 +103,13 @@ yet from a live delivery — the first real ones are read against this.
 
 Two tables, both generated from `schema.ts`.
 
-- **What Sonarr did, per episode.** The lean is an append-only event table —
-  grab, import, delete, each with its raw payload and a unique
-  `(source, source_event_id)` — with the current answer per episode a view
-  over it, the way `watch_event` and `watch_state` are. The walk's reconcile
-  is a nightly snapshot rather than an event, and its shape is chunk 3's to
-  settle.
+- **What Sonarr did, per episode** — `library_event`, landed 2026-10-07: an
+  append-only grab, import or delete, each with its raw payload and a unique
+  `(source, source_event_id)`, the way `watch_event` is. Any current answer
+  per episode is a reading over it, written when a check first needs one;
+  reasoning in [data-model.md](data-model.md) § Presence per episode is a log.
+  The walk's reconcile is a nightly snapshot rather than an event, and its
+  shape is chunk 3's to settle.
 - **`alert`** — one row per thing worth saying, unique on its key
   (`ready:show:tvdb:392276:3:5`), with a delivered time that stays null until
   chunk 5. A second decision about the same thing is a conflict, not a second

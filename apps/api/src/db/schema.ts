@@ -166,7 +166,7 @@ export const episodes = pgTable(
   },
   (t) => [
     unique('episode_title_season_number').on(t.titleId, t.season, t.number),
-    // Referenced by watch_event's composite foreign key below.
+    // Referenced by the composite foreign keys of library_event and watch_event below.
     unique('episode_id_title').on(t.id, t.titleId),
   ],
 );
@@ -187,6 +187,53 @@ export const libraryPresence = pgTable('library_presence', {
   removedAt: timestamp('removed_at', { withTimezone: true }),
   source: text('source').notNull(),
 });
+
+export const libraryEventKind = pgEnum('library_event_kind', ['grab', 'import', 'delete']);
+
+/**
+ * What Sonarr did to one episode's file: grabbed a release for it, imported
+ * it, or deleted it.
+ *
+ * Append-only for the reason `watch_event` is: each row is a fact a source
+ * reported, and what is on disk now is a reading over them rather than a
+ * column something has to keep current. Episode-grained where
+ * `library_presence` is title-grained, because "the new episode is here" and
+ * "it never came" are questions about one episode.
+ */
+export const libraryEvents = pgTable(
+  'library_event',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    source: text('source').notNull(),
+    /**
+     * Derived at ingest, since Sonarr sends no id of its own:
+     * `<episode key>@<kind>@<downloadId | episodeFile.id>`. The kind keeps a
+     * file's import and its later delete two facts, and the episode keeps a
+     * grab of a two-episode file two rows. Unique per source, so a delivery
+     * arriving twice is one fact.
+     */
+    sourceEventId: text('source_event_id').notNull(),
+    kind: libraryEventKind('kind').notNull(),
+    titleId: uuid('title_id')
+      .notNull()
+      .references(() => titles.id, { onDelete: 'restrict' }),
+    episodeId: uuid('episode_id').notNull(),
+    /** When it arrived. Sonarr's payloads carry no time of their own. */
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+    raw: jsonb('raw').notNull(),
+  },
+  (t) => [
+    unique('library_event_source_id').on(t.source, t.sourceEventId),
+    // Composite for the reason watch_event's is: two separate keys would let
+    // a row name one title and another title's episode.
+    foreignKey({
+      columns: [t.titleId, t.episodeId],
+      foreignColumns: [episodes.titleId, episodes.id],
+      name: 'library_event_episode_fk',
+    }).onDelete('restrict'),
+    index('library_event_episode_idx').on(t.episodeId),
+  ],
+);
 
 /** What the viewer wants, which is the thing Plex cannot express at all. */
 export const intent = pgTable('intent', {

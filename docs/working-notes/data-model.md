@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. Extended 2026-09-19 with `episode_gap`, the viewer's own account of a hole. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. Extended 2026-09-19 with `episode_gap`, the viewer's own account of a hole, and 2026-10-07 with `library_event`, what Sonarr did to an episode's file. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -18,9 +18,10 @@ months, the fix is a re-derivation rather than a data loss.
 
 **`title` rows are permanent.** Media comes and goes underneath them. A title is
 never deleted, because outliving the media is the entire point of the project.
-The delete rules encode that: `watch_event` restricts, so a title with history
-cannot be removed at all, while `episode`, `library_presence` and `intent`
-cascade — and the episode cascade is itself blocked by the event restrict.
+The delete rules encode that: `watch_event` and `library_event` restrict, so a
+title with history cannot be removed at all, while `episode`,
+`library_presence` and `intent` cascade — and the episode cascade is itself
+blocked by the event restricts.
 
 ## Tables
 
@@ -37,6 +38,13 @@ episode           (id, title_id, season, number, name, air_date, runtime,
 
 library_presence  is it on disk right now?
                   (title_id, present, first_seen_at, removed_at, source)
+
+library_event     append-only: what Sonarr did to one episode's file
+                  (id, source, source_event_id, kind, title_id, episode_id,
+                   received_at, raw)
+                  kind is grab | import | delete
+                  UNIQUE (source, source_event_id), and the same composite
+                  foreign key as watch_event
 
 intent            do I want to watch it?
                   (title_id, want, started_at, dropped_at, excluded_at, note)
@@ -87,8 +95,25 @@ ones to be inexpressible.
 
 Keeping them apart also means the future Sonarr-request feature is purely
 additive — it writes an `intent` row and makes one API call, and no existing
-table has to change. Same for Sonarr's add/delete webhooks, which only ever
-touch `library_presence`.
+table has to change. Same for Sonarr's webhooks, which touch nothing about
+viewing: `library_presence` for the title and `library_event` for each
+episode.
+
+## Presence per episode is a log
+
+`library_presence` answers whether a title is on disk. Episode alerts
+([episode-alerts.md](episode-alerts.md)) ask about one episode — is the one
+that aired last night here, and did a grab ever turn into a file — so Sonarr's
+grabs, imports and deletes are kept per episode in `library_event`.
+
+A log rather than a current answer per episode, because each row is something
+Sonarr reported and the question asked of them changes: "on disk now" is the
+latest import not followed by a delete, "stuck" is a grab with no import
+after it. Both are readings over the same rows, and neither needs a column
+kept up to date. Sonarr sends no id and no time, so `received_at` is the
+arrival and the id is derived from the episode, the kind, and the download or
+file it names: a file's import and its delete stay two facts, and a grab of a
+two-episode file two rows.
 
 `intent` is also what gives Engram the two things Plex genuinely cannot express:
 "want to watch" and "dropped after S2".

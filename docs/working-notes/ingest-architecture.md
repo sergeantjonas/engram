@@ -251,8 +251,8 @@ The backfill is safe by accident of the endpoint — Plex's history is scoped to
 the calling token's account, verified 2026-09-17 in
 [plex-api-findings.md](plex-api-findings.md). Nothing else is. Tautulli fires a
 webhook for every play on the server and identifies the viewer with `{user_id}`;
-Sonarr and Radarr are not per-user at all, though they only ever write
-`library_presence`.
+Sonarr and Radarr are not per-user at all, though they only ever write what is
+on disk: `library_presence`, and for Sonarr `library_event` per episode.
 
 So the ingest boundary filters on an allowlist of account ids from config,
 defaulting to the owner's, and a play by anyone else is **dropped rather than

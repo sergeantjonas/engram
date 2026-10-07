@@ -263,7 +263,8 @@ the viewer wants of a title. The SPA calls all four.
    there for the webhooks below, which fire for every viewer on the server.
    Reasoning in [ingest-architecture.md](ingest-architecture.md).
 4. **Webhook receivers** — Tautulli done 2026-09-21, Sonarr still to come,
-   per [ingest-architecture.md](ingest-architecture.md). Tautulli
+   per [ingest-architecture.md](ingest-architecture.md), now chunk 1 of
+   [episode-alerts.md](episode-alerts.md). Tautulli
    authenticates on `WEBHOOK_SECRET`, filters on `TAUTULLI_USER_IDS` before it
    writes anything to a log, sits on the guard's open list as `POST
    /webhooks/tautulli` — the list is keyed on method and route pattern
@@ -403,6 +404,14 @@ the viewer wants of a title. The SPA calls all four.
    control, a figure box that rules each line once however it wraps, a
    favicon and `theme-color`, and both families served with the app,
    preloaded.
+10. **Episode alerts** — scoped 2026-10-07 in
+    [episode-alerts.md](episode-alerts.md), nothing built. A Discord ping when
+    a recently aired episode of a followed show is ready, stuck after its
+    grab, or overdue, and never for what the owner did themselves. Five
+    chunks: the Sonarr receiver (item 4's other half), the `alert` table and
+    ready, the walk keeping every episode as the reconcile, an hourly stuck
+    and overdue check on the box, then Discord. No Sonarr API key. First step
+    is reading Sonarr's webhook payloads from its source.
 
 ## Blocked
 

@@ -57,4 +57,9 @@ reference. Every note carries a `**Status:**` line; trust it over this map.
   plays, fed by Tautulli's playback triggers and held in memory, and why no
   Plex token goes on the box for it. Read before touching the Tautulli
   receiver or the wall's band.
+- `episode-alerts.md` — plan. Discord pings for a followed show's new
+  episode — ready, stuck after its grab, or overdue — and only for what
+  happened without the owner, fed by a Sonarr receiver with the library walk
+  as its reconcile. Read before writing the Sonarr receiver or anything that
+  notifies.
 - `integration-ideas.md` — idea pool. Nothing here is committed to.

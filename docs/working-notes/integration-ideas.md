@@ -41,57 +41,10 @@ Explicitly **not** a goal: replacing Plex, Sonarr or Radarr.
 - **Return alerts that account for the viewer.** Sonarr knows a new season is
   coming; it does not know whether the last one was finished. "S03 airs in two
   weeks, you finished S02 in August" via ntfy or Discord.
-- **Episode alerts for followed shows.** An alert reports only what happened
-  without the owner: adding a series, searching by hand, an upgrade or a
-  delete never pings. The test is a recently aired episode of a followed show
-  — wanted or started, not dropped or excluded. Three alerts pass it:
-
-  - **Ready** — the episode was imported. "S03E05 is on disk, you're one
-    behind" says where the viewer stands, which Sonarr's own Discord
-    connection cannot, and that connection pings for every series in it,
-    dropped ones included.
-  - **Stuck** — grabbed, and still not imported hours later. A grab alone
-    does not ping: on the seedbox the import usually follows within minutes,
-    and two pings for one episode is noise.
-  - **Overdue** — aired, and nothing grabbed. Sonarr has no alert for this
-    at all.
-
-  Ready and stuck ride the Sonarr receiver open-work.md already owes: `Grab`
-  and `Download` carry the `tvdbId` and the episodes, and `Download` feeds
-  `library_presence` as well. `isUpgrade` never pings. Two things to measure
-  on the live install: whether a season pack arrives as one event or one per
-  file, and if per file the pings collapse per title over a short window; and
-  whether a grab says it was automatic, without which a manual search for last
-  night's episode still pings when it lands.
-
-  Settled 2026-10-04: `SeriesAdd` creates the title the moment Sonarr has it,
-  rather than at the next walk, and is never an alert. Sonarr is the owner's
-  alone; it is Plex that is shared, and the titles the walk brings in for
-  other viewers are excluded by hand.
-
-  Stuck and overdue are scheduled checks rather than events. Stuck needs only
-  what the receiver records, a grab with no import after it. Overdue needs two
-  things Engram lacks. `episode.air_date` is a day with no time, and the
-  network's local day at that, so the earliest safe "late" is the end of the
-  day after it. And `library_presence` is per title, while "this episode has
-  no file" is per episode; the check trusts only presence a reconcile backs,
-  or a missed `Download` webhook reports as a late episode.
-
-  The library walk can be that reconcile at no extra cost: it already fetches
-  every episode of every watched show and keeps only the watched ones
-  ([dump-library.mjs:118](../../tools/dump-library.mjs#L118)). Shows wanted but
-  not started are not fetched; covering them is one Plex request each.
-  Sonarr's API would give exact air times and the same reconcile, but its key
-  has no read-only scope, so it stays on the slot beside Sonarr, and an hourly
-  check — the only kind for which exact times matter — goes beyond the nightly
-  container Bytesized authorized. Deferred until a day-late alert proves too
-  coarse.
-
-  Deciding whether to ping belongs here; delivering it does not. Only Engram
-  knows what is followed, but the Discord webhook URL — a credential, whoever
-  holds it can post — and never pinging twice for one thing are wanted by other
-  projects too, a wishlist price drop on vyoh.gg being the first. The delivery
-  side is `notify-hub.md` in commonplace, the cross-project notes repo.
+- **Episode alerts for followed shows.** Ready, stuck and overdue, for a
+  recently aired episode of a show being followed, and only for what
+  happened without the owner. Scoped 2026-10-07 as an arc in
+  [episode-alerts.md](episode-alerts.md).
 
 ## Unglamorous but worth doing early
 

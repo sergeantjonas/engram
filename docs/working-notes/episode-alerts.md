@@ -5,6 +5,7 @@ source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
 its first real grabs, imports and series add read against the source that
 evening; a delete and a series delete have not fired yet. Chunk 2 built
 2026-10-07 and not yet deployed: the `alert` table and the ready decision.
+Chunk 5 goes next, through the notify hub, which is being built first.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -36,6 +37,9 @@ download log into something worth being told.
   goes beyond the one nightly container Bytesized authorized on 2026-09-27.
   Without it, overdue counts from the TMDB air date and the library walk is
   the reconcile. Revisited only if a day-late alert proves too coarse.
+- **2026-10-09 — Delivery goes through the notify hub from the start.** The
+  owner chose to build `notify.vyoh.gg` first rather than a Discord sender in
+  Engram to be replaced by it later, so Engram never holds a Discord URL.
 - **2026-10-07 — Alerts are rows before they are messages.** Deciding is
   Engram's and is built first; delivery drains what was decided. A Discord
   outage then delays an alert rather than losing it, and moving delivery
@@ -211,12 +215,14 @@ a grab with no import after a few hours. Overdue: a followed show's episode
 whose air date ended a full day ago, with no grab, no import, and absent from
 the last walk. The unit checks in with healthchecks.io like the others.
 
-## Chunk 5 · Discord
+## Chunk 5 · Through the notify hub
 
-Drains undelivered alerts to a Discord webhook, collapsing a burst per title
-into one message. The URL lives in `/srv/engram/.env` and never reaches a log:
-whoever holds it can post. Moves behind commonplace's notify hub once a second
-project sends.
+Drains undelivered alerts to the hub's `POST /messages` at `notify.vyoh.gg`,
+one message per alert under the alert's own key, and marks an alert delivered
+once the hub has taken it. Engram holds the hub's URL and a secret of its own,
+never a Discord URL; collapsing a burst, the channel and Discord itself are
+the hub's. Taken ahead of chunks 3 and 4, so ready alerts reach Discord before
+stuck and overdue exist.
 
 ## Needed from the owner
 
@@ -227,7 +233,8 @@ project sends.
   empty. Triggers on: *On Grab*, *On File Import*, *On File Upgrade*, *On
   Series Add*, *On Series Delete*, *On Episode File Delete*. Off: *On Import
   Complete*, *On Episode File Delete For Upgrade*, and the rest.
-- Before chunk 5: a Discord webhook URL.
+- Before chunk 5: the hub deployed, and Engram's secret for it in
+  `/srv/engram/.env`. The Discord webhook URL goes to the hub, not here.
 
 ## Not in this arc
 
@@ -235,7 +242,8 @@ project sends.
   above.
 - **Radarr.** A film arrives because the owner asked for it, which the rule
   already answers.
-- **The hub.** commonplace's `notify-hub.md`, once a second sender exists.
+- **The hub itself.** Built in `~/dev/notify.vyoh.gg`; commonplace's
+  `notify-hub.md` holds the contract this posts to.
 - **Alerts in the web app.** Discord is where they are read.
 - **Manual Interaction Required.** Sonarr sends it when a download needs a
   hand to import, which happens without the owner and is often what stuck

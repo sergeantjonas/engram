@@ -410,12 +410,13 @@ the viewer wants of a title. The SPA calls all four.
     built, deployed and connected the same day; chunk 2, the `alert` table
     and the ready decision, built with it and not yet deployed. A
     Discord ping when a recently aired episode of a followed show is ready,
-    stuck after its
-    grab, or overdue, and never for what the owner did themselves. Five
-    chunks: the Sonarr receiver (item 4's other half), the `alert` table and
-    ready, the walk keeping every episode as the reconcile, an hourly stuck
-    and overdue check on the box, then Discord. No Sonarr API key. Sonarr's
-    payloads read from its source 2026-10-07.
+    stuck after its grab, or overdue, and never for what the owner did
+    themselves. Five chunks: the Sonarr receiver (item 4's other half), the
+    `alert` table and ready, the walk keeping every episode as the reconcile,
+    an hourly stuck and overdue check on the box, then delivery. No Sonarr API
+    key. Sonarr's payloads read from its source 2026-10-07. Delivery goes
+    next, through the notify hub in `~/dev/notify.vyoh.gg`, built first
+    (decided 2026-10-09).
 
 ## Blocked
 

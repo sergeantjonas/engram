@@ -1,3 +1,4 @@
+import { startAlertChecks } from './alerts/check.js';
 import { startAlertDelivery } from './alerts/deliver.js';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
@@ -27,10 +28,11 @@ const stopDelivery =
       })
     : null;
 if (!stopDelivery) app.log.warn('no notify hub configured: alerts are decided and held');
+const stopChecks = startAlertChecks({ db, log: app.log });
 
 const shutdown = async (signal: string): Promise<void> => {
   app.log.info({ signal }, 'shutting down');
-  await Promise.all([app.close(), stopDelivery?.()]);
+  await Promise.all([app.close(), stopDelivery?.(), stopChecks()]);
   await connection.end();
   process.exit(0);
 };

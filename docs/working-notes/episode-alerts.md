@@ -12,7 +12,9 @@ at `notify.vyoh.gg` the same day. From the API container the hub answered
 its health check, refused a post with no secret, and took Engram's secret.
 A test alert inserted by hand for Dexter: Resurrection S01E01 reached the
 hub 5 seconds after it was decided and Discord 67 seconds after that, the
-hub's quiet period; it stays in the table, delivered. Chunk 4 remains.
+hub's quiet period; it stays in the table, delivered. Chunk 4 built
+2026-10-10 and not yet deployed: stuck and overdue, decided hourly in the
+API.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -47,6 +49,10 @@ download log into something worth being told.
 - **2026-10-09 — Delivery goes through the notify hub from the start.** The
   owner chose to build `notify.vyoh.gg` first rather than a Discord sender in
   Engram to be replaced by it later, so Engram never holds a Discord URL.
+- **2026-10-10 — Stuck and overdue are decided in the API process**, hourly
+  beside delivery, not by a timer on the box: the owner's choice. A unit, a
+  healthchecks.io check and sudo steps would watch a pass whose failure
+  delivery shares anyway; one that stops shows in the API's log alone.
 - **2026-10-07 — Alerts are rows before they are messages.** Deciding is
   Engram's and is built first; delivery drains what was decided. A Discord
   outage then delays an alert rather than losing it, and moving delivery
@@ -248,11 +254,49 @@ watched path read exactly as before.
 
 ## Chunk 4 · Stuck and overdue
 
-A timer on the box, hourly. It reads only Engram's database, so how often it
-runs costs Bytesized nothing; only the reconcile it trusts is nightly. Stuck:
-a grab with no import after a few hours. Overdue: a followed show's episode
-whose air date ended a full day ago, with no grab, no import, and absent from
-the last walk. The unit checks in with healthchecks.io like the others.
+Hourly, reading only Engram's database, so how often it runs costs
+Bytesized nothing; only the reconcile it trusts is nightly. Stuck: a grab
+with no import after a few hours. Overdue: a followed show's episode whose
+air date ended a full day ago, with no grab, no import, and absent from the
+last walk.
+
+Built 2026-10-10 as `planStuckAlert` and `planOverdueAlert` in
+[scheduled.ts](../../apps/api/src/alerts/scheduled.ts), with
+`decideScheduledAlerts` in [check.ts](../../apps/api/src/alerts/check.ts)
+running at boot and then hourly. The owner chose the numbers. Both alerts
+share the ready alert's tests — followed, aired within 14 days of TMDB's
+date, not watched — and also pass over a special, an episode the viewer
+skipped, and one on disk by Sonarr's import or by the walk's snapshot.
+
+- **Stuck is a grab four hours old** with no import. Imports have followed
+  their grabs within minutes on the seedbox, so four hours leaves room for a
+  long queue and still pings the same evening. An upgrade's grab never
+  counts: a file was already there. The price of the same evening: an
+  import whose webhook was lost while the API was down reads as stuck until
+  the night's walk finds the file, most likely right after a deploy. Waiting
+  for the walk, as overdue does, would make stuck a morning-after alert.
+- **Overdue waits for the walk two days after the air date.** TMDB gives a
+  day and no time, and a US evening airing reaches Brussels the morning
+  after its date, so the episode falls due at midnight UTC two days on, and
+  only a walk made after that can say its file is missing: Sonarr's silence
+  alone looks the same as a webhook missed while the API was down. With the
+  walk at 04:30, a show airing on a Tuesday pings early on Thursday. A walk
+  that stops leaves overdue silent, and its own heartbeat says so.
+- **A show numbered off the grid gets no overdue.** One where Plex or
+  Sonarr named a regular episode TMDB's backfill never matched — Bleach,
+  whose newest arc Plex files as season 17 — could have the grid's missing
+  episode on disk under another number. Specials are left out of the test:
+  TVDB and TMDB number them apart far more often than a run, and they say
+  nothing about the seasons. An episode Sonarr has just created stays
+  unmatched until the next backfill, which holds that show's overdue for a
+  night: the quiet direction.
+- **A followed show Sonarr does not track** pings overdue for each new
+  episode until it is dropped or excluded here, which is what the alert
+  should say: followed, aired, and not coming.
+
+Read against production when built: of 36 followed shows only Bleach and
+The Rings of Power have an episode due in the coming weeks, neither had a
+Sonarr event since the receiver went live, and Bleach reads as off the grid.
 
 ## Chunk 5 · Through the notify hub
 

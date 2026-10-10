@@ -11,7 +11,7 @@ import { type ExternalIds, episodeKey, type TitleKind } from '@engram/shared';
  */
 export const RECENT_DAYS = 14;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** What the record says about the viewer and a title. */
 export interface FollowState {
@@ -45,15 +45,17 @@ export interface ReadyInput {
   now: Date;
 }
 
+export type AlertKind = 'ready' | 'stuck' | 'overdue';
+
 export interface PlannedAlert {
   key: string;
-  kind: 'ready';
+  kind: AlertKind;
   season: number;
   number: number;
   behind: number | null;
 }
 
-export type ReadyDecision = { ok: true; alert: PlannedAlert } | { ok: false; reason: string };
+export type AlertDecision = { ok: true; alert: PlannedAlert } | { ok: false; reason: string };
 
 /**
  * A show being followed: wanted, or with a play behind it, and neither
@@ -108,7 +110,7 @@ export function behindOf(
  * watched. Everything else is the owner's own doing or nothing new, and the
  * reason says which, so the log can answer "why did it not tell me".
  */
-export function planReadyAlert(input: ReadyInput): ReadyDecision {
+export function planReadyAlert(input: ReadyInput): AlertDecision {
   const { episode, follow, now } = input;
 
   if (input.upgrade) return { ok: false, reason: 'an upgrade' };

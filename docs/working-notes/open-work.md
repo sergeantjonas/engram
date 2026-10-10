@@ -409,7 +409,7 @@ the viewer wants of a title. The SPA calls all four.
     [episode-alerts.md](episode-alerts.md); chunk 1, the Sonarr receiver,
     built, deployed and connected the same day; chunk 2, the `alert` table
     and the ready decision, built with it and deployed 2026-10-10; chunk 5,
-    delivery through the notify hub, built 2026-10-10 and not yet deployed. A
+    delivery through the notify hub, built and deployed 2026-10-10. A
     Discord ping when a recently aired episode of a followed show is ready,
     stuck after its grab, or overdue, and never for what the owner did
     themselves. Five chunks: the Sonarr receiver (item 4's other half), the

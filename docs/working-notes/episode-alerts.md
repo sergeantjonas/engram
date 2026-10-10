@@ -5,8 +5,10 @@ source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
 its first real grabs, imports and series add read against the source that
 evening; a delete and a series delete have not fired yet. Chunk 2 built
 2026-10-07 and deployed 2026-10-10: the `alert` table and the ready decision.
-Chunk 5 built 2026-10-10 and not yet deployed: delivery through the notify
-hub, live at `notify.vyoh.gg` the same day. Chunks 3 and 4 remain.
+Chunk 5 built and deployed 2026-10-10: delivery through the notify hub, live
+at `notify.vyoh.gg` the same day. From the API container the hub answered
+its health check, refused a post with no secret, and took Engram's secret;
+no real alert has gone through yet. Chunks 3 and 4 remain.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every

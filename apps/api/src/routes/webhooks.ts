@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { decideScheduledAlerts } from '../alerts/check.js';
 import { type DecidedAlerts, decideReadyAlerts } from '../alerts/store.js';
 import { secretMatches } from '../auth/secret.js';
 import type { Config } from '../config.js';
@@ -244,6 +245,18 @@ export function registerWebhookRoutes(
         request.log.error({ err: error, title: plan.series.key }, 'ready alert not decided');
       }
     }
+    // A blocked download is stuck now, not in four hours: the hourly pass,
+    // run at once, finds the event just stored. Only for a new one — Sonarr
+    // sends it again after a restart — and swallowed for the same reason as
+    // above; the next hourly pass decides it anyway.
+    let stuck: string[] | null = null;
+    if (plan.action === 'file' && plan.kind === 'blocked' && stored.written > 0) {
+      try {
+        stuck = await decideScheduledAlerts(db, new Date());
+      } catch (error) {
+        request.log.error({ err: error, title: plan.series.key }, 'stuck alert not decided');
+      }
+    }
 
     // The key and the episode numbers, enough to follow a delivery to its
     // rows. `raw` on each row is the full payload, paths and all.
@@ -260,6 +273,7 @@ export function registerWebhookRoutes(
         written: stored.written,
         skipped: stored.skipped,
         alerts: alerts?.written ?? null,
+        stuck,
         passed: alerts?.passed.map((p) => `s${p.season}e${p.number}: ${p.reason}`) ?? null,
       },
       'sonarr event recorded',

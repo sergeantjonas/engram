@@ -47,14 +47,16 @@ library_episode   every episode the last walk found in Plex
 
 library_event     append-only: what Sonarr did to one episode's file
                   (id, source, source_event_id, kind, title_id, episode_id,
-                   received_at, raw)
-                  kind is grab | import | delete
+                   received_at, detail, raw)
+                  kind is grab | import | delete | blocked; blocked is a
+                  download Sonarr could not import without a hand, and
+                  detail holds its reasons
                   UNIQUE (source, source_event_id), and the same composite
                   foreign key as watch_event
 
 alert             something worth telling the owner about an episode
                   (id, key, kind, title_id, episode_id, behind, decided_at,
-                   delivered_at, refused_at)
+                   detail, delivered_at, refused_at)
                   kind is ready | stuck | overdue; key is <kind>@<episode
                   key>, unique, so a second decision about the same thing is
                   a conflict rather than a second message

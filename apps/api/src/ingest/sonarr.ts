@@ -2,7 +2,7 @@ import { type ExternalIds, episodeKey, titleKey } from '@engram/shared';
 import { z } from 'zod';
 
 /** What Sonarr did to an episode's file. Mirrors `library_event_kind`. */
-export type LibraryEventKind = 'grab' | 'import' | 'delete';
+export type LibraryEventKind = 'grab' | 'import' | 'delete' | 'blocked';
 
 /*
  * The fields of Sonarr's webhook bodies this reads, as `v4.0.20.3012` builds
@@ -48,6 +48,19 @@ const deleteBody = z.object({
   episodeFile,
   deleteReason: z.string().nullish(),
 });
+// What Sonarr found wrong, per download or per file. Its words are usually in
+// `messages`, with `title` naming the download or file they are about; a
+// partial import puts its headline in `title` and leaves `messages` empty.
+const statusMessages = z
+  .array(z.object({ title: z.string().nullish(), messages: z.array(z.string()).nullish() }))
+  .nullish()
+  .catch(null);
+const blockedBody = z.object({
+  series: seriesShape,
+  episodes,
+  downloadId: z.string().min(1),
+  downloadStatusMessages: statusMessages,
+});
 const seriesBody = z.object({ series: seriesShape });
 const seriesDeleteBody = z.object({ series: seriesShape, deletedFiles: z.boolean().nullish() });
 
@@ -78,6 +91,8 @@ export interface PlannedLibraryEvent {
   sourceEventId: string;
   kind: LibraryEventKind;
   episode: PlannedEpisode;
+  /** Sonarr's reasons, on a blocked download; null on every other kind. */
+  detail: string | null;
   raw: unknown;
 }
 
@@ -142,6 +157,7 @@ function eventsOf(
   occurrence: string,
   list: z.infer<typeof episodes>,
   body: Record<string, unknown>,
+  detail: string | null = null,
 ): PlannedLibraryEvent[] {
   // The body's own entries, by position: a parse keeps the list's order.
   const rawEpisodes = Array.isArray(body.episodes) ? body.episodes : [];
@@ -162,6 +178,7 @@ function eventsOf(
         airDate: ep.airDate ?? null,
         airedAt: ep.airDateUtc ?? null,
       },
+      detail,
       // The body with only this row's episode in it. A season pack names
       // every episode, overview and all, and kept whole on each row it would
       // be stored once per episode; across its rows it is still all there.
@@ -232,6 +249,36 @@ export function planSonarrEvent(body: unknown): SonarrPlan {
       const occurrence = String(read.body.episodeFile.id);
       const events = eventsOf(series, 'delete', occurrence, read.body.episodes, fields);
       return { ok: true, action: 'file', kind: 'delete', series, events, upgrade: false };
+    }
+
+    // A finished download Sonarr could not import by itself: a title that did
+    // not match, a release matched by id, files it refused. Sonarr sends it
+    // once per download, and the download names it as a grab's does.
+    case 'ManualInteractionRequired': {
+      const read = parse(blockedBody, body, eventType);
+      if (!read.ok) return read;
+      const keyed = seriesOf(read.body.series);
+      if (!keyed.ok) return keyed;
+      const { series } = keyed;
+      // One line per distinct reason: a pack refused file by file repeats it.
+      // The message is clipped where it is sent, not here.
+      const said = new Set<string>();
+      for (const entry of read.body.downloadStatusMessages ?? []) {
+        const words = (entry.messages ?? []).map((m) => m.trim()).filter((m) => m !== '');
+        for (const line of words.length > 0 ? words : [entry.title?.trim() ?? '']) {
+          if (line !== '') said.add(line);
+        }
+      }
+      const detail = said.size > 0 ? [...said].join('\n') : null;
+      const events = eventsOf(
+        series,
+        'blocked',
+        read.body.downloadId,
+        read.body.episodes,
+        fields,
+        detail,
+      );
+      return { ok: true, action: 'file', kind: 'blocked', series, events, upgrade: false };
     }
 
     case 'SeriesAdd': {

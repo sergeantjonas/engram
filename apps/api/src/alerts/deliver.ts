@@ -16,6 +16,8 @@ export interface PendingAlert {
   season: number;
   number: number;
   episodeName: string | null;
+  /** Sonarr's reasons, on a stuck download it asked a hand for. */
+  detail: string | null;
 }
 
 /** Most alerts one pass sends; the rest go on the next. */
@@ -56,7 +58,9 @@ export function composeMessage(alert: PendingAlert, webOrigin: string): NotifyMe
     }
     case 'stuck':
       verb = 'is stuck';
-      lines.push('Grabbed, and not imported since.');
+      lines.push(
+        alert.detail ? `Sonarr needs a hand:\n${alert.detail}` : 'Grabbed, and not imported since.',
+      );
       break;
     case 'overdue':
       verb = 'is overdue';
@@ -83,6 +87,7 @@ interface PendingRow extends Record<string, unknown> {
   season: number;
   number: number;
   episode_name: string | null;
+  detail: string | null;
 }
 
 export interface DeliveryPass {
@@ -118,7 +123,8 @@ export async function deliverAlerts(
       t.name as show,
       e.season,
       e.number,
-      e.name as episode_name
+      e.name as episode_name,
+      a.detail
     from alert a
       join title t on t.id = a.title_id
       join episode e on e.id = a.episode_id
@@ -139,6 +145,7 @@ export async function deliverAlerts(
         season: row.season,
         number: row.number,
         episodeName: row.episode_name,
+        detail: row.detail,
       },
       webOrigin,
     );

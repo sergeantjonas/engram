@@ -214,7 +214,13 @@ export const libraryEpisodes = pgTable(
   (t) => [primaryKey({ columns: [t.titleId, t.season, t.number] })],
 );
 
-export const libraryEventKind = pgEnum('library_event_kind', ['grab', 'import', 'delete']);
+/** `blocked` is a finished download Sonarr could not import without a hand. */
+export const libraryEventKind = pgEnum('library_event_kind', [
+  'grab',
+  'import',
+  'delete',
+  'blocked',
+]);
 
 /**
  * What Sonarr did to one episode's file: grabbed a release for it, imported
@@ -246,6 +252,8 @@ export const libraryEvents = pgTable(
     episodeId: uuid('episode_id').notNull(),
     /** When it arrived. Sonarr's payloads carry no time of their own. */
     receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Sonarr's own words for a blocked download: why it could not import. */
+    detail: text('detail'),
     raw: jsonb('raw').notNull(),
   },
   (t) => [
@@ -290,6 +298,8 @@ export const alerts = pgTable(
      * run.
      */
     behind: integer('behind'),
+    /** What the message adds beyond its kind: Sonarr's reasons, on a blocked download. */
+    detail: text('detail'),
     decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
     /** Null until the notify hub has taken it. */
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),

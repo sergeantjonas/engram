@@ -21,6 +21,7 @@ const event = (kind: PlannedLibraryEvent['kind'], number: number): PlannedLibrar
     airDate: '2025-01-17',
     airedAt: '2025-01-17T02:00:00Z',
   },
+  detail: null,
   raw: { eventType: 'Download' },
 });
 
@@ -89,6 +90,20 @@ describe('storeSonarrPlan', () => {
       series,
       events: [event('grab', 1)],
     });
+    expect(stub.inserted.some((row) => 'present' in (row.values as object))).toBe(false);
+  });
+
+  it('keeps a blocked download’s reasons on its event, and puts nothing on disk', async () => {
+    const stub = primed([[{ id: 'ev-1' }]]);
+    await storeSonarrPlan(stub.db, {
+      ok: true,
+      action: 'file',
+      upgrade: false,
+      kind: 'blocked',
+      series,
+      events: [{ ...event('blocked', 1), detail: 'Sample' }],
+    });
+    expect(stub.inserted[2]?.values).toMatchObject({ kind: 'blocked', detail: 'Sample' });
     expect(stub.inserted.some((row) => 'present' in (row.values as object))).toBe(false);
   });
 

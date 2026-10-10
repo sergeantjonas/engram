@@ -48,6 +48,10 @@ export interface EpisodeState extends GridEpisode {
   grabbedAt: Date | null;
   /** Sonarr imported a file for it, ever. */
   imported: boolean;
+  /** Sonarr asked for a hand with a download of it. */
+  blocked: boolean;
+  /** Sonarr's reasons, from its latest such request. */
+  detail: string | null;
   /** In the last walk's snapshot of Plex. */
   onDisk: boolean;
 }
@@ -84,12 +88,13 @@ function decided(
   show: ShowState,
   episode: EpisodeState,
   now: Date,
+  detail: string | null = null,
 ): AlertDecision {
   const { season, number } = episode;
   const today = now.toISOString().slice(0, 10);
   return {
     ok: true,
-    alert: { key, kind, season, number, behind: behindOf(show.grid, episode, today) },
+    alert: { key, kind, season, number, behind: behindOf(show.grid, episode, today), detail },
   };
 }
 
@@ -98,7 +103,8 @@ function decided(
  *
  * Pure, with the clock passed in. A grab the import followed — by Sonarr's
  * word or by the walk's — is not stuck, and neither is an upgrade's, since a
- * file was already there.
+ * file was already there. A download Sonarr asked a hand for is stuck at
+ * once, with its reasons: there is nothing to wait for.
  */
 export function planStuckAlert(input: {
   show: ShowState;
@@ -108,6 +114,7 @@ export function planStuckAlert(input: {
   const { show, episode, now } = input;
   const base = eligible('stuck', show, episode, now);
   if (!base.ok) return base;
+  if (episode.blocked) return decided('stuck', base.key, show, episode, now, episode.detail);
   if (episode.grabbedAt === null) return { ok: false, reason: 'never grabbed' };
   if (now.getTime() - episode.grabbedAt.getTime() < STUCK_HOURS * 60 * 60 * 1000) {
     return { ok: false, reason: `grabbed under ${STUCK_HOURS} hours ago` };
@@ -132,7 +139,7 @@ export function planOverdueAlert(input: {
   const { show, episode, lastWalkAt, now } = input;
   const base = eligible('overdue', show, episode, now);
   if (!base.ok) return base;
-  if (episode.grabbedAt !== null) return { ok: false, reason: 'grabbed' };
+  if (episode.grabbedAt !== null || episode.blocked) return { ok: false, reason: 'grabbed' };
   if (show.offGrid) return { ok: false, reason: 'numbered off the grid' };
 
   const due = new Date(`${episode.airDate}T00:00:00Z`).getTime() + OVERDUE_DAYS * DAY_MS;

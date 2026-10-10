@@ -21,6 +21,8 @@ interface CandidateRow extends Record<string, unknown> {
   /** Epoch milliseconds: drizzle hands raw timestamps back as Postgres text. */
   grabbed_ms: number | null;
   imported: boolean;
+  blocked: boolean;
+  blocked_detail: string | null;
   on_disk: boolean;
   /** The last walk, the same on every row. */
   walked_ms: number | null;
@@ -89,6 +91,15 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
       exists (
         select 1 from library_event le where le.episode_id = e.id and le.kind = 'import'
       ) as imported,
+      exists (
+        select 1 from library_event le where le.episode_id = e.id and le.kind = 'blocked'
+      ) as blocked,
+      (
+        select le.detail from library_event le
+        where le.episode_id = e.id and le.kind = 'blocked'
+        order by le.received_at desc
+        limit 1
+      ) as blocked_detail,
       exists (
         select 1 from library_episode d
         where d.title_id = e.title_id and d.season = e.season and d.number = e.number
@@ -188,6 +199,8 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
       ...place,
       grabbedAt: row.grabbed_ms === null ? null : new Date(row.grabbed_ms),
       imported: row.imported,
+      blocked: row.blocked,
+      detail: row.blocked_detail,
       onDisk: row.on_disk,
     };
 
@@ -205,6 +218,7 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
           titleId: row.title_id,
           episodeId: row.id,
           behind: decision.alert.behind,
+          detail: decision.alert.detail,
         })
         .onConflictDoNothing()
         .returning({ id: alerts.id });

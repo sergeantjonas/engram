@@ -26,6 +26,8 @@ const episode = (over: Partial<EpisodeState> = {}): EpisodeState => ({
   airDate: '2026-10-06',
   grabbedAt: null,
   imported: false,
+  blocked: false,
+  detail: null,
   onDisk: false,
   ...over,
 });
@@ -43,6 +45,7 @@ describe('planStuckAlert', () => {
         season: 1,
         number: 3,
         behind: 1,
+        detail: null,
       },
     });
   });
@@ -63,6 +66,15 @@ describe('planStuckAlert', () => {
         planStuckAlert({ show: show(), episode: episode({ grabbedAt, ...found }), now }),
       ).toEqual({ ok: false, reason: 'on disk' });
     }
+  });
+
+  it('says so at once, with Sonarr’s reasons, for a download Sonarr asked a hand for', () => {
+    const grabbedAt = new Date('2026-10-07T19:50:00Z');
+    const blocked = episode({ grabbedAt, blocked: true, detail: 'Sample' });
+    expect(planStuckAlert({ show: show(), episode: blocked, now })).toMatchObject({
+      ok: true,
+      alert: { key: 'stuck@show:tvdb:452595/s01e0003', detail: 'Sample' },
+    });
   });
 
   // A season searched for by hand is grabbed too; it aired long ago.
@@ -104,10 +116,14 @@ describe('planOverdueAlert', () => {
     });
   });
 
-  it('leaves a grabbed episode to the stuck alert', () => {
+  // Blocked without a grab on record: the grab's webhook was missed.
+  it('leaves a grabbed or blocked episode to the stuck alert', () => {
     const grabbedAt = new Date('2026-10-07T10:00:00Z');
     expect(
       planOverdueAlert({ show: show(), episode: episode({ grabbedAt }), lastWalkAt, now }),
+    ).toEqual({ ok: false, reason: 'grabbed' });
+    expect(
+      planOverdueAlert({ show: show(), episode: episode({ blocked: true }), lastWalkAt, now }),
     ).toEqual({ ok: false, reason: 'grabbed' });
   });
 

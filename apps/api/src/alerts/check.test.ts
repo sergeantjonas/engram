@@ -52,6 +52,8 @@ const candidate = (over: Record<string, unknown>) => ({
   number: 2,
   grabbed_ms: null,
   imported: false,
+  blocked: false,
+  blocked_detail: null,
   on_disk: false,
   walked_ms: new Date('2026-10-08T02:30:00Z').getTime(),
   ...over,
@@ -78,6 +80,7 @@ describe('decideScheduledAlerts', () => {
         titleId: 'title-1',
         episodeId: 'ep-2',
         behind: 0,
+        detail: null,
       },
       {
         key: 'overdue@show:tvdb:452595/s01e0003',
@@ -85,9 +88,18 @@ describe('decideScheduledAlerts', () => {
         titleId: 'title-1',
         episodeId: 'ep-3',
         behind: 1,
+        detail: null,
       },
     ]);
     expect(stub.inserted.every((i) => i.onConflict === 'nothing')).toBe(true);
+  });
+
+  it('carries Sonarr’s reasons onto the stuck alert of a blocked download', async () => {
+    const stub = primed([candidate({ blocked: true, blocked_detail: 'Sample' })]);
+    stub.returns = [[{ id: 'alert-1' }]];
+
+    expect(await decideScheduledAlerts(stub.db, now)).toEqual(['stuck@show:tvdb:452595/s01e0002']);
+    expect(stub.inserted[0]?.values).toMatchObject({ kind: 'stuck', detail: 'Sample' });
   });
 
   // Each run decides the same alerts again; the key makes them nothing new.

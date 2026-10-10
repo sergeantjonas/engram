@@ -497,6 +497,70 @@ describe('POST /webhooks/sonarr', () => {
     expect(onGrab.executions).toHaveLength(2);
   });
 
+  it('decides a stuck alert at once for a download Sonarr asks a hand for', async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const stub = sessionDb();
+    stub.returns = [[{ id: 'title-1' }], [{ id: 'ev-1' }], [{ id: 'alert-1' }]];
+    stub.selects = [[{ id: 'episode-1' }]];
+    stub.executions = [
+      [
+        {
+          id: 'episode-1',
+          title_id: 'title-1',
+          season: 2,
+          number: 1,
+          grabbed_ms: null,
+          imported: false,
+          blocked: true,
+          blocked_detail: 'Sample',
+          on_disk: false,
+          walked_ms: null,
+        },
+      ],
+      [
+        {
+          id: 'title-1',
+          kind: 'show',
+          tvdb_id: '371980',
+          tmdb_id: null,
+          imdb_id: null,
+          want: true,
+          dropped: false,
+          excluded: false,
+          played: false,
+          off_grid: false,
+        },
+      ],
+      [
+        {
+          title_id: 'title-1',
+          season: 2,
+          number: 1,
+          seen: false,
+          skipped: false,
+          air_date: yesterday,
+        },
+      ],
+    ];
+    const { episodeFile: _file, isUpgrade: _upgrade, ...rest } = imported;
+    const blocked = {
+      ...rest,
+      eventType: 'ManualInteractionRequired',
+      downloadId: 'SABnzbd_nzo_x',
+      downloadStatusMessages: [{ title: 'Severance.S02E01', messages: ['Sample'] }],
+    };
+
+    expect((await sonarr(good, blocked, stub)).statusCode).toBe(204);
+    expect(stub.inserted).toContainEqual(
+      expect.objectContaining({
+        values: expect.objectContaining({
+          key: 'stuck@show:tvdb:371980/s02e0001',
+          detail: 'Sample',
+        }),
+      }),
+    );
+  });
+
   it('refuses a missing or wrong secret, and takes none from the body', async () => {
     expect((await sonarr({}, imported)).statusCode).toBe(401);
     expect((await sonarr({ 'x-engram-token': 'wrong' }, imported)).statusCode).toBe(401);
@@ -525,9 +589,19 @@ describe('POST /webhooks/sonarr', () => {
     expect(stub.inserted).toEqual([]);
   });
 
-  // The import is stored before the alert is decided, and a 500 would count
+  // The event is stored before the alert is decided, and a 500 would count
   // towards Sonarr pausing the webhook over a delivery that was fine.
-  it('still answers 204 when deciding an alert fails', async () => {
+  const { episodeFile: _file, isUpgrade: _upgrade, ...unfiled } = imported;
+  const blockedBody = {
+    ...unfiled,
+    eventType: 'ManualInteractionRequired',
+    downloadId: 'SABnzbd_nzo_x',
+    downloadStatusMessages: [{ title: 'Severance.S02E01', messages: ['Sample'] }],
+  };
+  it.each([
+    ['an import', imported],
+    ['a blocked download', blockedBody],
+  ])('still answers 204 when deciding the alert for %s fails', async (_case, payload) => {
     const errors: unknown[] = [];
     const stub = sessionDb();
     stub.returns = [[{ id: 'title-1' }], [{ id: 'ev-1' }]];
@@ -548,7 +622,7 @@ describe('POST /webhooks/sonarr', () => {
       method: 'POST',
       url: '/webhooks/sonarr',
       headers: { 'content-type': 'application/json', ...good },
-      payload: imported,
+      payload,
     });
 
     expect(response.statusCode).toBe(204);

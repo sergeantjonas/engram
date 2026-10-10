@@ -8,7 +8,9 @@ keeping every episode as `library_episode`, stuck and overdue decided hourly
 in the API, and delivery through the notify hub at `notify.vyoh.gg` —
 deployed 2026-10-10. A ready alert inserted by hand reached Discord that
 afternoon; no stuck or overdue has fired yet, and the next episode of a
-followed show airs 2026-10-20.
+followed show airs 2026-10-20. Sonarr's *Manual Interaction Required* built
+the same day and not yet deployed: a download Sonarr asks a hand for is
+stuck at once, with its reasons.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -47,6 +49,10 @@ download log into something worth being told.
   beside delivery, not by a timer on the box: the owner's choice. A unit, a
   healthchecks.io check and sudo steps would watch a pass whose failure
   delivery shares anyway; one that stops shows in the API's log alone.
+- **2026-10-10 — A download Sonarr asks a hand for is stuck at once**, with
+  Sonarr's reasons as the message, rather than a fourth alert: the owner's
+  choice. One problem, one ping; a fourth kind would ping now and stuck
+  would ping again four hours later.
 - **2026-10-07 — Alerts are rows before they are messages.** Deciding is
   Engram's and is built first; delivery drains what was decided. A Discord
   outage then delays an alert rather than losing it, and moving delivery
@@ -319,6 +325,35 @@ Taken and then not marked is harmless, since the hub drops the repeat by
 key. Production held no alert yet when this was built, so switching it on
 sends no backlog.
 
+## Manual Interaction Required
+
+Read 2026-10-10 from the same source. Sonarr sends `ManualInteractionRequired`
+when a finished download cannot be imported without a hand — a series title
+that does not match, a release matched by id, a name it cannot parse, or
+files it refused, all of them or some — once per download, remembered in
+memory, so a restart of Sonarr can send it again. It is not the end of the
+download: Sonarr checks a blocked one again on every pass and imports it by
+itself once what blocked it clears, such as a season pack refused while its
+newest titles still read TBA. The body names the series, its episodes and the
+`downloadId` as a grab does, plus `downloadStatusMessages`: one entry per
+download or file, with Sonarr's words in `messages`, or in `title` alone for
+a partial import's headline. Building it reads the
+grab's quality, which a download Sonarr never matched to a series does not
+have, so that case probably fails in Sonarr and arrives as nothing; the
+hourly stuck check still has its grab.
+
+Built 2026-10-10. The receiver keeps it as a `library_event` of kind
+`blocked`, keyed `<episode key>@blocked@<downloadId>`, with the distinct
+messages in a `detail` column. Storing one runs the hourly pass at once,
+which decides stuck for that episode without the four-hour wait and copies
+the reasons onto the alert, where the message gives them as "Sonarr needs a
+hand:" and the list. Every other test still applies: followed, recent, not
+watched, not on disk — so a refused upgrade, whose episode already has a
+file, says nothing, and neither do the episodes a partial import did bring
+in. An episode with a blocked download is never overdue. The import that
+follows one still gets its ready alert: Sonarr may well have made it alone,
+and "it arrived after all" is news either way.
+
 ## Needed from the owner
 
 - ~~The Sonarr version~~ — `4.0.20.3012`, given 2026-10-07.
@@ -328,6 +363,7 @@ sends no backlog.
   empty. Triggers on: *On Grab*, *On File Import*, *On File Upgrade*, *On
   Series Add*, *On Series Delete*, *On Episode File Delete*. Off: *On Import
   Complete*, *On Episode File Delete For Upgrade*, and the rest.
+- ~~*On Manual Interaction Required*~~ — ticked 2026-10-10.
 - After chunk 3 is pushed: the API deploy, then `scripts/deploy-walker.sh`
   for the walker's new image. Either order works — the API already running
   takes the larger walk and ignores what it does not read — and the snapshot
@@ -346,7 +382,3 @@ sends no backlog.
 - **The hub itself.** Built in `~/dev/notify.vyoh.gg`; commonplace's
   `notify-hub.md` holds the contract this posts to.
 - **Alerts in the web app.** Discord is where they are read.
-- **Manual Interaction Required.** Sonarr sends it when a download needs a
-  hand to import, which happens without the owner and is often what stuck
-  is. A candidate fourth alert, or a stuck that fires at once instead of
-  hours later; found while reading the source, not yet decided.

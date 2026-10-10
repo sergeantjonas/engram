@@ -147,6 +147,7 @@ export async function storeSonarrPlan(
           kind: event.kind,
           titleId,
           episodeId: episodeRow.id,
+          detail: event.detail,
           raw: event.raw,
         })
         // Nothing, not an update: the id names the download or the file, so a

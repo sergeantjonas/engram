@@ -14,6 +14,7 @@ const alert = (over: Partial<PendingAlert> = {}): PendingAlert => ({
   season: 1,
   number: 4,
   episodeName: 'Call Me Red',
+  detail: null,
   ...over,
 });
 
@@ -35,6 +36,18 @@ describe('composeMessage', () => {
 
   it('sends no body when there is neither a name nor a standing', () => {
     expect(composeMessage(alert({ behind: null, episodeName: null }), WEB).body).toBeUndefined();
+  });
+
+  it('gives Sonarr’s reasons as the body of a stuck download it asked a hand for', () => {
+    const stuck = alert({
+      kind: 'stuck',
+      key: 'stuck@show:tvdb:452595/s01e0004',
+      detail: 'Sample',
+    });
+    expect(composeMessage(stuck, WEB)).toMatchObject({
+      title: 'Dexter: Resurrection S01E04 is stuck',
+      body: '“Call Me Red”\nSonarr needs a hand:\nSample',
+    });
   });
 
   // Past the hub's limit the message is refused for good.

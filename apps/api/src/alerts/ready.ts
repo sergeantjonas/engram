@@ -53,6 +53,8 @@ export interface PlannedAlert {
   season: number;
   number: number;
   behind: number | null;
+  /** What the message adds beyond its kind: Sonarr's reasons, on a blocked download. */
+  detail: string | null;
 }
 
 export type AlertDecision = { ok: true; alert: PlannedAlert } | { ok: false; reason: string };
@@ -149,6 +151,7 @@ export function planReadyAlert(input: ReadyInput): AlertDecision {
       season: episode.season,
       number: episode.number,
       behind: behindOf(input.grid, episode, today),
+      detail: null,
     },
   };
 }

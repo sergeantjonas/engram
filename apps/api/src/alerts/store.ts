@@ -91,6 +91,8 @@ export async function decideReadyAlerts(
   const decided: DecidedAlerts = { written: 0, passed: [] };
   for (const event of plan.events) {
     const { season, number, airedAt, airDate } = event.episode;
+    const row = rows.find((r) => r.season === season && r.number === number);
+    if (!row) throw new Error(`episode s${season}e${number} not on the grid of ${titleId}`);
     const decision = planReadyAlert({
       title: { kind: plan.series.kind, ids: plan.series.ids },
       episode: { season, number, airedAt, airDate },
@@ -104,8 +106,6 @@ export async function decideReadyAlerts(
       continue;
     }
 
-    const row = rows.find((r) => r.season === season && r.number === number);
-    if (!row) throw new Error(`episode s${season}e${number} not on the grid of ${titleId}`);
     const inserted = await db
       .insert(alerts)
       .values({
@@ -114,6 +114,7 @@ export async function decideReadyAlerts(
         titleId,
         episodeId: row.id,
         behind: decision.alert.behind,
+        detail: decision.alert.detail,
       })
       .onConflictDoNothing()
       .returning({ id: alerts.id });

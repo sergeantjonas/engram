@@ -133,6 +133,61 @@ describe('planSonarrEvent', () => {
     });
   });
 
+  it('plans a blocked download per episode, with Sonarr’s reasons once each', () => {
+    const blocked = {
+      ...grab,
+      eventType: 'ManualInteractionRequired',
+      downloadStatus: 'Warning',
+      downloadStatusMessages: [
+        {
+          title: 'Severance.S02E01.1080p',
+          messages: ['Not an upgrade for existing episode file(s)'],
+        },
+        { title: 'Severance.S02E01.sample.mkv', messages: ['Sample', ' '] },
+        {
+          title: 'Severance.S02E01.nfo',
+          messages: ['Not an upgrade for existing episode file(s)'],
+        },
+      ],
+    };
+    expect(planSonarrEvent(blocked)).toMatchObject({
+      ok: true,
+      action: 'file',
+      kind: 'blocked',
+      upgrade: false,
+      events: [
+        {
+          sourceEventId: 'show:tvdb:371980/s02e0001@blocked@A1B2C3D4E5',
+          kind: 'blocked',
+          detail: 'Not an upgrade for existing episode file(s)\nSample',
+        },
+      ],
+    });
+    // A partial import's headline is its title, with no messages under it.
+    const partial = {
+      ...blocked,
+      downloadStatusMessages: [
+        {
+          title:
+            'One or more episodes expected in this release were not imported or missing from the release',
+          messages: [],
+        },
+      ],
+    };
+    expect(planSonarrEvent(partial)).toMatchObject({
+      events: [
+        {
+          detail:
+            'One or more episodes expected in this release were not imported or missing from the release',
+        },
+      ],
+    });
+    // Reasons Sonarr sent in a shape this does not read are none, not a refusal.
+    expect(planSonarrEvent({ ...blocked, downloadStatusMessages: 'odd' })).toMatchObject({
+      events: [{ detail: null }],
+    });
+  });
+
   it('plans a series add, and refuses a series Sonarr has no tvdb id for', () => {
     expect(planSonarrEvent({ eventType: 'SeriesAdd', series })).toMatchObject({
       ok: true,

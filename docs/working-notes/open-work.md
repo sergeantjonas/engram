@@ -405,7 +405,8 @@ the viewer wants of a title. The SPA calls all four.
    control, a figure box that rules each line once however it wraps, a
    favicon and `theme-color`, and both families served with the app,
    preloaded.
-10. **Episode alerts** — scoped 2026-10-07 in
+10. ~~**Episode alerts**~~ — built, all five chunks deployed by 2026-10-10
+    (see Done). Scoped 2026-10-07 in
     [episode-alerts.md](episode-alerts.md); chunk 1, the Sonarr receiver,
     built, deployed and connected the same day; chunk 2, the `alert` table
     and the ready decision, built with it and deployed 2026-10-10; chunk 5,
@@ -486,6 +487,16 @@ the viewer wants of a title. The SPA calls all four.
   canonical source alone, arriving unprompted.
 
 ## Done
+
+- **2026-10-10** — Episode alerts, all five chunks of
+  [episode-alerts.md](episode-alerts.md): a Discord ping, through the notify
+  hub at `notify.vyoh.gg`, when a recently aired episode of a followed show is
+  ready, stuck four hours after its grab, or overdue by the walk two days
+  after it aired — and never for what the owner did. The Sonarr receiver and
+  `library_event` (2026-10-07), the `alert` table and the ready decision, the
+  nightly walk keeping every episode in Plex as `library_episode`, the hourly
+  stuck and overdue check in the API, and delivery. A hand-made ready alert
+  reached Discord the same afternoon.
 
 - **2026-09-22** — Bulk add on `/add`, and search results that know what the
   record already holds. Adding a trilogy was three searches, three adds, three

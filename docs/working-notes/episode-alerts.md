@@ -1,20 +1,14 @@
 # Episode alerts
 
-**Status:** Building — scoped 2026-10-07, and Sonarr's webhooks read from
-source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
-its first real grabs, imports and series add read against the source that
-evening; a delete and a series delete have not fired yet. Chunk 2 built
-2026-10-07 and deployed 2026-10-10: the `alert` table and the ready decision.
-Chunk 3 built and deployed 2026-10-10: the walk lists every show's episodes
-and the API keeps them as `library_episode`; its first walk stored 1,097.
-Chunk 5 built and deployed 2026-10-10: delivery through the notify hub, live
-at `notify.vyoh.gg` the same day. From the API container the hub answered
-its health check, refused a post with no secret, and took Engram's secret.
-A test alert inserted by hand for Dexter: Resurrection S01E01 reached the
-hub 5 seconds after it was decided and Discord 67 seconds after that, the
-hub's quiet period; it stays in the table, delivered. Chunk 4 built
-2026-10-10 and not yet deployed: stuck and overdue, decided hourly in the
-API.
+**Status:** Built — all five chunks deployed by 2026-10-10. Scoped
+2026-10-07, when chunk 1, the Sonarr receiver, was deployed and its first
+grabs, imports and series add read against the source; a delete and a series
+delete have not fired yet. Chunks 2 to 5 — the ready decision, the walk
+keeping every episode as `library_episode`, stuck and overdue decided hourly
+in the API, and delivery through the notify hub at `notify.vyoh.gg` —
+deployed 2026-10-10. A ready alert inserted by hand reached Discord that
+afternoon; no stuck or overdue has fired yet, and the next episode of a
+followed show airs 2026-10-20.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every

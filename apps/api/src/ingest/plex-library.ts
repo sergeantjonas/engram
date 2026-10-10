@@ -14,6 +14,8 @@ export interface PlexLeaf {
   title?: string;
   viewCount?: number;
   lastViewedAt?: number;
+  /** When Plex added the file, in epoch seconds. */
+  addedAt?: number;
 }
 
 /** A show or film as the section listing returns it, with `includeGuids=1`. */
@@ -26,7 +28,10 @@ export interface PlexLibraryItem {
   viewCount?: number;
   viewedLeafCount?: number;
   lastViewedAt?: number;
-  /** Present on a watched show only: the watched episodes under it. */
+  /**
+   * The episodes under a show: every one from a dump that counts its leaves,
+   * the watched ones alone from an older dump.
+   */
   episodes?: PlexLeaf[];
 }
 
@@ -50,6 +55,14 @@ export interface PlannedEpisode {
   season: number;
   number: number;
   name: string | null;
+}
+
+/** An episode Plex holds a file for, by Plex's own numbering. */
+export interface PlannedLibraryEpisode {
+  titleKey: string;
+  season: number;
+  number: number;
+  addedAt: Date | null;
 }
 
 export interface PlannedEvent {
@@ -96,6 +109,8 @@ export interface LibraryPlan {
   events: PlannedEvent[];
   /** Canonical keys of every title the walk saw, watched or not. */
   presence: string[];
+  /** Every episode the walk found under a keyable show, watched or not. */
+  onDisk: PlannedLibraryEpisode[];
   /** Items that could not be placed at all. Reported rather than silently lost. */
   dropped: DroppedItem[];
   /** Shows placed, but with fewer watched episodes than they claim. */
@@ -107,6 +122,8 @@ export interface LibraryPlan {
    * other carries episodes as well as items.
    */
   read: number;
+  /** Every episode in every item, the same way: what a dump's `leaves` counts. */
+  leaves: number;
 }
 
 const KIND_BY_SECTION: Record<string, TitleKind | undefined> = { show: 'show', movie: 'movie' };
@@ -116,10 +133,15 @@ const KIND_BY_SECTION: Record<string, TitleKind | undefined> = { show: 'show', m
  * decided together or the insert fails on a row the planner thought was fine.
  */
 function watchedAt(at: number | undefined): Pick<PlannedEvent, 'watchedAt' | 'watchedPrecision'> {
-  // A zeroed field is Plex saying nothing, not Plex saying 1970.
-  return typeof at === 'number' && at > 0
-    ? { watchedAt: new Date(at * 1000), watchedPrecision: 'exact' }
+  const date = instant(at);
+  return date
+    ? { watchedAt: date, watchedPrecision: 'exact' }
     : { watchedAt: null, watchedPrecision: 'unknown' };
+}
+
+/** A zeroed field is Plex saying nothing, not Plex saying 1970. */
+function instant(at: number | undefined): Date | null {
+  return typeof at === 'number' && at > 0 ? new Date(at * 1000) : null;
 }
 
 /**
@@ -137,6 +159,7 @@ export function planLibrary(sections: PlexLibrarySection[]): LibraryPlan {
   // be the same claim twice, so they merge into the fullest one.
   const events = new Map<string, PlannedEvent>();
   const presence = new Set<string>();
+  const onDisk = new Map<string, PlannedLibraryEpisode>();
   const dropped: DroppedItem[] = [];
   const incomplete: IncompleteShow[] = [];
 
@@ -158,8 +181,10 @@ export function planLibrary(sections: PlexLibrarySection[]): LibraryPlan {
   };
 
   let read = 0;
+  let leaves = 0;
   for (const section of sections) {
     read += section.items.length;
+    for (const item of section.items) leaves += item.episodes?.length ?? 0;
     const kind = KIND_BY_SECTION[section.type];
     // Photos and music share the endpoint and have no place in this record.
     if (kind === undefined) continue;
@@ -203,16 +228,29 @@ export function planLibrary(sections: PlexLibrarySection[]): LibraryPlan {
       // failed, and the events below are short by the difference. Presence and
       // identity stand either way — those came from the section listing, which
       // read fine, and presence is never inferred from a watch.
-      const leaves = item.episodes ?? [];
       const expected = item.viewedLeafCount ?? 0;
       let found = 0;
 
-      for (const leaf of leaves) {
-        const plays = leaf.viewCount ?? 0;
-        if (plays < 1) continue;
-
+      for (const leaf of item.episodes ?? []) {
         const season = leaf.parentIndex;
         const number = leaf.index;
+        const plays = leaf.viewCount ?? 0;
+
+        // Every numbered leaf is on disk, watched or not. One with no number
+        // can be matched to nothing, so it is left out here and reported below
+        // only if it carries a watch, which is the part that would be lost.
+        if (season !== undefined && number !== undefined) {
+          const slot = `${key}/${season}/${number}`;
+          const addedAt = instant(leaf.addedAt);
+          const held = onDisk.get(slot);
+          // A show in two sections lists its files twice; the earlier one is
+          // when the episode first arrived.
+          if (!held || (addedAt !== null && (held.addedAt === null || addedAt < held.addedAt))) {
+            onDisk.set(slot, { titleKey: key, season, number, addedAt });
+          }
+        }
+
+        if (plays < 1) continue;
         if (season === undefined || number === undefined) {
           dropped.push({
             reason: 'episode has no season or number',
@@ -257,31 +295,52 @@ export function planLibrary(sections: PlexLibrarySection[]): LibraryPlan {
     episodes: [...episodes.values()],
     events: [...events.values()],
     presence: [...presence],
+    onDisk: [...onDisk.values()],
     dropped,
     incomplete,
     read,
+    leaves,
   };
 }
 
+/** What a dump says about itself: its items and, from a walk that lists every episode, its leaves. */
+export interface DumpCount {
+  items?: number | undefined;
+  leaves?: number | undefined;
+}
+
 /**
- * Whether a plan was made from every item its dump counted.
+ * Whether a plan was made from every item and episode its dump counted.
  *
  * The writer reads absence as removal, so it is only safe over a dump that is
  * the whole library. A short walk is refused before this whenever Plex
  * reports a `totalSize` — the dump throws rather than write a section paged
  * out short of it — but the file or body can still lose items after the dump
- * counted them, and
- * writing what is left would mark whatever is missing as gone from disk. A
- * dump that never counted itself has nothing to be checked against and is
- * taken at its word.
+ * counted them, and writing what is left would mark whatever is missing as
+ * gone from disk. A dump that never counted itself has nothing to be checked
+ * against and is taken at its word.
+ *
+ * Episodes are held to the same rule, and say whether the episode snapshot may
+ * be rewritten: a dump that did not count them may predate listing every one,
+ * and its watched episodes alone would read as everything else gone.
  */
 export function checkComplete(
-  counted: number | undefined,
+  counted: DumpCount | undefined,
   plan: LibraryPlan,
-): { ok: true } | { ok: false; reason: string } {
-  if (counted === undefined || counted === plan.read) return { ok: true };
-  return {
-    ok: false,
-    reason: `dump does not add up: it counted ${counted} item(s), its sections hold ${plan.read}`,
-  };
+): { ok: true; episodesCounted: boolean } | { ok: false; reason: string } {
+  const items = counted?.items;
+  if (items !== undefined && items !== plan.read) {
+    return {
+      ok: false,
+      reason: `dump does not add up: it counted ${items} item(s), its sections hold ${plan.read}`,
+    };
+  }
+  const leaves = counted?.leaves;
+  if (leaves !== undefined && leaves !== plan.leaves) {
+    return {
+      ok: false,
+      reason: `dump does not add up: it counted ${leaves} episode(s), its shows hold ${plan.leaves}`,
+    };
+  }
+  return { ok: true, episodesCounted: leaves !== undefined };
 }

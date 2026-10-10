@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. Extended 2026-09-19 with `episode_gap`, the viewer's own account of a hole, and 2026-10-07 with `library_event`, what Sonarr did to an episode's file, and `alert`, what is worth telling the owner about one. This note carries the reasoning; the schema is the source of truth for shape.
+**Status:** Implemented 2026-09-16 in `apps/api/src/db/schema.ts`, extended 2026-09-17 with date precision and excluded titles. The imported grids were partial until the 2026-09-18 backfill; see that section for why the importer still writes them that way. Extended 2026-09-19 with `episode_gap`, the viewer's own account of a hole, and 2026-10-07 with `library_event`, what Sonarr did to an episode's file, and `alert`, what is worth telling the owner about one; 2026-10-10 with `library_episode`, every episode the nightly walk finds in Plex. This note carries the reasoning; the schema is the source of truth for shape.
 
 ## Principles
 
@@ -39,6 +39,12 @@ episode           (id, title_id, season, number, name, air_date, runtime,
 library_presence  is it on disk right now?
                   (title_id, present, first_seen_at, removed_at, source)
 
+library_episode   every episode the last walk found in Plex
+                  (title_id, season, number, added_at, walked_at)
+                  PRIMARY KEY (title_id, season, number), in Plex's own
+                  numbering and not tied to an episode row; a snapshot that
+                  only a walk which counted its episodes rewrites
+
 library_event     append-only: what Sonarr did to one episode's file
                   (id, source, source_event_id, kind, title_id, episode_id,
                    received_at, raw)
@@ -48,7 +54,7 @@ library_event     append-only: what Sonarr did to one episode's file
 
 alert             something worth telling the owner about an episode
                   (id, key, kind, title_id, episode_id, behind, decided_at,
-                   delivered_at)
+                   delivered_at, refused_at)
                   kind is ready | stuck | overdue; key is <kind>@<episode
                   key>, unique, so a second decision about the same thing is
                   a conflict rather than a second message
@@ -122,6 +128,17 @@ kept up to date. Sonarr sends no id and no time, so `received_at` is the
 arrival and the id is derived from the episode, the kind, and the download or
 file it names: a file's import and its delete stay two facts, and a grab of a
 two-episode file two rows.
+
+Plex's side is the opposite shape. `library_episode` holds every episode the
+last walk found, one row each, and each walk replaces it: the walk reports
+what is there, not what changed, so a log of it would be the same rows every
+night. The question asked of it is only ever "is it in Plex now", and the
+events above already say when a file came or went. It is keyed on season and
+number, not on an `episode` row, because Plex numbers some shows differently
+from TMDB — [Eight episodes TMDB has never heard of](#eight-episodes-tmdb-has-never-heard-of)
+is one — and a row the grid has no match for is the evidence that it does.
+Absence from it is read as absence from disk, so only a walk that counted its
+episodes may rewrite it, and one that found none never clears it.
 
 `intent` is also what gives Engram the two things Plex genuinely cannot express:
 "want to watch" and "dropped after S2".

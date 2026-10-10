@@ -127,6 +127,13 @@
       "when": 1791640408127,
       "tag": "0017_kind_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791642321597,
+      "tag": "0018_serious_frank_castle",
+      "breakpoints": true
     }
   ]
 }

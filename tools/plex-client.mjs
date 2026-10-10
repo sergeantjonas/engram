@@ -177,12 +177,16 @@ export async function fetchSectionItems(uri, token, sectionKey, options = {}) {
 // rather than on the show: 11 of this server's 22 watched shows report a null
 // `lastViewedAt` at show level while every watched episode under them carries
 // one, so a walk that reads the show row records those as undated.
+//
+// The total is required for the reason the section listing's is: Engram reads
+// an episode missing from this list as gone from disk. Plex reported one on
+// every show's leaves, measured 2026-09-28.
 export async function fetchShowLeaves(uri, token, ratingKey, options = {}) {
   return fetchAllPages(
     (start, size) =>
       `${uri}/library/metadata/${ratingKey}/allLeaves` +
       `?sort=id:asc&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${size}`,
     token,
-    options,
+    { ...options, requireTotal: true },
   );
 }

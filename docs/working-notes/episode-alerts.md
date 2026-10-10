@@ -5,12 +5,14 @@ source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
 its first real grabs, imports and series add read against the source that
 evening; a delete and a series delete have not fired yet. Chunk 2 built
 2026-10-07 and deployed 2026-10-10: the `alert` table and the ready decision.
+Chunk 3 built 2026-10-10 and not yet deployed: the walk lists every show's
+episodes and the API keeps them as `library_episode`.
 Chunk 5 built and deployed 2026-10-10: delivery through the notify hub, live
 at `notify.vyoh.gg` the same day. From the API container the hub answered
 its health check, refused a post with no secret, and took Engram's secret.
 A test alert inserted by hand for Dexter: Resurrection S01E01 reached the
 hub 5 seconds after it was decided and Discord 67 seconds after that, the
-hub's quiet period; it stays in the table, delivered. Chunks 3 and 4 remain.
+hub's quiet period; it stays in the table, delivered. Chunk 4 remains.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -121,8 +123,8 @@ Two tables, both generated from `schema.ts`.
   `(source, source_event_id)`, the way `watch_event` is. Any current answer
   per episode is a reading over it, written when a check first needs one;
   reasoning in [data-model.md](data-model.md) § Presence per episode is a log.
-  The walk's reconcile is a nightly snapshot rather than an event, and its
-  shape is chunk 3's to settle.
+  The walk's reconcile is a nightly snapshot rather than an event:
+  `library_episode`, settled in chunk 3.
 - **`alert`** — landed 2026-10-07: one row per thing worth saying, unique on
   its key (`ready@show:tvdb:392276/s03e0005`), with a delivered time set once
   the hub has taken it, and a refused time if the hub never will. A second
@@ -204,14 +206,38 @@ event.
 
 ## Chunk 3 · The walk keeps every episode
 
-The walk already fetches every episode of every watched show and keeps only
-the watched ones ([dump-library.mjs:118](../../tools/dump-library.mjs#L118)).
-Kept, they say which episodes Plex has, which is the reconcile overdue needs:
-without it a missed `Download` reads as a late episode. Same container, same
-schedule and the same Plex requests as before, so inside the 2026-09-27
-authorization; the walker image is rebuilt and pulled on the slot. Shows
-wanted but not started are not fetched today — one request each, decided
-here.
+The walk fetched every episode of every watched show and kept only the
+watched ones. Kept, they say which episodes Plex has, which is the reconcile
+overdue needs: without it a missed `Download` reads as a late episode. Same
+container and schedule; the walker image is rebuilt and pulled on the slot.
+Whether to also read the shows nobody had started was this chunk's to decide.
+
+Built 2026-10-10. The owner chose to list **every show's** episodes, not only
+the shows with a play: then `library_episode` is everything in Plex, so a
+missing row means a missing file for any show, including one followed later.
+Plex held 53 shows that day, 24 with a play, so the walk makes 29 more
+requests a night, one per show it skipped before, and its post grows from
+about 1 MB to 3 MB, inside the route's 16 MiB. That reads more than the
+2026-09-27 authorization's "same Plex requests as before" assumed: the same
+container on the same schedule, reading more of the same library.
+
+- **A snapshot in Plex's numbering.** One row per episode the walk found —
+  title, season, number, Plex's `addedAt` and the walk's time — keyed on the
+  numbers rather than tied to an `episode` row, so an episode Plex numbers
+  differently from TMDB is kept rather than refused, and is the evidence
+  chunk 4 needs to tell a misnumbered show from a missing episode. Each walk
+  upserts what it found and deletes what it did not; one that found nothing
+  deletes nothing, like the title sweep. Reasoning in
+  [data-model.md](data-model.md).
+- **Only a counted walk rewrites it.** The walk sends `summary.leaves`, every
+  episode it listed, and the API refuses a body short of that count as it
+  refuses one short of its items. A walk that did not count — the old walker,
+  or an old dump through `import:library` — leaves the snapshot alone, since
+  its watched episodes alone would read as every other one gone.
+- **Watched episodes are written exactly as before.** Unwatched ones go to
+  the snapshot and nowhere else: no `episode` row, no event, nothing in the
+  grid. An unwatched leaf with no number is left out quietly; a watched one
+  is still reported as dropped and fails the run.
 
 ## Chunk 4 · Stuck and overdue
 
@@ -257,6 +283,10 @@ sends no backlog.
   empty. Triggers on: *On Grab*, *On File Import*, *On File Upgrade*, *On
   Series Add*, *On Series Delete*, *On Episode File Delete*. Off: *On Import
   Complete*, *On Episode File Delete For Upgrade*, and the rest.
+- After chunk 3 is pushed: the API deploy, then `scripts/deploy-walker.sh`
+  for the walker's new image. Either order works — the API already running
+  takes the larger walk and ignores what it does not read — and the snapshot
+  starts with the first walk after both, at 04:30.
 - Before chunk 5 deploys: `NOTIFY_ORIGIN=https://notify.vyoh.gg` and
   `NOTIFY_SECRET` in `/srv/engram/.env`, the second copied from the hub's
   `SOURCE_ENGRAM_SECRET` in `/srv/notify/.env`. The Discord webhook URL goes

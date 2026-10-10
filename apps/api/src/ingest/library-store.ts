@@ -1,6 +1,6 @@
-import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { and, eq, lt, notInArray, sql } from 'drizzle-orm';
 import type { Database } from '../db/client.js';
-import { episodes, libraryPresence, titles, watchEvents } from '../db/schema.js';
+import { episodes, libraryEpisodes, libraryPresence, titles, watchEvents } from '../db/schema.js';
 import type { LibraryPlan } from './plex-library.js';
 
 export const SOURCE = 'plex-library';
@@ -14,11 +14,20 @@ export interface StoredLibrary {
   present: number;
   /** Titles on record as present that this walk did not see. */
   gone: number;
+  /** Episodes the walk found in Plex, or null when it did not count them. */
+  episodesOnDisk: number | null;
+  /** Episodes the last snapshot held that this walk did not find. */
+  episodesGone: number;
 }
+
+/** Rows per statement: five parameters each, far inside Postgres's limit. */
+const BATCH = 1000;
 
 /**
  * Writes a library plan: every title, episode and event it names, the
  * presence of every title it saw, and the absence of every title it did not.
+ * With `episodesCounted`, it also replaces the snapshot of every episode in
+ * Plex — which `checkComplete` grants only to a dump that counted them.
  *
  * Idempotent, but not the way the history importer is. A history row never
  * changes, so re-importing one is a no-op; a library row is one claim per
@@ -34,6 +43,7 @@ export async function storeLibrary(
   db: Database,
   plan: LibraryPlan,
   walkedAt: Date,
+  options: { episodesCounted: boolean },
 ): Promise<StoredLibrary> {
   return db.transaction(async (tx) => {
     const titleIds = new Map<string, string>();
@@ -196,6 +206,42 @@ export async function storeLibrary(
             )
             .returning({ id: libraryPresence.titleId });
 
+    let episodesOnDisk: number | null = null;
+    let episodesGone = 0;
+    if (options.episodesCounted) {
+      const rows = plan.onDisk.map((episode) => {
+        const titleId = titleIds.get(episode.titleKey);
+        if (!titleId) throw new Error(`no id for planned title ${episode.titleKey}`);
+        const { season, number, addedAt } = episode;
+        return { titleId, season, number, addedAt, walkedAt };
+      });
+      for (let i = 0; i < rows.length; i += BATCH) {
+        await tx
+          .insert(libraryEpisodes)
+          .values(rows.slice(i, i + BATCH))
+          .onConflictDoUpdate({
+            target: [libraryEpisodes.titleId, libraryEpisodes.season, libraryEpisodes.number],
+            // A leaf that lost its date keeps the one already held.
+            set: {
+              addedAt: sql`coalesce(excluded.added_at, ${libraryEpisodes.addedAt})`,
+              walkedAt: sql`excluded.walked_at`,
+            },
+          });
+      }
+      episodesOnDisk = rows.length;
+
+      // Everything an earlier walk found and this one did not. Never after a
+      // walk that found no episode at all, for the reason the title sweep
+      // never runs after one that saw no title.
+      if (rows.length > 0) {
+        const removed = await tx
+          .delete(libraryEpisodes)
+          .where(lt(libraryEpisodes.walkedAt, walkedAt))
+          .returning({ titleId: libraryEpisodes.titleId });
+        episodesGone = removed.length;
+      }
+    }
+
     return {
       titles: titleIds.size,
       episodes: episodeIds.size,
@@ -203,6 +249,8 @@ export async function storeLibrary(
       fresh,
       present: seen.length,
       gone: gone.length,
+      episodesOnDisk,
+      episodesGone,
     };
   });
 }

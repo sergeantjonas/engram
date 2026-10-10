@@ -7,9 +7,9 @@ import { storeLibrary } from '../ingest/library-store.js';
 import { checkComplete, type PlexLibrarySection, planLibrary } from '../ingest/plex-library.js';
 
 /**
- * Fastify's default of 1 MiB refuses this library's walk, which is 2 MB
- * pretty-printed and grows with every episode watched. Raised on this route
- * alone, and only reached by a caller that has already proved the secret.
+ * Fastify's default of 1 MiB refuses this library's walk, which lists every
+ * episode on disk, about 3 MB for 53 shows. Raised on this route alone, and
+ * only reached by a caller that has already proved the secret.
  */
 const BODY_LIMIT = 16 * 1024 * 1024;
 
@@ -27,6 +27,7 @@ const leaf = z.looseObject({
   title: z.string().optional(),
   viewCount: count.optional(),
   lastViewedAt: count.optional(),
+  addedAt: count.optional(),
 });
 
 const item = z.looseObject({
@@ -44,7 +45,7 @@ const item = z.looseObject({
 export const libraryWalk = z.object({
   server: z.string().optional(),
   machineIdentifier: z.string(),
-  summary: z.looseObject({ items: count }),
+  summary: z.looseObject({ items: count, leaves: count.optional() }),
   sections: z.array(
     z.object({ key: z.string(), type: z.string(), title: z.string(), items: z.array(item) }),
   ),
@@ -122,12 +123,14 @@ export function registerIngestRoutes(app: FastifyInstance, config: Config, db: D
       // Validated above against every field the planner reads; the cast only
       // bridges zod's `T | undefined` optionals to the interfaces' own.
       const plan = planLibrary(walk.sections as PlexLibrarySection[]);
-      const complete = checkComplete(walk.summary.items, plan);
+      const complete = checkComplete(walk.summary, plan);
       if (!complete.ok) {
         return reply.code(422).send({ error: 'incomplete', message: complete.reason });
       }
 
-      const stored = await storeLibrary(db, plan, new Date());
+      const stored = await storeLibrary(db, plan, new Date(), {
+        episodesCounted: complete.episodesCounted,
+      });
       request.log.info(
         { ...stored, dropped: plan.dropped.length, incomplete: plan.incomplete.length },
         'library walk stored',

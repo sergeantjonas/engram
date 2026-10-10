@@ -191,7 +191,10 @@ file beside it exposes nothing new. The slot gives each user a rootless
 Docker daemon, and the walk runs in a container on it. Bytesized's terms reserve anything not
 installed by default for staff authorization, which was asked for and given
 on 2026-09-27 for exactly this: one small nightly container reading the
-owner's own library.
+owner's own library. Since 2026-10-10 it lists every show's episodes, not
+only those of shows with a play, so that Engram knows every episode on disk
+([episode-alerts.md](episode-alerts.md) § Chunk 3): one request per show,
+53 that day.
 
 - **The push authenticates on `INGEST_SECRET`, not `WEBHOOK_SECRET`.** Both
   live on the same slot, but they can be rotated apart. Either one, lost,

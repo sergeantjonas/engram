@@ -188,6 +188,32 @@ export const libraryPresence = pgTable('library_presence', {
   source: text('source').notNull(),
 });
 
+/**
+ * Every episode the last library walk found in Plex, by Plex's own numbering.
+ *
+ * A snapshot that each walk replaces, not a log: what is in Plex now is the
+ * question, and Sonarr's events already say when a file came or went. Keyed by
+ * season and number rather than to an `episode` row, because Plex numbers some
+ * shows differently from TMDB, and a row the grid has no match for is itself
+ * the evidence that it does. Rewritten only by a walk that counted its
+ * episodes, since absence from it is read as absence from disk.
+ */
+export const libraryEpisodes = pgTable(
+  'library_episode',
+  {
+    titleId: uuid('title_id')
+      .notNull()
+      .references(() => titles.id, { onDelete: 'cascade' }),
+    season: integer('season').notNull(),
+    number: integer('number').notNull(),
+    /** When Plex added the file, from the leaf's `addedAt`. */
+    addedAt: timestamp('added_at', { withTimezone: true }),
+    /** The walk that last found it: every row carries the latest walk's time. */
+    walkedAt: timestamp('walked_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.titleId, t.season, t.number] })],
+);
+
 export const libraryEventKind = pgEnum('library_event_kind', ['grab', 'import', 'delete']);
 
 /**

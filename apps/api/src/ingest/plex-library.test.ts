@@ -289,6 +289,44 @@ describe('planLibrary', () => {
     });
   });
 
+  it('puts every numbered episode on disk, watched or not, with when Plex added it', () => {
+    const plan = planLibrary([
+      shows(
+        show({
+          episodes: [
+            leaf({ addedAt: 1736488800 }),
+            leaf({ index: 5, viewCount: 0, addedAt: 0 }),
+            leaf({ index: undefined, viewCount: 0 }),
+          ],
+        }),
+      ),
+    ]);
+
+    expect(plan.onDisk).toEqual([
+      {
+        titleKey: 'show:tvdb:392276',
+        season: 1,
+        number: 4,
+        addedAt: new Date(1736488800 * 1000),
+      },
+      { titleKey: 'show:tvdb:392276', season: 1, number: 5, addedAt: null },
+    ]);
+    // An unwatched leaf with no number has nothing to lose, so it is not a
+    // drop that would fail the nightly run.
+    expect(plan.dropped).toEqual([]);
+    expect(plan.leaves).toBe(3);
+  });
+
+  it('keeps the earlier arrival of an episode listed in two sections', () => {
+    const plan = planLibrary([
+      shows(show({ episodes: [leaf({ addedAt: 1736488800 })] })),
+      shows(show({ ratingKey: '749', episodes: [leaf({ addedAt: 1700000000 })] })),
+    ]);
+
+    expect(plan.onDisk).toHaveLength(1);
+    expect(plan.onDisk[0]?.addedAt).toEqual(new Date(1700000000 * 1000));
+  });
+
   it('ignores a section that holds neither shows nor films', () => {
     const plan = planLibrary([{ key: '3', type: 'artist', title: 'Music', items: [show()] }]);
 
@@ -305,14 +343,14 @@ describe('checkComplete', () => {
   it('accepts a dump whose sections hold every item it counted, dropped ones included', () => {
     const plan = planLibrary([shows(show()), films(film({ Guid: [] }))]);
     expect(plan.dropped).toHaveLength(1);
-    expect(checkComplete(2, plan)).toEqual({ ok: true });
+    expect(checkComplete({ items: 2 }, plan)).toEqual({ ok: true, episodesCounted: false });
   });
 
   // The dump counts both copies; presence holds one title.
   it('accepts a film held in two sections as the two items the dump counted', () => {
     const plan = planLibrary([films(film()), films(film({ ratingKey: '901' }))]);
     expect(plan.presence).toHaveLength(1);
-    expect(checkComplete(2, plan)).toEqual({ ok: true });
+    expect(checkComplete({ items: 2 }, plan)).toEqual({ ok: true, episodesCounted: false });
   });
 
   // A dropped episode is not an item, so it cannot stand in for one the body
@@ -320,13 +358,45 @@ describe('checkComplete', () => {
   it('refuses a short body even when an episode was dropped', () => {
     const plan = planLibrary([shows(show({ episodes: [leaf({ index: undefined })] }))]);
     expect(plan.dropped).toHaveLength(1);
-    expect(checkComplete(2, plan)).toEqual({
+    expect(checkComplete({ items: 2 }, plan)).toEqual({
       ok: false,
       reason: 'dump does not add up: it counted 2 item(s), its sections hold 1',
     });
   });
 
   it('takes a dump that never counted itself at its word', () => {
-    expect(checkComplete(undefined, planLibrary([shows(show())]))).toEqual({ ok: true });
+    expect(checkComplete(undefined, planLibrary([shows(show())]))).toEqual({
+      ok: true,
+      episodesCounted: false,
+    });
+  });
+
+  // Like an item, an episode under a show that could not be keyed was still
+  // read, and the dump counted it.
+  it('counts the episodes of a dropped show towards the leaves', () => {
+    const plan = planLibrary([shows(show({ Guid: [], episodes: [leaf()] }))]);
+    expect(plan.dropped).toHaveLength(1);
+    expect(checkComplete({ items: 1, leaves: 1 }, plan)).toEqual({
+      ok: true,
+      episodesCounted: true,
+    });
+  });
+
+  it('lets a dump that counted its episodes rewrite the snapshot', () => {
+    const plan = planLibrary([shows(show({ episodes: [leaf(), leaf({ index: 5 })] }))]);
+    expect(checkComplete({ items: 1, leaves: 2 }, plan)).toEqual({
+      ok: true,
+      episodesCounted: true,
+    });
+  });
+
+  // Absence from the snapshot is read as absence from disk, so a body that
+  // lost an episode is refused like one that lost an item.
+  it('refuses a body short of the episodes it counted', () => {
+    const plan = planLibrary([shows(show({ episodes: [leaf()] }))]);
+    expect(checkComplete({ items: 1, leaves: 2 }, plan)).toEqual({
+      ok: false,
+      reason: 'dump does not add up: it counted 2 episode(s), its shows hold 1',
+    });
   });
 });

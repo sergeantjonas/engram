@@ -111,6 +111,15 @@ test('refuses a section listed without a total', async () => {
   );
 });
 
+test('refuses a show whose episodes are listed without a total', async () => {
+  await assert.rejects(
+    fetchShowLeaves('http://x', 't', '748', {
+      get: stubLibrary({ total: 16, reportTotal: false }),
+    }),
+    /no totalSize/,
+  );
+});
+
 test('pages a show with more episodes than one page holds', async () => {
   const got = await fetchShowLeaves('http://x', 't', '748', {
     get: stubLibrary({ total: 424, clamp: 100 }),

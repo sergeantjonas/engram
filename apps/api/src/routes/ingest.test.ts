@@ -66,10 +66,29 @@ describe('POST /ingest/plex-library', () => {
       fresh: 0,
       present: 1,
       gone: 0,
+      episodesOnDisk: null,
+      episodesGone: 0,
       dropped: [],
       incomplete: [],
     });
     expect(stub.inserted[0]?.values).toMatchObject({ key: 'movie:tmdb:438631' });
+  });
+
+  // Counted, the walk holds every episode, so the snapshot is rewritten from it.
+  it('records the episodes on disk from a walk that counted them', async () => {
+    const stub = storing();
+    const response = await post(bearer, walk({ summary: { items: 1, leaves: 0 } }), stub);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ episodesOnDisk: 0 });
+  });
+
+  it('refuses a walk short of the episodes it counted', async () => {
+    const stub = storing();
+    const response = await post(bearer, walk({ summary: { items: 1, leaves: 3 } }), stub);
+
+    expect(response.statusCode).toBe(422);
+    expect(stub.inserted).toEqual([]);
   });
 
   // Fastify's default limit is 1 MiB, and this library's walk is already

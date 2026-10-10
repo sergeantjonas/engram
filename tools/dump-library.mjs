@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Archives what Plex's library knows to disk: every item in every section, and
-// for each watched show, every watched episode under it.
+// every episode under every show, watched or not.
 //
 // This is the deeper record. The history endpoint is a server-local log that
 // starts when the server was built; per-item watched state is account data and
@@ -54,7 +54,7 @@ if (target && wantServer) {
 }
 
 // Redrawn in place in a terminal. In the slot's journal every redraw would be
-// a line of its own, one per watched show.
+// a line of its own, one per show.
 const progress = process.stdout.isTTY ? (line) => process.stdout.write(`\r${line}`) : () => {};
 
 const watched = (item) => (item.viewCount ?? 0) > 0 || (item.viewedLeafCount ?? 0) > 0;
@@ -62,6 +62,7 @@ const watched = (item) => (item.viewCount ?? 0) > 0 || (item.viewedLeafCount ?? 
 function summarise(sections) {
   let items = 0;
   let watchedItems = 0;
+  let leaves = 0;
   let episodes = 0;
   let undatedFilms = 0;
   let undatedEpisodes = 0;
@@ -78,6 +79,7 @@ function summarise(sections) {
   for (const section of sections) {
     for (const item of section.items) {
       items++;
+      leaves += (item.episodes ?? []).length;
       if (!watched(item)) continue;
       watchedItems++;
       if (section.type === 'movie') {
@@ -88,8 +90,9 @@ function summarise(sections) {
       // A show Plex counts as watched that yielded no watched episode is the
       // one shape this file can take that reads as success and is not: the
       // totals stay plausible while a whole show's viewing is missing.
-      if ((item.episodes ?? []).length === 0) emptyWatchedShows++;
-      for (const ep of item.episodes ?? []) {
+      const seen = (item.episodes ?? []).filter((ep) => (ep.viewCount ?? 0) > 0);
+      if (seen.length === 0) emptyWatchedShows++;
+      for (const ep of seen) {
         episodes++;
         if (typeof ep.lastViewedAt === 'number') at(ep.lastViewedAt);
         else undatedEpisodes++;
@@ -101,6 +104,9 @@ function summarise(sections) {
   return {
     sections: sections.length,
     items,
+    // Every episode under every show. Engram holds a walk to it, and only a
+    // walk that counted it may rewrite its record of what is on disk.
+    leaves,
     watchedItems,
     watchedEpisodes: episodes,
     emptyWatchedShows,
@@ -115,22 +121,19 @@ async function walkSection(conn, section) {
   const items = await fetchSectionItems(conn.uri, conn.token, section.key);
   progress(`  ${section.title}: ${items.length} item(s)`);
 
-  // Only the shows with something watched need their episodes: the rest
-  // contribute presence, which the section listing already carries.
-  const shows = section.type === 'show' ? items.filter(watched) : [];
+  // Every show's episodes, unwatched ones and unstarted shows included: Engram
+  // keeps the whole list as its record of what is on disk, which is how it
+  // tells an episode that never arrived from one whose Sonarr webhook was
+  // missed. One request per show.
+  const shows = section.type === 'show' ? items : [];
   let done = 0;
   for (const show of shows) {
-    const leaves = await fetchShowLeaves(conn.uri, conn.token, show.ratingKey);
-    // An unwatched episode says nothing the show row has not already said, and
-    // library_presence is keyed to the title rather than the episode.
-    show.episodes = leaves.filter((ep) => (ep.viewCount ?? 0) > 0);
+    show.episodes = await fetchShowLeaves(conn.uri, conn.token, show.ratingKey);
     done++;
-    progress(
-      `  ${section.title}: ${items.length} item(s), episodes for ${done}/${shows.length} watched show(s)`,
-    );
+    progress(`  ${section.title}: ${items.length} item(s), episodes for ${done}/${shows.length}`);
   }
   if (process.stdout.isTTY) process.stdout.write('\n');
-  else console.log(`  ${section.title}: ${items.length} item(s), ${shows.length} watched show(s)`);
+  else console.log(`  ${section.title}: ${items.length} item(s), ${shows.length} show(s)`);
 
   return { key: section.key, type: section.type, title: section.title, items };
 }

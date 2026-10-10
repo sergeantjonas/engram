@@ -11,6 +11,7 @@ const render = (fragment: unknown) =>
 const KEY = 'show:tvdb:392276';
 const EVENT = `plex-library:${KEY}:S1E4`;
 const walkedAt = new Date('2026-09-27T03:00:00Z');
+const uncounted = { episodesCounted: false };
 
 const plan = (over: Partial<LibraryPlan> = {}): LibraryPlan => ({
   titles: [{ key: KEY, kind: 'show', ids: { tvdb: '392276' }, name: 'The Pitt', year: 2025 }],
@@ -28,9 +29,14 @@ const plan = (over: Partial<LibraryPlan> = {}): LibraryPlan => ({
     },
   ],
   presence: [KEY],
+  onDisk: [
+    { titleKey: KEY, season: 1, number: 4, addedAt: new Date('2025-01-10T06:00:00Z') },
+    { titleKey: KEY, season: 1, number: 5, addedAt: null },
+  ],
   dropped: [],
   incomplete: [],
   read: 1,
+  leaves: 2,
   ...over,
 });
 
@@ -45,9 +51,18 @@ const primed = (held: string[] = []) => {
 describe('storeLibrary', () => {
   it('writes the title, its episode, the event and the presence', async () => {
     const stub = primed();
-    const stored = await storeLibrary(stub.db, plan(), walkedAt);
+    const stored = await storeLibrary(stub.db, plan(), walkedAt, uncounted);
 
-    expect(stored).toEqual({ titles: 1, episodes: 1, events: 1, fresh: 1, present: 1, gone: 0 });
+    expect(stored).toEqual({
+      titles: 1,
+      episodes: 1,
+      events: 1,
+      fresh: 1,
+      present: 1,
+      gone: 0,
+      episodesOnDisk: null,
+      episodesGone: 0,
+    });
     expect(stub.inserted.map((i) => i.onConflict)).toEqual([
       'update',
       'nothing',
@@ -65,7 +80,7 @@ describe('storeLibrary', () => {
 
   it('counts an event already on record as refreshed, not new', async () => {
     const stub = primed([EVENT]);
-    const stored = await storeLibrary(stub.db, plan(), walkedAt);
+    const stored = await storeLibrary(stub.db, plan(), walkedAt, uncounted);
     expect(stored.fresh).toBe(0);
   });
 
@@ -73,7 +88,7 @@ describe('storeLibrary', () => {
   // the conflict merges the columns a later walk can improve and no others.
   it('merges an event on record rather than replacing it', async () => {
     const stub = primed([EVENT]);
-    await storeLibrary(stub.db, plan(), walkedAt);
+    await storeLibrary(stub.db, plan(), walkedAt, uncounted);
 
     const set = stub.inserted[2]?.set as Record<string, unknown>;
     expect(Object.keys(set).sort()).toEqual(['plays', 'raw', 'watchedAt', 'watchedPrecision']);
@@ -83,7 +98,7 @@ describe('storeLibrary', () => {
 
   it('refreshes the metadata of a known title without touching its identity', async () => {
     const stub = primed();
-    await storeLibrary(stub.db, plan(), walkedAt);
+    await storeLibrary(stub.db, plan(), walkedAt, uncounted);
 
     const set = stub.inserted[0]?.set as Record<string, unknown>;
     for (const field of ['name', 'year', 'tmdbId', 'tvdbId', 'imdbId']) {
@@ -97,7 +112,7 @@ describe('storeLibrary', () => {
   // only knows what Plex can see.
   it('keeps the first sighting and the owning source of a present title', async () => {
     const stub = primed();
-    await storeLibrary(stub.db, plan(), walkedAt);
+    await storeLibrary(stub.db, plan(), walkedAt, uncounted);
     expect(stub.inserted[3]?.set).toEqual({ present: true, removedAt: null });
   });
 
@@ -105,7 +120,7 @@ describe('storeLibrary', () => {
     const stub = primed();
     stub.returns.push([{ id: 'title-9' }]);
 
-    const stored = await storeLibrary(stub.db, plan(), walkedAt);
+    const stored = await storeLibrary(stub.db, plan(), walkedAt, uncounted);
     expect(stored.gone).toBe(1);
     expect(stub.updated).toHaveLength(1);
     expect(stub.updated[0]?.set).toEqual({ present: false, removedAt: walkedAt });
@@ -115,7 +130,7 @@ describe('storeLibrary', () => {
   // Sonarr owns, or rows already gone, as removed tonight.
   it('sweeps only present rows this source owns that the walk did not see', async () => {
     const stub = primed();
-    await storeLibrary(stub.db, plan(), walkedAt);
+    await storeLibrary(stub.db, plan(), walkedAt, uncounted);
 
     const where = render(stub.updated[0]?.where);
     expect(where.sql).toContain('"source" = $1');
@@ -129,7 +144,7 @@ describe('storeLibrary', () => {
     stub.selects = [[]];
 
     const empty = plan({ titles: [], episodes: [], events: [], presence: [] });
-    const stored = await storeLibrary(stub.db, empty, walkedAt);
+    const stored = await storeLibrary(stub.db, empty, walkedAt, uncounted);
     expect(stored.gone).toBe(0);
     expect(stub.updated).toHaveLength(0);
   });
@@ -141,8 +156,54 @@ describe('storeLibrary', () => {
     stub.returns = [[{ id: 'title-1' }]];
     stub.selects = [[], []];
 
-    await expect(storeLibrary(stub.db, plan(), walkedAt)).rejects.toThrow(
+    await expect(storeLibrary(stub.db, plan(), walkedAt, uncounted)).rejects.toThrow(
       /no id for planned episode/,
     );
+  });
+
+  describe('the episode snapshot', () => {
+    const counted = { episodesCounted: true };
+
+    it('records every episode on disk as of the walk, and drops what it no longer found', async () => {
+      const stub = primed();
+      // The title sweep's rows, then the snapshot's.
+      stub.returns.push([], [{ titleId: 'title-1' }]);
+
+      const stored = await storeLibrary(stub.db, plan(), walkedAt, counted);
+
+      expect(stored).toMatchObject({ episodesOnDisk: 2, episodesGone: 1 });
+      expect(stub.inserted[4]?.values).toEqual([
+        {
+          titleId: 'title-1',
+          season: 1,
+          number: 4,
+          addedAt: new Date('2025-01-10T06:00:00Z'),
+          walkedAt,
+        },
+        { titleId: 'title-1', season: 1, number: 5, addedAt: null, walkedAt },
+      ]);
+      const where = render(stub.deletedWhere[0]);
+      expect(where.sql).toBe('"library_episode"."walked_at" < $1');
+      expect(where.params).toEqual([walkedAt.toISOString()]);
+    });
+
+    // An older dump lists watched episodes alone, which would read as every
+    // other episode gone from disk.
+    it('leaves the snapshot alone after a walk that did not count its episodes', async () => {
+      const stub = primed();
+      const stored = await storeLibrary(stub.db, plan(), walkedAt, uncounted);
+
+      expect(stored.episodesOnDisk).toBeNull();
+      expect(stub.inserted).toHaveLength(4);
+      expect(stub.deleted).toBe(0);
+    });
+
+    it('never clears it after a walk that found no episode', async () => {
+      const stub = primed();
+      const stored = await storeLibrary(stub.db, plan({ onDisk: [] }), walkedAt, counted);
+
+      expect(stored).toMatchObject({ episodesOnDisk: 0, episodesGone: 0 });
+      expect(stub.deleted).toBe(0);
+    });
   });
 });

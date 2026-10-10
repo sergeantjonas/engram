@@ -33,13 +33,13 @@ async function newestMatching(prefix: string): Promise<string> {
 const dumpPath = process.argv[2] ?? (await newestMatching('plex-library-'));
 const dump = JSON.parse(await readFile(dumpPath, 'utf8')) as {
   server?: string;
-  summary?: { items?: number };
+  summary?: { items?: number; leaves?: number };
   sections: PlexLibrarySection[];
 };
 
 const plan = planLibrary(dump.sections);
 
-const complete = checkComplete(dump.summary?.items, plan);
+const complete = checkComplete(dump.summary, plan);
 if (!complete.ok) {
   throw new Error(
     `${complete.reason}.\nRe-run dump:library rather than importing a partial library.`,
@@ -54,7 +54,9 @@ console.log(
 );
 
 const { db, sql: connection } = createDatabase(loadDatabaseUrl());
-const written = await storeLibrary(db, plan, new Date());
+const written = await storeLibrary(db, plan, new Date(), {
+  episodesCounted: complete.episodesCounted,
+});
 
 const [counts] = await db
   .select({
@@ -72,6 +74,11 @@ console.log(
 );
 console.log(
   `presence: ${written.present} present${written.gone > 0 ? `, ${written.gone} gone` : ''}`,
+);
+console.log(
+  written.episodesOnDisk === null
+    ? 'on disk:  left alone, the dump did not count its episodes'
+    : `on disk:  ${written.episodesOnDisk} episode(s), ${written.episodesGone} gone`,
 );
 
 if (plan.incomplete.length > 0) {

@@ -7,8 +7,10 @@ evening; a delete and a series delete have not fired yet. Chunk 2 built
 2026-10-07 and deployed 2026-10-10: the `alert` table and the ready decision.
 Chunk 5 built and deployed 2026-10-10: delivery through the notify hub, live
 at `notify.vyoh.gg` the same day. From the API container the hub answered
-its health check, refused a post with no secret, and took Engram's secret;
-no real alert has gone through yet. Chunks 3 and 4 remain.
+its health check, refused a post with no secret, and took Engram's secret.
+A test alert inserted by hand for Dexter: Resurrection S01E01 reached the
+hub 5 seconds after it was decided and Discord 67 seconds after that, the
+hub's quiet period; it stays in the table, delivered. Chunks 3 and 4 remain.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every

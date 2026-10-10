@@ -406,8 +406,8 @@ the viewer wants of a title. The SPA calls all four.
    favicon and `theme-color`, and both families served with the app,
    preloaded.
 10. ~~**Episode alerts**~~ — built, all five chunks deployed by 2026-10-10
-    (see Done); Sonarr's *Manual Interaction Required* built that evening
-    and not yet deployed. Scoped 2026-10-07 in
+    (see Done); Sonarr's *Manual Interaction Required* built and deployed
+    that evening. Scoped 2026-10-07 in
     [episode-alerts.md](episode-alerts.md); chunk 1, the Sonarr receiver,
     built, deployed and connected the same day; chunk 2, the `alert` table
     and the ready decision, built with it and deployed 2026-10-10; chunk 5,

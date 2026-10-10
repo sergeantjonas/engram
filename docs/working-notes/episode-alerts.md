@@ -9,8 +9,8 @@ in the API, and delivery through the notify hub at `notify.vyoh.gg` —
 deployed 2026-10-10. A ready alert inserted by hand reached Discord that
 afternoon; no stuck or overdue has fired yet, and the next episode of a
 followed show airs 2026-10-20. Sonarr's *Manual Interaction Required* built
-the same day and not yet deployed: a download Sonarr asks a hand for is
-stuck at once, with its reasons.
+and deployed the same day: a download Sonarr asks a hand for is stuck at
+once, with its reasons; none has arrived yet.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every

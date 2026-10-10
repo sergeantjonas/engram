@@ -121,6 +121,41 @@ const schema = z.object({
   ),
 
   /**
+   * Where decided alerts go: the notify hub at `notify.vyoh.gg`, which owns
+   * the Discord webhook, so Engram never holds one. Optional and
+   * empty-as-unset like the walk's pair; unset, alerts are still decided and
+   * wait in the `alert` table until it is set. An origin alone, and https
+   * unless it is this machine, since the secret below travels to it.
+   */
+  NOTIFY_ORIGIN: z.preprocess(
+    (raw) => (raw === '' ? undefined : raw),
+    z
+      .string()
+      .refine((value) => {
+        const url = URL.parse(value);
+        if (!url || url.origin !== value) return false;
+        return (
+          url.protocol === 'https:' ||
+          (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))
+        );
+      }, 'NOTIFY_ORIGIN must be an https origin with no path or trailing slash, or http to localhost')
+      .optional(),
+  ),
+
+  /**
+   * The bearer token that names Engram to the hub — its
+   * `SOURCE_ENGRAM_SECRET`, which refuses anything shorter or with spaces.
+   */
+  NOTIFY_SECRET: z.preprocess(
+    (raw) => (raw === '' ? undefined : raw),
+    z
+      .string()
+      .regex(/^[\x21-\x7e]+$/, 'NOTIFY_SECRET must be printable ASCII without spaces')
+      .min(32, 'NOTIFY_SECRET must be at least 32 characters')
+      .optional(),
+  ),
+
+  /**
    * Signs the OAuth `state` and nothing else. The floor is what
    * `openssl rand -hex 32` produces, so a passphrase short enough to guess
    * cannot be substituted for it.
@@ -154,6 +189,20 @@ const schema = z.object({
 
 export type Config = z.infer<typeof schema>;
 
+// Apart from `schema`, which the one-shot loaders below `pick` from, and zod
+// refuses to pick from an object carrying a refinement.
+const server = schema.superRefine((env, ctx) => {
+  // Either half alone is an unfinished edit to .env: an origin with no secret
+  // is refused on every post, and a secret with no origin goes nowhere.
+  if ((env.NOTIFY_ORIGIN === undefined) !== (env.NOTIFY_SECRET === undefined)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['NOTIFY_ORIGIN'],
+      message: 'NOTIFY_ORIGIN and NOTIFY_SECRET are set together or not at all',
+    });
+  }
+});
+
 function orThrow<T>(result: z.ZodSafeParseResult<T>): T {
   if (result.success) return result.data;
   // The issues only, never the values: half of these variables are secrets.
@@ -164,7 +213,7 @@ function orThrow<T>(result: z.ZodSafeParseResult<T>): T {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  return orThrow(schema.safeParse(env));
+  return orThrow(server.safeParse(env));
 }
 
 /**

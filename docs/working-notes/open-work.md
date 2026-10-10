@@ -408,15 +408,16 @@ the viewer wants of a title. The SPA calls all four.
 10. **Episode alerts** — scoped 2026-10-07 in
     [episode-alerts.md](episode-alerts.md); chunk 1, the Sonarr receiver,
     built, deployed and connected the same day; chunk 2, the `alert` table
-    and the ready decision, built with it and not yet deployed. A
+    and the ready decision, built with it and deployed 2026-10-10; chunk 5,
+    delivery through the notify hub, built 2026-10-10 and not yet deployed. A
     Discord ping when a recently aired episode of a followed show is ready,
     stuck after its grab, or overdue, and never for what the owner did
     themselves. Five chunks: the Sonarr receiver (item 4's other half), the
     `alert` table and ready, the walk keeping every episode as the reconcile,
     an hourly stuck and overdue check on the box, then delivery. No Sonarr API
-    key. Sonarr's payloads read from its source 2026-10-07. Delivery goes
-    next, through the notify hub in `~/dev/notify.vyoh.gg`, built first
-    (decided 2026-10-09).
+    key. Sonarr's payloads read from its source 2026-10-07. Delivery taken
+    ahead of chunks 3 and 4, through the notify hub in `~/dev/notify.vyoh.gg`,
+    built first (decided 2026-10-09, live 2026-10-10).
 
 ## Blocked
 

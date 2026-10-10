@@ -1,7 +1,9 @@
+import { startAlertDelivery } from './alerts/deliver.js';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { createGithubClient } from './github/client.js';
+import { createNotifyClient } from './notify/client.js';
 import { createTmdbClient } from './tmdb/client.js';
 
 const config = loadConfig();
@@ -15,9 +17,20 @@ const github = createGithubClient({
 
 const app = buildApp({ config, db, tmdb, github });
 
+const stopDelivery =
+  config.NOTIFY_ORIGIN && config.NOTIFY_SECRET
+    ? startAlertDelivery({
+        db,
+        notify: createNotifyClient({ origin: config.NOTIFY_ORIGIN, secret: config.NOTIFY_SECRET }),
+        webOrigin: config.WEB_ORIGIN,
+        log: app.log,
+      })
+    : null;
+if (!stopDelivery) app.log.warn('no notify hub configured: alerts are decided and held');
+
 const shutdown = async (signal: string): Promise<void> => {
   app.log.info({ signal }, 'shutting down');
-  await app.close();
+  await Promise.all([app.close(), stopDelivery?.()]);
   await connection.end();
   process.exit(0);
 };

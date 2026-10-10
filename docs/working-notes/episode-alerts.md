@@ -4,8 +4,9 @@
 source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
 its first real grabs, imports and series add read against the source that
 evening; a delete and a series delete have not fired yet. Chunk 2 built
-2026-10-07 and not yet deployed: the `alert` table and the ready decision.
-Chunk 5 goes next, through the notify hub, which is being built first.
+2026-10-07 and deployed 2026-10-10: the `alert` table and the ready decision.
+Chunk 5 built 2026-10-10 and not yet deployed: delivery through the notify
+hub, live at `notify.vyoh.gg` the same day. Chunks 3 and 4 remain.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -119,11 +120,12 @@ Two tables, both generated from `schema.ts`.
   The walk's reconcile is a nightly snapshot rather than an event, and its
   shape is chunk 3's to settle.
 - **`alert`** — landed 2026-10-07: one row per thing worth saying, unique on
-  its key (`ready@show:tvdb:392276/s03e0005`), with a delivered time that
-  stays null until chunk 5. A second decision about the same thing is a
-  conflict, not a second ping. `behind` holds where the viewer stood, on the
-  definition Next up already uses: the episodes still unwatched between the
-  furthest one watched and this one, holes before that point not counted.
+  its key (`ready@show:tvdb:392276/s03e0005`), with a delivered time set once
+  the hub has taken it, and a refused time if the hub never will. A second
+  decision about the same thing is a conflict, not a second ping. `behind`
+  holds where the viewer stood, on the definition Next up already uses: the
+  episodes still unwatched between the furthest one watched and this one,
+  holes before that point not counted.
 
 Each decision is a pure function — `planReadyAlert` for the first — that
 takes the event, whether the show is followed and the grid it stands on, and
@@ -176,8 +178,8 @@ Read on the box that evening, against the source:
 ## Chunk 2 · Alerts, and ready
 
 The `alert` table and the ready decision, run on every import: followed,
-recently aired, not an upgrade. The row records where the viewer stands — "one behind"
-— at the moment it was decided. Nothing sends it yet; it is read on the box.
+recently aired, not an upgrade. The row records where the viewer stands —
+"one behind" — at the moment it was decided; chunk 5 sends it.
 
 Built 2026-10-07 as `planReadyAlert` in
 [ready.ts](../../apps/api/src/alerts/ready.ts), with `decideReadyAlerts`
@@ -224,6 +226,24 @@ never a Discord URL; collapsing a burst, the channel and Discord itself are
 the hub's. Taken ahead of chunks 3 and 4, so ready alerts reach Discord before
 stuck and overdue exist.
 
+Built 2026-10-10 as `deliverAlerts` in
+[deliver.ts](../../apps/api/src/alerts/deliver.ts), on a 15-second interval in
+the API process, with the hub's client in
+[notify/client.ts](../../apps/api/src/notify/client.ts). `NOTIFY_ORIGIN` and
+`NOTIFY_SECRET` are set together or not at all, checked at boot; unset,
+alerts are decided and wait. A message reads "Dexter: Resurrection S01E04 is
+ready", then the episode's name and where the viewer stands — "1 episode to
+watch before it", or "You're caught up: it's next" — linked to the title's
+page. What the hub says decides the row, as commonplace's contract has it: a
+202 marks it delivered, and nothing else does, so a proxy answering 200 in
+the hub's place cannot swallow an alert; a 400 or 413 is the message itself,
+so it is marked refused, logged with the hub's reason and never sent again;
+anything else — a 401, a 5xx, no answer — ends the pass with nothing marked,
+and the next one tries again.
+Taken and then not marked is harmless, since the hub drops the repeat by
+key. Production held no alert yet when this was built, so switching it on
+sends no backlog.
+
 ## Needed from the owner
 
 - ~~The Sonarr version~~ — `4.0.20.3012`, given 2026-10-07.
@@ -233,8 +253,10 @@ stuck and overdue exist.
   empty. Triggers on: *On Grab*, *On File Import*, *On File Upgrade*, *On
   Series Add*, *On Series Delete*, *On Episode File Delete*. Off: *On Import
   Complete*, *On Episode File Delete For Upgrade*, and the rest.
-- Before chunk 5: the hub deployed, and Engram's secret for it in
-  `/srv/engram/.env`. The Discord webhook URL goes to the hub, not here.
+- Before chunk 5 deploys: `NOTIFY_ORIGIN=https://notify.vyoh.gg` and
+  `NOTIFY_SECRET` in `/srv/engram/.env`, the second copied from the hub's
+  `SOURCE_ENGRAM_SECRET` in `/srv/notify/.env`. The Discord webhook URL goes
+  to the hub, not here. ~~The hub deployed~~ — live 2026-10-10.
 
 ## Not in this arc
 

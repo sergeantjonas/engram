@@ -47,6 +47,43 @@ describe('loadConfig', () => {
     );
   });
 
+  describe('the notify hub', () => {
+    const hub = { NOTIFY_ORIGIN: 'https://notify.vyoh.gg', NOTIFY_SECRET: 'c'.repeat(64) };
+
+    it('reads an empty pair as unset, so alerts wait rather than the API not booting', () => {
+      const config = loadConfig({ ...base, NOTIFY_ORIGIN: '', NOTIFY_SECRET: '' });
+      expect(config.NOTIFY_ORIGIN).toBeUndefined();
+      expect(config.NOTIFY_SECRET).toBeUndefined();
+    });
+
+    it('accepts the pair together', () => {
+      expect(loadConfig({ ...base, ...hub }).NOTIFY_ORIGIN).toBe('https://notify.vyoh.gg');
+    });
+
+    it('refuses either half alone', () => {
+      expect(() => loadConfig({ ...base, NOTIFY_ORIGIN: hub.NOTIFY_ORIGIN })).toThrow(
+        /set together/,
+      );
+      expect(() => loadConfig({ ...base, NOTIFY_SECRET: hub.NOTIFY_SECRET })).toThrow(
+        /set together/,
+      );
+    });
+
+    // The secret travels to this origin in a header.
+    it('refuses plain http to anywhere but this machine', () => {
+      expect(() => loadConfig({ ...base, ...hub, NOTIFY_ORIGIN: 'http://notify.vyoh.gg' })).toThrow(
+        /NOTIFY_ORIGIN/,
+      );
+      expect(
+        loadConfig({ ...base, ...hub, NOTIFY_ORIGIN: 'http://localhost:2013' }).NOTIFY_ORIGIN,
+      ).toBe('http://localhost:2013');
+    });
+
+    it('refuses a secret the hub would refuse', () => {
+      expect(() => loadConfig({ ...base, ...hub, NOTIFY_SECRET: 'short' })).toThrow(/at least 32/);
+    });
+  });
+
   // The whole arc is unbuildable without these, and a 500 on the first login
   // attempt is a worse way to find that out than a process that will not start.
   it('refuses to start without the credentials the login flow needs', () => {

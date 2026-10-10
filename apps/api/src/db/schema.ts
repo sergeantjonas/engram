@@ -265,8 +265,13 @@ export const alerts = pgTable(
      */
     behind: integer('behind'),
     decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
-    /** Null until something has sent it. */
+    /** Null until the notify hub has taken it. */
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    /**
+     * Set when the hub refused the message itself as malformed, which no
+     * retry changes, so it is never sent again. Clearing it sends it again.
+     */
+    refusedAt: timestamp('refused_at', { withTimezone: true }),
   },
   (t) => [
     foreignKey({
@@ -275,6 +280,7 @@ export const alerts = pgTable(
       name: 'alert_episode_fk',
     }).onDelete('cascade'),
     check('alert_behind_nonnegative', sql`${t.behind} is null or ${t.behind} >= 0`),
+    check('alert_delivered_or_refused', sql`${t.deliveredAt} is null or ${t.refusedAt} is null`),
   ],
 );
 

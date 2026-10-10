@@ -1,0 +1,2 @@
+ALTER TABLE "alert" ADD COLUMN "refused_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "alert" ADD CONSTRAINT "alert_delivered_or_refused" CHECK ("alert"."delivered_at" is null or "alert"."refused_at" is null);

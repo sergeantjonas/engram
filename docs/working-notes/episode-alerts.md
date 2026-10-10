@@ -5,8 +5,8 @@ source the same day. Chunk 1 built, deployed and connected 2026-10-07, and
 its first real grabs, imports and series add read against the source that
 evening; a delete and a series delete have not fired yet. Chunk 2 built
 2026-10-07 and deployed 2026-10-10: the `alert` table and the ready decision.
-Chunk 3 built 2026-10-10 and not yet deployed: the walk lists every show's
-episodes and the API keeps them as `library_episode`.
+Chunk 3 built and deployed 2026-10-10: the walk lists every show's episodes
+and the API keeps them as `library_episode`; its first walk stored 1,097.
 Chunk 5 built and deployed 2026-10-10: delivery through the notify hub, live
 at `notify.vyoh.gg` the same day. From the API container the hub answered
 its health check, refused a post with no secret, and took Engram's secret.
@@ -238,6 +238,13 @@ container on the same schedule, reading more of the same library.
   the snapshot and nowhere else: no `episode` row, no event, nothing in the
   grid. An unwatched leaf with no number is left out quietly; a watched one
   is still reported as dropped and fails the run.
+
+Deployed the same day, the API at `sha-f023d0c` and the walker beside it,
+and walked once by hand. The first snapshot held 1,097 episodes across all
+53 shows, every one with Plex's `addedAt` and every one matching a grid
+episode, so no show on the server is numbered off TMDB's grid today. Nothing
+was dropped or incomplete, and the walk wrote no new watch event, so the
+watched path read exactly as before.
 
 ## Chunk 4 · Stuck and overdue
 

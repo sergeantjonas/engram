@@ -5,7 +5,9 @@ import type { Database } from '../db/client.js';
 import { alerts } from '../db/schema.js';
 import { type AlertDecision, type GridEpisode, RECENT_DAYS } from './ready.js';
 import {
+  type BlockedEpisode,
   type EpisodeState,
+  planBlockedAlert,
   planOverdueAlert,
   planStuckAlert,
   type ShowState,
@@ -22,7 +24,6 @@ interface CandidateRow extends Record<string, unknown> {
   grabbed_ms: number | null;
   imported: boolean;
   blocked: boolean;
-  blocked_detail: string | null;
   on_disk: boolean;
   /** The last walk, the same on every row. */
   walked_ms: number | null;
@@ -39,6 +40,14 @@ interface ShowRow extends Record<string, unknown> {
   excluded: boolean;
   played: boolean;
   off_grid: boolean;
+}
+
+interface BlockedRow extends Record<string, unknown> {
+  title_id: string;
+  title_key: string;
+  download_id: string;
+  reasons: string | null;
+  episodes: BlockedEpisode[];
 }
 
 interface GridRow extends Record<string, unknown> {
@@ -65,14 +74,75 @@ function idsOf(row: ShowRow): ExternalIds {
 }
 
 /**
- * Decides the stuck and overdue alerts due now, and writes the ones it
- * decides. The alert key absorbs a decision made again on the next run, so
- * this runs on a schedule with nothing to remember between runs.
+ * The downloads Sonarr asked a hand for lately, one alert each.
+ *
+ * Read back over two days rather than once: the webhook runs this the moment
+ * one arrives, and the hourly pass is the retry if that write failed. The id
+ * is the download's, taken back out of each event's own id, which the Sonarr
+ * receiver builds as `<episode key>@blocked@<downloadId>`.
+ */
+async function decideBlockedAlerts(db: Database): Promise<string[]> {
+  const groups = await db.execute<BlockedRow>(sql`
+    select
+      le.title_id,
+      t.key as title_key,
+      split_part(le.source_event_id, '@blocked@', 2) as download_id,
+      max(le.detail) as reasons,
+      json_agg(json_build_object(
+        'season', e.season,
+        'number', e.number,
+        'handled', exists (
+          select 1 from library_event i where i.episode_id = e.id and i.kind = 'import'
+        ) or exists (
+          select 1 from library_episode d
+          where d.title_id = e.title_id and d.season = e.season and d.number = e.number
+        )
+      )) as episodes
+    from library_event le
+      join title t on t.id = le.title_id
+      join episode e on e.id = le.episode_id
+    where le.kind = 'blocked' and le.received_at > now() - interval '2 days'
+    group by le.title_id, t.key, split_part(le.source_event_id, '@blocked@', 2)
+  `);
+
+  const written: string[] = [];
+  for (const group of groups) {
+    const decision = planBlockedAlert({
+      titleKey: group.title_key,
+      downloadId: group.download_id,
+      episodes: group.episodes,
+      reasons: group.reasons,
+    });
+    if (!decision.ok) continue;
+    const inserted = await db
+      .insert(alerts)
+      .values({
+        key: decision.alert.key,
+        kind: decision.alert.kind,
+        titleId: group.title_id,
+        episodeId: null,
+        behind: null,
+        detail: decision.alert.detail,
+      })
+      .onConflictDoNothing()
+      .returning({ id: alerts.id });
+    if (inserted.length > 0) written.push(decision.alert.key);
+  }
+  return written;
+}
+
+/**
+ * Decides the alerts due now — blocked downloads, then stuck and overdue
+ * episodes — and writes the ones it decides. The alert key absorbs a decision
+ * made again on the next run, so this runs on a schedule with nothing to
+ * remember between runs.
  *
  * Reads only Engram's own tables: Sonarr's events, the last walk's snapshot
  * of Plex, and the grid. Raw SQL, as the ready decision's reads are.
  */
 export async function decideScheduledAlerts(db: Database, now: Date): Promise<string[]> {
+  const written = await decideBlockedAlerts(db);
+
   // A day of slack past the window: the database's day and the planner's UTC
   // day can differ, and the planner decides recency exactly. The last walk is
   // read in the same statement as `on_disk`, so a walk committing mid-pass
@@ -94,12 +164,6 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
       exists (
         select 1 from library_event le where le.episode_id = e.id and le.kind = 'blocked'
       ) as blocked,
-      (
-        select le.detail from library_event le
-        where le.episode_id = e.id and le.kind = 'blocked'
-        order by le.received_at desc
-        limit 1
-      ) as blocked_detail,
       exists (
         select 1 from library_episode d
         where d.title_id = e.title_id and d.season = e.season and d.number = e.number
@@ -112,7 +176,7 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
     where e.season > 0
       and e.air_date between current_date - ${RECENT_DAYS + 1}::int and current_date + 1
   `);
-  if (candidates.length === 0) return [];
+  if (candidates.length === 0) return written;
 
   const titleIds = [...new Set(candidates.map((row) => row.title_id))];
   const showRows = await db.execute<ShowRow>(sql`
@@ -190,7 +254,6 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
     });
   }
 
-  const written: string[] = [];
   for (const row of candidates) {
     const show = shows.get(row.title_id);
     const place = show?.grid.find((ep) => ep.season === row.season && ep.number === row.number);
@@ -200,7 +263,6 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
       grabbedAt: row.grabbed_ms === null ? null : new Date(row.grabbed_ms),
       imported: row.imported,
       blocked: row.blocked,
-      detail: row.blocked_detail,
       onDisk: row.on_disk,
     };
 
@@ -218,7 +280,6 @@ export async function decideScheduledAlerts(db: Database, now: Date): Promise<st
           titleId: row.title_id,
           episodeId: row.id,
           behind: decision.alert.behind,
-          detail: decision.alert.detail,
         })
         .onConflictDoNothing()
         .returning({ id: alerts.id });

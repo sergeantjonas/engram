@@ -33,7 +33,6 @@ describe('planReadyAlert', () => {
         season: 1,
         number: 4,
         behind: 0,
-        detail: null,
       },
     });
   });

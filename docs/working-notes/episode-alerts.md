@@ -8,9 +8,12 @@ keeping every episode as `library_episode`, stuck and overdue decided hourly
 in the API, and delivery through the notify hub at `notify.vyoh.gg` —
 deployed 2026-10-10. A ready alert inserted by hand reached Discord that
 afternoon; no stuck or overdue has fired yet, and the next episode of a
-followed show airs 2026-10-20. Sonarr's *Manual Interaction Required* built
-and deployed the same day: a download Sonarr asks a hand for is stuck at
-once, with its reasons; none has arrived yet.
+followed show airs 2026-10-20. Sonarr's *Manual Interaction Required* was
+read from 2026-10-10; the first, a Cyberpunk: Edgerunners season pack the
+owner had just added on 2026-10-14, was kept and alerted nothing at the
+time, which led to the 2026-10-14 decision below — built that night and not
+yet deployed. Its first pass reads two days back, so that pack pings once
+on deploy if it is still waiting.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -49,10 +52,14 @@ download log into something worth being told.
   beside delivery, not by a timer on the box: the owner's choice. A unit, a
   healthchecks.io check and sudo steps would watch a pass whose failure
   delivery shares anyway; one that stops shows in the API's log alone.
-- **2026-10-10 — A download Sonarr asks a hand for is stuck at once**, with
-  Sonarr's reasons as the message, rather than a fourth alert: the owner's
-  choice. One problem, one ping; a fourth kind would ping now and stuck
-  would ping again four hours later.
+- **2026-10-14 — A download Sonarr asks a hand for is always said**, once
+  per download, whatever the show: the owner's choice, after a season pack
+  they had just added sat blocked and nothing told them. It is the one
+  exception to the first rule above — they started it, but the download
+  cannot finish without them, and they would otherwise have to watch Sonarr
+  for it. It replaces 2026-10-10's "stuck at once", which kept the follow and
+  recency tests and pinged per episode; stuck now passes over an episode
+  whose download has said so, so one problem is still one ping.
 - **2026-10-07 — Alerts are rows before they are messages.** Deciding is
   Engram's and is built first; delivery drains what was decided. A Discord
   outage then delays an alert rather than losing it, and moving delivery
@@ -344,15 +351,24 @@ hourly stuck check still has its grab.
 
 Built 2026-10-10. The receiver keeps it as a `library_event` of kind
 `blocked`, keyed `<episode key>@blocked@<downloadId>`, with the distinct
-messages in a `detail` column. Storing one runs the hourly pass at once,
-which decides stuck for that episode without the four-hour wait and copies
-the reasons onto the alert, where the message gives them as "Sonarr needs a
-hand:" and the list. Every other test still applies: followed, recent, not
-watched, not on disk — so a refused upgrade, whose episode already has a
-file, says nothing, and neither do the episodes a partial import did bring
-in. An episode with a blocked download is never overdue. The import that
-follows one still gets its ready alert: Sonarr may well have made it alone,
-and "it arrived after all" is news either way.
+messages in a `detail` column; storing one runs the hourly pass at once.
+
+Rebuilt 2026-10-14 as its own alert, `blocked`, one per download and keyed
+`blocked@<title key>@<downloadId>`, with no episode of its own — a season
+pack is one alert. `planBlockedAlert` asks nothing of the show: not whether
+it is followed, not when it aired. It lists the episodes still waiting —
+three by name, more as a range — then Sonarr's reasons, and the message
+reads "Cyberpunk: Edgerunners needs a hand". Episodes Sonarr has imported
+or the walk found on disk are left out — at any time, so an episode
+imported, deleted and then blocked on a fresh download says nothing — and a
+download with none left says nothing: a refused upgrade, whose file was
+already there, stays quiet. A download id the hub would refuse in a key,
+with whitespace or past 200 characters, is hashed; SABnzbd's never are. The hourly
+pass reads back two days of blocked downloads, as the retry if the
+webhook's own write failed. An episode with a blocked download is never
+stuck or overdue. The import that follows one still gets its ready alert,
+by the usual tests: Sonarr may well have made it alone, and "it arrived
+after all" is news either way.
 
 ## Needed from the owner
 

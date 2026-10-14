@@ -245,16 +245,16 @@ export function registerWebhookRoutes(
         request.log.error({ err: error, title: plan.series.key }, 'ready alert not decided');
       }
     }
-    // A blocked download is stuck now, not in four hours: the hourly pass,
-    // run at once, finds the event just stored. Only for a new one — Sonarr
-    // sends it again after a restart — and swallowed for the same reason as
-    // above; the next hourly pass decides it anyway.
-    let stuck: string[] | null = null;
+    // A blocked download is said now: the hourly pass, run at once, finds
+    // the event just stored. Only for a new one — Sonarr sends it again after
+    // a restart — and swallowed for the same reason as above; the next hourly
+    // pass decides it anyway.
+    let decided: string[] | null = null;
     if (plan.action === 'file' && plan.kind === 'blocked' && stored.written > 0) {
       try {
-        stuck = await decideScheduledAlerts(db, new Date());
+        decided = await decideScheduledAlerts(db, new Date());
       } catch (error) {
-        request.log.error({ err: error, title: plan.series.key }, 'stuck alert not decided');
+        request.log.error({ err: error, title: plan.series.key }, 'blocked alert not decided');
       }
     }
 
@@ -273,7 +273,7 @@ export function registerWebhookRoutes(
         written: stored.written,
         skipped: stored.skipped,
         alerts: alerts?.written ?? null,
-        stuck,
+        decided,
         passed: alerts?.passed.map((p) => `s${p.season}e${p.number}: ${p.reason}`) ?? null,
       },
       'sonarr event recorded',

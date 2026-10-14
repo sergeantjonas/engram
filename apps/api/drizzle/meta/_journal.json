@@ -141,6 +141,13 @@
       "when": 1791652041448,
       "tag": "0019_flippant_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792014793824,
+      "tag": "0020_safe_lockjaw",
+      "breakpoints": true
     }
   ]
 }

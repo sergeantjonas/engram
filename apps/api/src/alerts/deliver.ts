@@ -13,10 +13,10 @@ export interface PendingAlert {
   behind: number | null;
   titleId: string;
   show: string;
-  season: number;
-  number: number;
+  /** Null for a blocked download, which names its episodes in `detail`. */
+  season: number | null;
+  number: number | null;
   episodeName: string | null;
-  /** Sonarr's reasons, on a stuck download it asked a hand for. */
   detail: string | null;
 }
 
@@ -44,6 +44,19 @@ function standing(behind: number | null): string | null {
  * message past them is refused for good.
  */
 export function composeMessage(alert: PendingAlert, webOrigin: string): NotifyMessage {
+  const url = `${webOrigin}/titles/${alert.titleId}`;
+  // A whole download, not one episode: what it holds and what Sonarr said
+  // were written into `detail` when it was decided.
+  if (alert.kind === 'blocked' || alert.season === null || alert.number === null) {
+    const message: NotifyMessage = {
+      key: alert.key,
+      title: clip(`${alert.show} needs a hand`, TITLE_MAX),
+      url,
+    };
+    if (alert.detail) message.body = clip(alert.detail, BODY_MAX);
+    return message;
+  }
+
   const code = `S${String(alert.season).padStart(2, '0')}E${String(alert.number).padStart(2, '0')}`;
   const lines: string[] = [];
   if (alert.episodeName) lines.push(`“${alert.episodeName}”`);
@@ -58,9 +71,7 @@ export function composeMessage(alert: PendingAlert, webOrigin: string): NotifyMe
     }
     case 'stuck':
       verb = 'is stuck';
-      lines.push(
-        alert.detail ? `Sonarr needs a hand:\n${alert.detail}` : 'Grabbed, and not imported since.',
-      );
+      lines.push('Grabbed, and not imported since.');
       break;
     case 'overdue':
       verb = 'is overdue';
@@ -71,7 +82,7 @@ export function composeMessage(alert: PendingAlert, webOrigin: string): NotifyMe
   const message: NotifyMessage = {
     key: alert.key,
     title: clip(`${alert.show} ${code} ${verb}`, TITLE_MAX),
-    url: `${webOrigin}/titles/${alert.titleId}`,
+    url,
   };
   if (lines.length > 0) message.body = clip(lines.join('\n'), BODY_MAX);
   return message;
@@ -84,8 +95,8 @@ interface PendingRow extends Record<string, unknown> {
   behind: number | null;
   title_id: string;
   show: string;
-  season: number;
-  number: number;
+  season: number | null;
+  number: number | null;
   episode_name: string | null;
   detail: string | null;
 }
@@ -127,7 +138,7 @@ export async function deliverAlerts(
       a.detail
     from alert a
       join title t on t.id = a.title_id
-      join episode e on e.id = a.episode_id
+      left join episode e on e.id = a.episode_id
     where a.delivered_at is null and a.refused_at is null
     order by a.decided_at, a.key
     limit ${PASS_LIMIT}

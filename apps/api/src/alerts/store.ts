@@ -114,7 +114,6 @@ export async function decideReadyAlerts(
         titleId,
         episodeId: row.id,
         behind: decision.alert.behind,
-        detail: decision.alert.detail,
       })
       .onConflictDoNothing()
       .returning({ id: alerts.id });

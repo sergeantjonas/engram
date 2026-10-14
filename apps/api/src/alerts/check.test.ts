@@ -38,10 +38,10 @@ const grid = [
   },
 ];
 
-/** The three reads, in the order they run: candidates, shows, grids. */
-const primed = (candidates: Record<string, unknown>[]) => {
+/** The reads, in the order they run: blocked downloads, candidates, shows, grids. */
+const primed = (candidates: Record<string, unknown>[], blocked: Record<string, unknown>[] = []) => {
   const stub = sessionDb();
-  stub.executions = [candidates, [followed], grid];
+  stub.executions = [blocked, candidates, [followed], grid];
   return stub;
 };
 
@@ -53,7 +53,6 @@ const candidate = (over: Record<string, unknown>) => ({
   grabbed_ms: null,
   imported: false,
   blocked: false,
-  blocked_detail: null,
   on_disk: false,
   walked_ms: new Date('2026-10-08T02:30:00Z').getTime(),
   ...over,
@@ -80,7 +79,6 @@ describe('decideScheduledAlerts', () => {
         titleId: 'title-1',
         episodeId: 'ep-2',
         behind: 0,
-        detail: null,
       },
       {
         key: 'overdue@show:tvdb:452595/s01e0003',
@@ -88,18 +86,42 @@ describe('decideScheduledAlerts', () => {
         titleId: 'title-1',
         episodeId: 'ep-3',
         behind: 1,
-        detail: null,
       },
     ]);
     expect(stub.inserted.every((i) => i.onConflict === 'nothing')).toBe(true);
   });
 
-  it('carries Sonarr’s reasons onto the stuck alert of a blocked download', async () => {
-    const stub = primed([candidate({ blocked: true, blocked_detail: 'Sample' })]);
+  // An old show nobody follows has no candidate at all, and its blocked
+  // download is still said.
+  it('writes one alert per blocked download, with no episode of its own', async () => {
+    const stub = primed(
+      [],
+      [
+        {
+          title_id: 'title-9',
+          title_key: 'show:tvdb:384541',
+          download_id: 'SABnzbd_nzo_abc',
+          reasons: 'Sample',
+          episodes: [
+            { season: 1, number: 2, handled: false },
+            { season: 1, number: 1, handled: false },
+          ],
+        },
+      ],
+    );
     stub.returns = [[{ id: 'alert-1' }]];
 
-    expect(await decideScheduledAlerts(stub.db, now)).toEqual(['stuck@show:tvdb:452595/s01e0002']);
-    expect(stub.inserted[0]?.values).toMatchObject({ kind: 'stuck', detail: 'Sample' });
+    expect(await decideScheduledAlerts(stub.db, now)).toEqual([
+      'blocked@show:tvdb:384541@SABnzbd_nzo_abc',
+    ]);
+    expect(stub.inserted[0]?.values).toEqual({
+      key: 'blocked@show:tvdb:384541@SABnzbd_nzo_abc',
+      kind: 'blocked',
+      titleId: 'title-9',
+      episodeId: null,
+      behind: null,
+      detail: 'S01E01, S01E02\nSonarr says:\nSample',
+    });
   });
 
   // Each run decides the same alerts again; the key makes them nothing new.
@@ -111,7 +133,7 @@ describe('decideScheduledAlerts', () => {
 
   it('reads no further when no episode aired inside the window', async () => {
     const stub = sessionDb();
-    stub.executions = [[], [followed]];
+    stub.executions = [[], [], [followed]];
     expect(await decideScheduledAlerts(stub.db, now)).toEqual([]);
     expect(stub.executions).toEqual([[followed]]);
     expect(stub.inserted).toEqual([]);
@@ -128,8 +150,10 @@ describe('startAlertChecks', () => {
       let reads = 0;
       let release: (rows: unknown[]) => void = () => {};
       const db = {
+        // The pass's first read is held; the rest answer at once.
         execute: () => {
           reads += 1;
+          if (reads > 1) return Promise.resolve([]);
           return new Promise<unknown[]>((resolve) => {
             release = resolve;
           });

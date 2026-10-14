@@ -269,7 +269,8 @@ export const libraryEvents = pgTable(
   ],
 );
 
-export const alertKind = pgEnum('alert_kind', ['ready', 'stuck', 'overdue']);
+/** `blocked` is a download Sonarr asked a hand for, one alert per download. */
+export const alertKind = pgEnum('alert_kind', ['ready', 'stuck', 'overdue', 'blocked']);
 
 /**
  * Something worth telling the owner about an episode, decided once.
@@ -277,19 +278,24 @@ export const alertKind = pgEnum('alert_kind', ['ready', 'stuck', 'overdue']);
  * Written before anything sends it, so a delivery that fails delays an alert
  * rather than losing it, and the key makes a second decision about the same
  * thing a conflict instead of a second message. Unlike the event tables this
- * holds decisions, not facts, so it cascades with its episode.
+ * holds decisions, not facts, so it cascades with its episode, or with its
+ * title for a blocked download, which has none.
  */
 export const alerts = pgTable(
   'alert',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    /** `<kind>@<episode key>`: one of each kind per episode, ever. */
+    /**
+     * `<kind>@<episode key>`: one of each kind per episode, ever. A blocked
+     * download is `blocked@<title key>@<downloadId>`, one per download.
+     */
     key: text('key').notNull().unique(),
     kind: alertKind('kind').notNull(),
     titleId: uuid('title_id')
       .notNull()
       .references(() => titles.id, { onDelete: 'cascade' }),
-    episodeId: uuid('episode_id').notNull(),
+    /** Null for a blocked download, which can span a whole season. */
+    episodeId: uuid('episode_id'),
     /**
      * How many episodes the viewer still had before this one when it was
      * decided, counted from the furthest one watched: 0 is "this is next".
@@ -298,7 +304,10 @@ export const alerts = pgTable(
      * run.
      */
     behind: integer('behind'),
-    /** What the message adds beyond its kind: Sonarr's reasons, on a blocked download. */
+    /**
+     * What the message says beyond its kind: for a blocked download, the
+     * episodes still waiting and Sonarr's reasons, written when it is decided.
+     */
     detail: text('detail'),
     decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
     /** Null until the notify hub has taken it. */
@@ -317,6 +326,12 @@ export const alerts = pgTable(
     }).onDelete('cascade'),
     check('alert_behind_nonnegative', sql`${t.behind} is null or ${t.behind} >= 0`),
     check('alert_delivered_or_refused', sql`${t.deliveredAt} is null or ${t.refusedAt} is null`),
+    // As text: the migration that adds 'blocked' to the enum runs in the same
+    // transaction as this, where Postgres refuses the new value as a literal.
+    check(
+      'alert_episode_unless_blocked',
+      sql`(${t.kind}::text = 'blocked') = (${t.episodeId} is null)`,
+    ),
   ],
 );
 

@@ -497,50 +497,22 @@ describe('POST /webhooks/sonarr', () => {
     expect(onGrab.executions).toHaveLength(2);
   });
 
-  it('decides a stuck alert at once for a download Sonarr asks a hand for', async () => {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // Whatever the show: this one was added a moment ago and aired years back.
+  it('says at once that a download Sonarr asks a hand for needs one', async () => {
     const stub = sessionDb();
     stub.returns = [[{ id: 'title-1' }], [{ id: 'ev-1' }], [{ id: 'alert-1' }]];
     stub.selects = [[{ id: 'episode-1' }]];
     stub.executions = [
       [
         {
-          id: 'episode-1',
           title_id: 'title-1',
-          season: 2,
-          number: 1,
-          grabbed_ms: null,
-          imported: false,
-          blocked: true,
-          blocked_detail: 'Sample',
-          on_disk: false,
-          walked_ms: null,
+          title_key: 'show:tvdb:371980',
+          download_id: 'SABnzbd_nzo_x',
+          reasons: 'Sample',
+          episodes: [{ season: 2, number: 1, handled: false }],
         },
       ],
-      [
-        {
-          id: 'title-1',
-          kind: 'show',
-          tvdb_id: '371980',
-          tmdb_id: null,
-          imdb_id: null,
-          want: true,
-          dropped: false,
-          excluded: false,
-          played: false,
-          off_grid: false,
-        },
-      ],
-      [
-        {
-          title_id: 'title-1',
-          season: 2,
-          number: 1,
-          seen: false,
-          skipped: false,
-          air_date: yesterday,
-        },
-      ],
+      [],
     ];
     const { episodeFile: _file, isUpgrade: _upgrade, ...rest } = imported;
     const blocked = {
@@ -554,8 +526,9 @@ describe('POST /webhooks/sonarr', () => {
     expect(stub.inserted).toContainEqual(
       expect.objectContaining({
         values: expect.objectContaining({
-          key: 'stuck@show:tvdb:371980/s02e0001',
-          detail: 'Sample',
+          key: 'blocked@show:tvdb:371980@SABnzbd_nzo_x',
+          episodeId: null,
+          detail: 'S02E01\nSonarr says:\nSample',
         }),
       }),
     );

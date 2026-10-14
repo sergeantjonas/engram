@@ -57,10 +57,13 @@ library_event     append-only: what Sonarr did to one episode's file
 alert             something worth telling the owner about an episode
                   (id, key, kind, title_id, episode_id, behind, decided_at,
                    detail, delivered_at, refused_at)
-                  kind is ready | stuck | overdue; key is <kind>@<episode
-                  key>, unique, so a second decision about the same thing is
-                  a conflict rather than a second message
-                  a decision, not a fact, so it cascades with its episode
+                  kind is ready | stuck | overdue | blocked; key is
+                  <kind>@<episode key>, unique, so a second decision about
+                  the same thing is a conflict rather than a second message
+                  blocked is one per download, blocked@<title key>@<download
+                  id>, with no episode_id: a season pack is one alert
+                  a decision, not a fact, so it cascades with its episode,
+                  or its title for a blocked download
 
 intent            do I want to watch it?
                   (title_id, want, started_at, dropped_at, excluded_at, note)

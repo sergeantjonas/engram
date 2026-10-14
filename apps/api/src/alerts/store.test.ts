@@ -67,7 +67,6 @@ describe('decideReadyAlerts', () => {
           titleId: 'title-1',
           episodeId: 'ep-4',
           behind: 1,
-          detail: null,
         },
         onConflict: 'nothing',
       },

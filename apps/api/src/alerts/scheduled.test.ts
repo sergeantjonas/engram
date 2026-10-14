@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   type EpisodeState,
+  planBlockedAlert,
   planOverdueAlert,
   planStuckAlert,
   type ShowState,
@@ -27,7 +28,6 @@ const episode = (over: Partial<EpisodeState> = {}): EpisodeState => ({
   grabbedAt: null,
   imported: false,
   blocked: false,
-  detail: null,
   onDisk: false,
   ...over,
 });
@@ -45,7 +45,6 @@ describe('planStuckAlert', () => {
         season: 1,
         number: 3,
         behind: 1,
-        detail: null,
       },
     });
   });
@@ -68,13 +67,12 @@ describe('planStuckAlert', () => {
     }
   });
 
-  it('says so at once, with Sonarr’s reasons, for a download Sonarr asked a hand for', () => {
-    const grabbedAt = new Date('2026-10-07T19:50:00Z');
-    const blocked = episode({ grabbedAt, blocked: true, detail: 'Sample' });
-    expect(planStuckAlert({ show: show(), episode: blocked, now })).toMatchObject({
-      ok: true,
-      alert: { key: 'stuck@show:tvdb:452595/s01e0003', detail: 'Sample' },
-    });
+  // Its download's own alert already said so; one problem, one ping.
+  it('leaves an episode whose download Sonarr asked a hand for to that alert', () => {
+    const grabbedAt = new Date('2026-10-07T10:00:00Z');
+    expect(
+      planStuckAlert({ show: show(), episode: episode({ grabbedAt, blocked: true }), now }),
+    ).toEqual({ ok: false, reason: 'Sonarr asked for a hand' });
   });
 
   // A season searched for by hand is grabbed too; it aired long ago.
@@ -146,5 +144,61 @@ describe('planOverdueAlert', () => {
     expect(
       planOverdueAlert({ show: show(), episode: episode({ season: 0 }), lastWalkAt, now }),
     ).toMatchObject({ reason: 'a special' });
+  });
+});
+
+describe('planBlockedAlert', () => {
+  const pack = Array.from({ length: 10 }, (_, i) => ({ season: 1, number: i + 1, handled: false }));
+  const reasons =
+    'One or more episodes expected in this release were not imported or missing from the release';
+
+  // It is given no follow state and no air date: a download that cannot
+  // finish without the owner is said whatever the show, even one they added.
+  it('says a whole download needs a hand, once, with what Sonarr said', () => {
+    expect(
+      planBlockedAlert({
+        titleKey: 'show:tvdb:384541',
+        downloadId: 'SABnzbd_nzo_abc',
+        episodes: pack,
+        reasons,
+      }),
+    ).toEqual({
+      ok: true,
+      alert: {
+        key: 'blocked@show:tvdb:384541@SABnzbd_nzo_abc',
+        kind: 'blocked',
+        detail: `S01E01–S01E10 (10 episodes)\nSonarr says:\n${reasons}`,
+      },
+    });
+  });
+
+  // A blackhole client's id is a file name, which the hub's key cannot carry.
+  it('hashes a download id the hub would refuse in a key', () => {
+    const decision = planBlockedAlert({
+      titleKey: 'show:tvdb:384541',
+      downloadId: 'Blackhole_Cyberpunk Edgerunners S01 1080p_638650000000000000',
+      episodes: pack,
+      reasons: null,
+    });
+    expect(decision.ok && decision.alert.key).toMatch(/^blocked@show:tvdb:384541@[0-9a-f]{32}$/);
+  });
+
+  it('names only the episodes still waiting, and says nothing once none are', () => {
+    const some = pack.map((ep) => ({ ...ep, handled: ep.number !== 3 && ep.number !== 7 }));
+    expect(
+      planBlockedAlert({
+        titleKey: 'show:tvdb:384541',
+        downloadId: 'x',
+        episodes: some,
+        reasons: null,
+      }),
+    ).toMatchObject({
+      alert: { detail: 'S01E03, S01E07\nSonarr could not import it by itself.' },
+    });
+
+    const all = pack.map((ep) => ({ ...ep, handled: true }));
+    expect(
+      planBlockedAlert({ titleKey: 'show:tvdb:384541', downloadId: 'x', episodes: all, reasons }),
+    ).toEqual({ ok: false, reason: 'imported since' });
   });
 });

@@ -38,15 +38,21 @@ describe('composeMessage', () => {
     expect(composeMessage(alert({ behind: null, episodeName: null }), WEB).body).toBeUndefined();
   });
 
-  it('gives Sonarr’s reasons as the body of a stuck download it asked a hand for', () => {
-    const stuck = alert({
-      kind: 'stuck',
-      key: 'stuck@show:tvdb:452595/s01e0004',
-      detail: 'Sample',
+  it('says a blocked download needs a hand, with the body written when it was decided', () => {
+    const blocked = alert({
+      kind: 'blocked',
+      key: 'blocked@show:tvdb:452595@SABnzbd_nzo_abc',
+      season: null,
+      number: null,
+      episodeName: null,
+      behind: null,
+      detail: 'S01E01–S01E10 (10 episodes)\nSonarr says:\nSample',
     });
-    expect(composeMessage(stuck, WEB)).toMatchObject({
-      title: 'Dexter: Resurrection S01E04 is stuck',
-      body: '“Call Me Red”\nSonarr needs a hand:\nSample',
+    expect(composeMessage(blocked, WEB)).toEqual({
+      key: 'blocked@show:tvdb:452595@SABnzbd_nzo_abc',
+      title: 'Dexter: Resurrection needs a hand',
+      body: 'S01E01–S01E10 (10 episodes)\nSonarr says:\nSample',
+      url: 'https://engram.vyoh.gg/titles/title-1',
     });
   });
 

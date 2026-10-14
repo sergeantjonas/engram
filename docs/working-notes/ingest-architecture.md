@@ -207,7 +207,8 @@ only those of shows with a play, so that Engram knows every episode on disk
   shared with the account, and a walk of one of those would fill the wall
   with somebody else's library and sweep this one as gone. The TMDB backfills
   that fill a new title's grid and art stay on netcup, on a timer after the
-  walk.
+  walk; a title Sonarr creates is filled at once, after its webhook is
+  answered ([episode-alerts.md](episode-alerts.md) § Chunk 1).
 - **Weighed and not taken:** the owner's laptop, which already holds the
   token and runs only when awake.
 

@@ -13,7 +13,8 @@ read from 2026-10-10; the first, a Cyberpunk: Edgerunners season pack the
 owner had just added on 2026-10-14, was kept and alerted nothing at the
 time, which led to the 2026-10-14 decision below — built that night and not
 yet deployed. Its first pass reads two days back, so that pack pings once
-on deploy if it is still waiting.
+on deploy if it is still waiting. Built 2026-10-15 with it: a title Sonarr
+creates is filled from TMDB at once instead of at the next nightly backfill.
 
 A new episode of a show being followed lands on disk at some hour of the
 night, and nothing says so. Sonarr can post to Discord, but it pings for every
@@ -193,6 +194,24 @@ Read on the box that evening, against the source:
   kept everything it had.
 - Each row's `raw` held its own episode alone, with `airDateUtc`, and
   exactly the top-level fields the source builds.
+
+A title Sonarr creates carries ids, a name and a year, and no art: Cyberpunk:
+Edgerunners, added at 23:16 on 2026-10-14, sat on a placeholder until the
+next morning's backfill. Since 2026-10-15 the route fills it from TMDB — the
+details, then the grid — through `fillTitle`
+([fill.ts](../../apps/api/src/titles/fill.ts)), which runs the two nightly
+backfills for that one title, without holding the answer: TMDB slow or down
+must never be what Sonarr counts towards pausing the webhook. A title that
+already has its details costs one read and asks TMDB nothing; one TMDB could
+not answer for is asked again on its next event, and nightly. A second event
+for the same title while its fill is running starts none of its own.
+
+Followed up, not fixed: neither the store nor the episode backfill sorts its
+episode inserts, so a fill writing a show's grid while the next webhook
+inserts the same new episodes could take row locks in opposite orders and
+deadlock, failing that webhook once. The nightly backfill already shared the
+risk; the fill makes the overlap likelier. Sorting both, as marks are, closes
+it.
 
 ## Chunk 2 · Alerts, and ready
 

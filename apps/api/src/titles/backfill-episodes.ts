@@ -41,14 +41,21 @@ const slot = (episode: { season: number; number: number }) => `${episode.season}
 export async function backfillEpisodes(
   db: Database,
   tmdb: TmdbClient,
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; titleId?: string } = {},
 ): Promise<BackfillResult[]> {
   const shows = await db
     .select({ id: titleTable.id, name: titleTable.name, tmdbId: titleTable.tmdbId })
     .from(titleTable)
     // Movies have no episodes, and a title with no TMDB id has nothing to ask
-    // about — shows are keyed on tvdb, so that is not a given.
-    .where(and(eq(titleTable.kind, 'show'), isNotNull(titleTable.tmdbId)))
+    // about — shows are keyed on tvdb, so that is not a given. `titleId`
+    // narrows the run to the one title another source just created.
+    .where(
+      and(
+        eq(titleTable.kind, 'show'),
+        isNotNull(titleTable.tmdbId),
+        options.titleId === undefined ? undefined : eq(titleTable.id, options.titleId),
+      ),
+    )
     .orderBy(titleTable.name);
 
   const results: BackfillResult[] = [];

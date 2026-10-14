@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../db/client.js';
 import { type TmdbClient, TmdbError } from '../tmdb/client.js';
@@ -118,6 +120,15 @@ describe('backfillEpisodes', () => {
     expect(inserted[0]?.refreshed).toEqual(
       expect.arrayContaining(['name', 'airDate', 'runtimeMin', 'overview', 'stillPath']),
     );
+  });
+
+  it('fetches one show alone when given one', async () => {
+    const { db, predicates } = stubDb();
+    await backfillEpisodes(db, stubTmdb(), { titleId: 'a' });
+
+    const query = new PgDialect().sqlToQuery(predicates[0] as SQL);
+    expect(query.sql).toContain('"title"."id" = $2');
+    expect(query.params).toEqual(['show', 'a']);
   });
 
   // Every query has to be narrowed; a stub that dropped the predicate would

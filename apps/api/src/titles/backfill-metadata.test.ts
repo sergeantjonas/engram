@@ -142,6 +142,19 @@ describe('backfillMetadata', () => {
     expect(rendered).not.toContain('metadata_fetched_at');
   });
 
+  // A title Sonarr just created is filled on its own, and only while it has
+  // never been fetched.
+  it('asks about one title alone when given one', async () => {
+    const { db, selected } = stubDb();
+
+    await backfillMetadata(db, stubTmdb(), { titleId: 'a' });
+
+    const query = new PgDialect().sqlToQuery(selected[0] as SQL);
+    expect(query.sql).toContain('"metadata_fetched_at" is null');
+    expect(query.sql).toContain('"title"."id" = $1');
+    expect(query.params).toEqual(['a']);
+  });
+
   // A refresh runs over rows that already hold artwork. TMDB answering without
   // a field today must not erase what a previous run stored.
   it('never writes a null over something already there', async () => {

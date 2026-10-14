@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { githubStub, testConfig } from '../app.fixture.js';
 import { buildApp } from '../app.js';
 import { sessionDb } from '../auth/session.fixture.js';
+import { type TmdbClient, TmdbError } from '../tmdb/client.js';
 
 let app: FastifyInstance | undefined;
 
@@ -532,6 +533,113 @@ describe('POST /webhooks/sonarr', () => {
         }),
       }),
     );
+  });
+
+  // Sonarr names a show by its ids alone; art, details and the grid come
+  // from TMDB once it has had its answer.
+  it('fills a title Sonarr names from TMDB after answering, and only once', async () => {
+    const asked: string[] = [];
+    const tmdb = {
+      details: async (_kind: string, id: string) => {
+        asked.push(`details ${id}`);
+        return {
+          kind: 'show',
+          ids: { tmdb: id, tvdb: '371980' },
+          name: 'Severance',
+          year: 2022,
+          posterPath: '/poster.jpg',
+          backdropPath: null,
+          overview: null,
+          status: 'Returning Series',
+          lastAirDate: null,
+          nextEpisode: null,
+          runtimeMin: null,
+          director: null,
+          cast: [],
+          collection: null,
+          seasons: [{ season: 1, episodeCount: 1 }],
+        };
+      },
+      seasonEpisodes: async (id: string, season: number) => {
+        asked.push(`season ${id}/${season}`);
+        return [];
+      },
+    } as unknown as TmdbClient;
+    const post = async (stub: ReturnType<typeof sessionDb>) => {
+      await app?.close();
+      app = buildApp({ config: testConfig, db: stub.db, tmdb, github: githubStub });
+      return app.inject({
+        method: 'POST',
+        url: '/webhooks/sonarr',
+        headers: { 'content-type': 'application/json', ...good },
+        payload: { eventType: 'SeriesAdd', series: imported.series },
+      });
+    };
+
+    const fresh = sessionDb();
+    fresh.returns = [[{ id: 'title-1' }]];
+    // Not yet fetched, so the details; then the show for its grid, which
+    // holds no episode yet.
+    fresh.selects = [
+      [{ id: 'title-1', kind: 'show', name: 'Severance', tmdbId: '95396' }],
+      [{ id: 'title-1', name: 'Severance', tmdbId: '95396' }],
+      [],
+    ];
+    expect((await post(fresh)).statusCode).toBe(204);
+    await vi.waitFor(() =>
+      expect(asked).toEqual(['details 95396', 'details 95396', 'season 95396/1']),
+    );
+    expect(fresh.updated[0]?.set).toMatchObject({ posterPath: '/poster.jpg' });
+
+    asked.length = 0;
+    const known = sessionDb();
+    known.returns = [[{ id: 'title-1' }]];
+    known.selects = [[]];
+    expect((await post(known)).statusCode).toBe(204);
+    await vi.waitFor(() => expect(known.selects).toEqual([]));
+    expect(asked).toEqual([]);
+  });
+
+  // The answer never waits on TMDB, and a title it could not answer for is
+  // left unfetched, without its grid, for the next event or the night.
+  it('still answers 204 when TMDB cannot fill the title, and skips the grid', async () => {
+    const asked: string[] = [];
+    const warned: unknown[] = [];
+    const tmdb = {
+      details: async () => {
+        asked.push('details');
+        throw new TmdbError('TMDB responded 503', 503);
+      },
+      seasonEpisodes: async () => {
+        asked.push('season');
+        return [];
+      },
+    } as unknown as TmdbClient;
+    const stub = sessionDb();
+    stub.returns = [[{ id: 'title-1' }]];
+    stub.selects = [[{ id: 'title-1', kind: 'show', name: 'Severance', tmdbId: '95396' }]];
+    await app?.close();
+    app = buildApp({ config: testConfig, db: stub.db, tmdb, github: githubStub });
+    app.addHook('onRequest', (request, _reply, done) => {
+      request.log.warn = ((obj: unknown) => {
+        warned.push(obj);
+      }) as typeof request.log.warn;
+      done();
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhooks/sonarr',
+      headers: { 'content-type': 'application/json', ...good },
+      payload: { eventType: 'SeriesAdd', series: imported.series },
+    });
+
+    expect(response.statusCode).toBe(204);
+    await vi.waitFor(() =>
+      expect(warned).toContainEqual(expect.objectContaining({ failed: 'TMDB responded 503' })),
+    );
+    expect(asked).toEqual(['details']);
+    expect(stub.updated).toEqual([]);
   });
 
   it('refuses a missing or wrong secret, and takes none from the body', async () => {

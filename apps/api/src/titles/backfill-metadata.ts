@@ -40,7 +40,7 @@ export interface MetadataBackfillResult {
 export async function backfillMetadata(
   db: Database,
   tmdb: TmdbClient,
-  options: { dryRun?: boolean; refresh?: boolean } = {},
+  options: { dryRun?: boolean; refresh?: boolean; titleId?: string } = {},
 ): Promise<MetadataBackfillResult[]> {
   const pending = await db
     .select({
@@ -53,11 +53,14 @@ export async function backfillMetadata(
     // Keyed on `metadata_fetched_at`, not on a null poster: a title TMDB has no
     // artwork for would otherwise be asked about again on every future run.
     // `refresh` ignores the timestamp, which is how a column added after the
-    // first run gets filled for rows already marked done.
+    // first run gets filled for rows already marked done. `titleId` narrows
+    // the run to the one title another source just created.
     .where(
-      options.refresh
-        ? isNotNull(titleTable.tmdbId)
-        : and(isNull(titleTable.metadataFetchedAt), isNotNull(titleTable.tmdbId)),
+      and(
+        isNotNull(titleTable.tmdbId),
+        options.refresh ? undefined : isNull(titleTable.metadataFetchedAt),
+        options.titleId === undefined ? undefined : eq(titleTable.id, options.titleId),
+      ),
     )
     .orderBy(titleTable.name);
 

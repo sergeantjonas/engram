@@ -103,7 +103,10 @@ export function sessionDb(session: StubbedSession | null = {}, now = new Date())
           // the caller the one meant for the next query.
           where: () => {
             const answer = state.selects.shift() ?? (row === null ? [] : [row]);
-            return Object.assign(Promise.resolve(answer), { limit: async () => answer });
+            return Object.assign(Promise.resolve(answer), {
+              limit: async () => answer,
+              orderBy: async () => answer,
+            });
           },
         }),
       }),

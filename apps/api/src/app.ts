@@ -108,7 +108,7 @@ export function buildApp({
   registerSearchRoutes(app, db, tmdb);
   registerTitleRoutes(app, db, tmdb);
   registerWatchEventRoutes(app, db);
-  registerWebhookRoutes(app, config, db, live);
+  registerWebhookRoutes(app, config, db, live, tmdb);
 
   return app;
 }

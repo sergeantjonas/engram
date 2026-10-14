@@ -9,6 +9,8 @@ import { storeSonarrPlan } from '../ingest/sonarr-store.js';
 import { planTautulliPlay, readAction, readLiveEvent } from '../ingest/tautulli.js';
 import { storeTautulliPlay } from '../ingest/tautulli-store.js';
 import type { LiveSessions } from '../live/sessions.js';
+import { fillTitle } from '../titles/fill.js';
+import type { TmdbClient } from '../tmdb/client.js';
 
 /**
  * Tautulli's and Sonarr's webhooks: the freshness half of ingest.
@@ -25,7 +27,13 @@ export function registerWebhookRoutes(
   config: Config,
   db: Database,
   live: LiveSessions,
+  tmdb: TmdbClient | null,
 ): void {
+  // Titles being filled from TMDB right now. A grab can follow its series
+  // add within the first fill's round trip, and both would otherwise fetch
+  // every season of the same show.
+  const filling = new Set<string>();
+
   app.post('/webhooks/tautulli', async (request, reply) => {
     const body = request.body;
     const fields =
@@ -256,6 +264,27 @@ export function registerWebhookRoutes(
       } catch (error) {
         request.log.error({ err: error, title: plan.series.key }, 'blocked alert not decided');
       }
+    }
+
+    // Art, details and grid for a title Sonarr was the first to name, fetched
+    // without holding the answer: TMDB slow or down must never be what Sonarr
+    // counts towards pausing the webhook. A fill cut off by a restart loses
+    // nothing — each write is one idempotent statement — and the title is
+    // asked about again on its next event or the nightly backfill.
+    const titleId = stored.titleId;
+    if (tmdb !== null && titleId !== null && !filling.has(titleId)) {
+      const title = plan.series.key;
+      filling.add(titleId);
+      fillTitle(db, tmdb, titleId)
+        .then(
+          (filled) => {
+            if (filled.failed) request.log.warn({ title, ...filled }, 'title not filled from tmdb');
+            else if (filled.filled) request.log.info({ title }, 'title filled from tmdb');
+          },
+          (error: unknown) =>
+            request.log.error({ err: error, title }, 'title not filled from tmdb'),
+        )
+        .finally(() => filling.delete(titleId));
     }
 
     // The key and the episode numbers, enough to follow a delivery to its

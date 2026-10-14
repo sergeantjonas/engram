@@ -408,7 +408,8 @@ the viewer wants of a title. The SPA calls all four.
 10. ~~**Episode alerts**~~ — built, all five chunks deployed by 2026-10-10
     (see Done); Sonarr's *Manual Interaction Required* read from that
     evening, and rebuilt 2026-10-14 as its own alert, one per download and
-    whatever the show, not yet deployed. Scoped 2026-10-07 in
+    whatever the show; a title Sonarr creates filled from TMDB at once,
+    2026-10-15. Both not yet deployed. Scoped 2026-10-07 in
     [episode-alerts.md](episode-alerts.md); chunk 1, the Sonarr receiver,
     built, deployed and connected the same day; chunk 2, the `alert` table
     and the ready decision, built with it and deployed 2026-10-10; chunk 5,

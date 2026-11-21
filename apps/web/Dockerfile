@@ -32,7 +32,7 @@ RUN pnpm --filter @engram/shared run build \
 
 # nginx rather than a node process: this is a static bundle, and the host's
 # nginx in front of it is doing the TLS and the routing either way.
-FROM nginx:1.29-alpine AS runtime
+FROM nginx:1.30-alpine AS runtime
 
 # Every path that is not a file is the SPA's entry point, or a reload on
 # /titles/<id> is a 404 from a server that has never heard of the route.
